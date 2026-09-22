@@ -1,0 +1,146 @@
+import type { TaskStatus } from "@/generated/prisma/enums";
+import { windowsOverlap, type OccupancyWindow, type Part, type TimeWindow, type TurnaroundType } from "@/lib/turnaround";
+
+// Model of the band view (CLAUDE.md, "Sávos idősoros nézet"). Pure functions:
+// the data layer passes in tasks and shifts, and gets lanes and boxes back.
+
+export type ConflictKind = "OVERLAP" | "OUTSIDE_SHIFT";
+
+/** What the view needs from a task; the data layer maps a TaskView onto this. */
+export interface BoardTask {
+  id: string;
+  flightLabel: string;
+  stand: string;
+  status: TaskStatus;
+  type: TurnaroundType;
+  arrivalAgentId: string | null;
+  /** As assigned; on a quick turnaround the arrival agent covers both parts. */
+  departureAgentId: string | null;
+  windows: OccupancyWindow[];
+}
+
+export interface BoardShift extends TimeWindow {
+  id: string;
+  userId: string;
+}
+
+export interface BoardBox extends TimeWindow {
+  /** Stable id for drag and drop: task and part. */
+  id: string;
+  taskId: string;
+  part: Part | "WHOLE";
+  flightLabel: string;
+  stand: string;
+  status: TaskStatus;
+  agentId: string | null;
+  conflicts: ConflictKind[];
+}
+
+export interface BoardLane {
+  agent: { id: string; name: string };
+  shifts: TimeWindow[];
+  /** False when the agent has tasks that day but no shift (marked in the view). */
+  hasShift: boolean;
+  boxes: BoardBox[];
+}
+
+export interface Board {
+  lanes: BoardLane[];
+  unassigned: BoardBox[];
+}
+
+/** One box on a quick turnaround, two on a long one. */
+export function taskBoxes(task: BoardTask): BoardBox[] {
+  return task.windows.map((window) => ({
+    id: `${task.id}:${window.part}`,
+    taskId: task.id,
+    part: window.part,
+    start: window.start,
+    end: window.end,
+    flightLabel: task.flightLabel,
+    stand: task.stand,
+    status: task.status,
+    agentId: window.part === "DEPARTURE_PART" ? task.departureAgentId : task.arrivalAgentId,
+    conflicts: [],
+  }));
+}
+
+/** Merges touching or overlapping windows into continuous stretches. */
+export function mergeWindows(windows: readonly TimeWindow[]): TimeWindow[] {
+  const sorted = [...windows].sort((a, b) => a.start.getTime() - b.start.getTime());
+  const merged: TimeWindow[] = [];
+  for (const window of sorted) {
+    const last = merged.at(-1);
+    if (last && window.start.getTime() <= last.end.getTime()) {
+      if (window.end.getTime() > last.end.getTime()) last.end = window.end;
+    } else {
+      merged.push({ start: window.start, end: window.end });
+    }
+  }
+  return merged;
+}
+
+function isCovered(box: TimeWindow, stretches: readonly TimeWindow[]): boolean {
+  return stretches.some(
+    (s) => s.start.getTime() <= box.start.getTime() && box.end.getTime() <= s.end.getTime(),
+  );
+}
+
+/**
+ * Conflicts of one agent: two occupancy windows overlapping, and a box that
+ * sticks out of the agent's shifts.
+ */
+export function conflictsFor(boxes: readonly BoardBox[], shifts: readonly TimeWindow[]): Map<string, ConflictKind[]> {
+  const stretches = mergeWindows(shifts);
+  const result = new Map<string, ConflictKind[]>();
+  const add = (id: string, kind: ConflictKind) => {
+    const kinds = result.get(id) ?? [];
+    if (!kinds.includes(kind)) result.set(id, [...kinds, kind]);
+  };
+
+  for (const box of boxes) {
+    if (!isCovered(box, stretches)) add(box.id, "OUTSIDE_SHIFT");
+    for (const other of boxes) {
+      if (other.id !== box.id && windowsOverlap(box, other)) add(box.id, "OVERLAP");
+    }
+  }
+  return result;
+}
+
+/** Lanes for agents with a shift that day, plus agents that only have tasks. */
+export function buildBoard({
+  tasks,
+  shifts,
+  agents,
+}: {
+  tasks: readonly BoardTask[];
+  shifts: readonly BoardShift[];
+  agents: readonly { id: string; name: string }[];
+}): Board {
+  const boxes = tasks.flatMap(taskBoxes);
+  const byId = new Map(agents.map((agent) => [agent.id, agent]));
+  const laneIds = new Set<string>();
+  for (const shift of shifts) laneIds.add(shift.userId);
+  for (const box of boxes) if (box.agentId) laneIds.add(box.agentId);
+
+  const lanes = [...laneIds]
+    .map((id) => {
+      const agentShifts = shifts.filter((shift) => shift.userId === id).map(({ start, end }) => ({ start, end }));
+      const laneBoxes = boxes.filter((box) => box.agentId === id);
+      const conflicts = conflictsFor(laneBoxes, agentShifts);
+      return {
+        agent: byId.get(id) ?? { id, name: id },
+        shifts: agentShifts,
+        hasShift: agentShifts.length > 0,
+        boxes: laneBoxes
+          .map((box) => ({ ...box, conflicts: conflicts.get(box.id) ?? [] }))
+          .sort((a, b) => a.start.getTime() - b.start.getTime()),
+      };
+    })
+    .sort((a, b) => a.agent.name.localeCompare(b.agent.name, "hu"));
+
+  return {
+    lanes,
+    unassigned: boxes.filter((box) => !box.agentId).sort((a, b) => a.start.getTime() - b.start.getTime()),
+  };
+}
