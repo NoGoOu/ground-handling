@@ -55,6 +55,22 @@ model User {
   departureTasks     Task[]            @relation("DepartureAgent")
   recordedMilestones MilestoneRecord[] @relation("RecordedBy")
   updatedMilestones  MilestoneRecord[] @relation("UpdatedBy")
+  shifts             Shift[]
+}
+
+/// One agent's shift; start and end are free, and it may cross midnight.
+model Shift {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  startsAt  DateTime
+  endsAt    DateTime
+  note      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, startsAt])
+  @@index([startsAt])
 }
 
 model Airline {

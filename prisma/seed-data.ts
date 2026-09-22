@@ -18,6 +18,22 @@ export const SEED_AIRLINE = { name: "Demo Fapados", iataCode: "ZZ" };
 export const SEED_TEMPLATE = { name: "Alap", ...DEMO_TEMPLATE_PARAMS };
 export const SEED_MILESTONES = DEMO_MILESTONES;
 
+export interface SeedShift {
+  agent: SeedUsername;
+  startsAt: Date;
+  endsAt: Date;
+  note: string | null;
+}
+
+/** Shifts that cover the demo flights of the day. */
+export function buildSeedShifts(localDate: string): SeedShift[] {
+  const at = localTimeOn(localDate);
+  return [
+    { agent: "ugynok1", startsAt: at("06:00"), endsAt: at("14:00"), note: "Reggeles" },
+    { agent: "ugynok2", startsAt: at("11:00"), endsAt: at("19:00"), note: null },
+  ];
+}
+
 export interface SeedFlight {
   inboundFlightNumber: string;
   outboundFlightNumber: string;
@@ -35,13 +51,18 @@ export interface SeedFlight {
   records: { code: string; time: Date; by: SeedUsername }[];
 }
 
-export function buildSeedFlights(localDate: string): SeedFlight[] {
+/** "HH:MM" on the given Budapest day → UTC instant. */
+function localTimeOn(localDate: string) {
   const day = parseLocalDate(localDate);
   if (!day) throw new Error(`Invalid seed date: ${localDate}`);
-  const at = (hhmm: string) => {
+  return (hhmm: string) => {
     const [hour, minute] = hhmm.split(":").map(Number);
     return localToUtc(day.year, day.month, day.day, hour, minute);
   };
+}
+
+export function buildSeedFlights(localDate: string): SeedFlight[] {
+  const at = localTimeOn(localDate);
   const recordsBy = (by: SeedUsername, entries: [string, string][]) =>
     entries.map(([code, hhmm]) => ({ code, time: at(hhmm), by }));
 

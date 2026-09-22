@@ -6,6 +6,7 @@ import { templateSnapshotJson } from "@/lib/snapshot";
 import { toLocalDate } from "@/lib/time";
 import {
   buildSeedFlights,
+  buildSeedShifts,
   DEMO_PASSWORD,
   SEED_AIRLINE,
   SEED_MILESTONES,
@@ -30,6 +31,7 @@ async function main() {
     // Global settings: the defaults from the schema (decision 7).
     await tx.setting.upsert({ where: { id: SETTINGS_ID }, create: { id: SETTINGS_ID }, update: {} });
 
+    await tx.shift.deleteMany();
     await tx.milestoneRecord.deleteMany();
     await tx.task.deleteMany();
     await tx.flight.deleteMany();
@@ -55,6 +57,11 @@ async function main() {
       include: { milestones: true },
     });
     const milestoneId = new Map(template.milestones.map((m) => [m.code, m.id]));
+
+    for (const shift of buildSeedShifts(localDate)) {
+      const { agent, ...shiftData } = shift;
+      await tx.shift.create({ data: { ...shiftData, userId: userId(agent)! } });
+    }
 
     for (const flight of buildSeedFlights(localDate)) {
       const { status, arrivalAgent, departureAgent, records, ...flightData } = flight;
