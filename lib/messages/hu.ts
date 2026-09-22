@@ -33,6 +33,56 @@ export const hu = {
     submitting: "Belépés…",
     invalid: "Hibás felhasználónév vagy jelszó.",
   },
+  status: {
+    PLANNED: "Tervezett",
+    IN_PROGRESS: "Folyamatban",
+    COMPLETED: "Lezárva",
+  },
+  turnaroundType: {
+    QUICK: "Gyors",
+    LONG: "Hosszú",
+  },
+  part: {
+    ARRIVAL_PART: "Érkezési rész",
+    DEPARTURE_PART: "Indulási rész",
+  },
+  times: {
+    sta: "STA",
+    eta: "ETA",
+    ata: "ATA",
+    std: "STD",
+    etd: "ETD",
+    atd: "ATD",
+    minutes: "{minutes} perc",
+    delay: "Késés: +{minutes} perc",
+  },
+  dateNav: {
+    date: "Dátum",
+    today: "Ma",
+    previous: "‹ Előző nap",
+    next: "Következő nap ›",
+    show: "Mutasd",
+  },
+  flights: {
+    empty: "Erre a napra nincs járat.",
+    count: "{count} járat",
+    newFlight: "Új járat",
+    open: "Megnyitás",
+    edit: "Szerkesztés",
+    columns: {
+      flight: "Járat",
+      stand: "Állóhely",
+      arrival: "Érkezés",
+      departure: "Indulás",
+      type: "Típus",
+      status: "Státusz",
+      agents: "Ügynökök",
+      delay: "Késés",
+    },
+    arrivalAgent: "Érkezés",
+    departureAgent: "Indulás",
+    unassigned: "nincs kiosztva",
+  },
 } as const;
 
 export type Messages = typeof hu;
