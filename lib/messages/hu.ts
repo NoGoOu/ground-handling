@@ -115,6 +115,12 @@ export const hu = {
     statusTitle: "Státusz",
     missingOnComplete: "Lezárva. Hiányzó kötelező mérföldkövek: {names}",
   },
+  agent: {
+    empty: "Erre a napra nincs hozzád rendelt task.",
+    myParts: "Feladatod: {parts}",
+    next: "Következő: {name}, {time}",
+    allRecorded: "A részed minden mérföldköve rögzítve.",
+  },
   statusAction: {
     PLANNED: "Vissza tervezettre",
     IN_PROGRESS: "Folyamatban",

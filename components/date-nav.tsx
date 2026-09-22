@@ -9,8 +9,9 @@ export function DateNav({ basePath, date, today }: { basePath: string; date: str
   const href = (d: string) => `${basePath}?date=${d}`;
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <Link href={href(addDays(date, -1))} className="btn btn-secondary">
-        {t.previous}
+      <Link href={href(addDays(date, -1))} className="btn btn-secondary" aria-label={t.previous}>
+        <span className="sm:hidden">‹</span>
+        <span className="hidden sm:inline">{t.previous}</span>
       </Link>
       <form action={basePath} className="flex items-center gap-2">
         <label className="sr-only" htmlFor="date">
@@ -21,8 +22,9 @@ export function DateNav({ basePath, date, today }: { basePath: string; date: str
           {t.show}
         </button>
       </form>
-      <Link href={href(addDays(date, 1))} className="btn btn-secondary">
-        {t.next}
+      <Link href={href(addDays(date, 1))} className="btn btn-secondary" aria-label={t.next}>
+        <span className="sm:hidden">›</span>
+        <span className="hidden sm:inline">{t.next}</span>
       </Link>
       {date !== today && (
         <Link href={basePath} className="btn btn-secondary">

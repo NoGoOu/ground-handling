@@ -118,7 +118,7 @@ function RowActions({ ctx, row }: { ctx: ViewContext; row: TimelineRow }) {
   );
 }
 
-const rowGrid = "sm:grid sm:grid-cols-[2fr_1fr_2fr_1fr] sm:gap-4 lg:grid-cols-[2fr_1fr_2fr_1fr_auto]";
+const rowGrid = "sm:grid sm:grid-cols-[2fr_1fr_2fr_1fr] sm:gap-4 lg:grid-cols-[2fr_1fr_2fr_1fr_15rem]";
 
 function MilestoneRow({ ctx, row }: { ctx: ViewContext; row: TimelineRow }) {
   const { task, day, now } = ctx;
@@ -138,18 +138,21 @@ function MilestoneRow({ ctx, row }: { ctx: ViewContext; row: TimelineRow }) {
           <span className="rounded-full bg-orange-100 px-2 py-0.5 text-xs font-medium text-orange-800">{t.missing}</span>
         )}
       </div>
-      <div className="text-sm tabular-nums">
-        <span className="mr-1 text-xs text-neutral-500 sm:hidden">{t.planned}</span>
-        {formatTimeOnDay(row.planned, day)}
-      </div>
-      <div className="text-sm">
-        <span className="mr-1 text-xs text-neutral-500 sm:hidden">{t.actual}</span>
-        <ActualTimes row={row} day={day} />
-      </div>
-      <div>
-        {row.deviationMinutes !== null && row.deviationLevel && (
-          <DeviationBadge minutes={row.deviationMinutes} level={row.deviationLevel} />
-        )}
+      {/* One line on phones; separate grid cells from sm up. */}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 sm:contents">
+        <div className="text-sm tabular-nums">
+          <span className="mr-1 text-xs text-neutral-500 sm:hidden">{t.planned}</span>
+          {formatTimeOnDay(row.planned, day)}
+        </div>
+        <div className="text-sm">
+          <span className="mr-1 text-xs text-neutral-500 sm:hidden">{t.actual}</span>
+          <ActualTimes row={row} day={day} />
+        </div>
+        <div>
+          {row.deviationMinutes !== null && row.deviationLevel && (
+            <DeviationBadge minutes={row.deviationMinutes} level={row.deviationLevel} />
+          )}
+        </div>
       </div>
       <div className="sm:col-span-4 lg:col-span-1 lg:justify-self-end">
         <RowActions ctx={ctx} row={row} />
