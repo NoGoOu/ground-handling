@@ -132,6 +132,15 @@ function toTaskView(task: TaskWithRelations): TaskView {
   };
 }
 
+/** The inputs of the permission rules for a task. */
+export function taskAssignment(task: TaskView) {
+  return {
+    arrivalAgentId: task.arrivalAgent?.id ?? null,
+    departureAgentId: task.departureAgent?.id ?? null,
+    type: task.timeline.shape.type,
+  };
+}
+
 export async function getTaskView(id: string): Promise<TaskView | null> {
   const task = await prisma.task.findUnique({ where: { id }, include: taskInclude });
   return task ? toTaskView(task) : null;
