@@ -23,11 +23,20 @@ export function FormField({
   );
 }
 
-export function FormMessage({ message }: { message?: string }) {
-  if (!message) return null;
-  return (
-    <p role="alert" className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
-      {message}
-    </p>
-  );
+export function FormMessage({ message, notice }: { message?: string; notice?: string }) {
+  if (message) {
+    return (
+      <p role="alert" className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+        {message}
+      </p>
+    );
+  }
+  if (notice) {
+    return (
+      <p role="status" className="rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+        {notice}
+      </p>
+    );
+  }
+  return null;
 }

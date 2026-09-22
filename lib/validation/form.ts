@@ -27,5 +27,8 @@ export interface FormState<V extends Record<string, string> = Record<string, str
   errors?: FieldErrors;
   /** Submitted values, so the form keeps them after a failed attempt. */
   values?: Partial<V>;
+  /** Error message for the whole form. */
   message?: string;
+  /** Success message, e.g. after saving without leaving the page. */
+  notice?: string;
 }

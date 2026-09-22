@@ -4,6 +4,8 @@ import { prisma } from "@/lib/db";
 import { messages } from "@/lib/messages";
 import { canAdminister } from "@/lib/permissions";
 import { requireCapability } from "@/lib/session";
+import { createTemplate } from "../../templates/actions";
+import { TemplateCreateForm } from "../../templates/template-forms";
 import { updateAirline } from "../actions";
 import { AirlineForm } from "../airline-form";
 
@@ -36,6 +38,7 @@ export default async function AirlinePage(props: PageProps<"/admin/airlines/[id]
 
       <section className="flex flex-col gap-3">
         <h2 className="text-xl font-semibold">{t.templates}</h2>
+        <TemplateCreateForm action={createTemplate.bind(null, airline.id)} />
         {airline.templates.length === 0 ? (
           <p className="text-neutral-600">{t.noTemplates}</p>
         ) : (
