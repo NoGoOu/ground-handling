@@ -60,7 +60,7 @@ export async function updateFlight(
   const result = await parse(formData);
   if (!result.data) return result.state;
 
-  // Provisional decision 6: records point at the template's milestones.
+  // Decision 6 (CLAUDE.md): records point at the template's milestones.
   const hasRecords = (existing.task?._count.records ?? 0) > 0;
   if (hasRecords && result.data.templateId !== existing.templateId) {
     return { errors: { templateId: e.templateLocked }, values: result.values };

@@ -115,7 +115,7 @@ export async function changeStatus(
     if (task.status === status) return;
 
     // Completing freezes the template; reopening goes back to the live template
-    // (provisional decision 2).
+    // (decision 2 in CLAUDE.md).
     const templateSnapshot =
       status === "COMPLETED"
         ? templateSnapshotJson({ ...task.params, milestones: task.milestones })

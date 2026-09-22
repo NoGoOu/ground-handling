@@ -198,7 +198,7 @@ export async function deleteMilestone(templateId: string, milestoneId: string): 
     const target = milestones.find((m) => m.id === milestoneId);
     if (!target) throw new ActionError(messages.errors.notFound);
     if (target.code === ATA_CODE || target.code === ATD_CODE) throw new ActionError(e.lockedMilestone);
-    // Provisional decision 4: milestones with records are kept.
+    // Decision 4 (CLAUDE.md): milestones with records are kept.
     if ((await prisma.milestoneRecord.count({ where: { milestoneDefinitionId: milestoneId } })) > 0) {
       throw new ActionError(e.hasRecords);
     }

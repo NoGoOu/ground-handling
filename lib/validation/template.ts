@@ -2,7 +2,7 @@ import { z } from "zod";
 import { messages } from "@/lib/messages";
 import { ATA_CODE, ATD_CODE, sortByOrder, type Anchor, type MilestoneDef, type Part } from "@/lib/turnaround";
 
-// Template editing rules: CLAUDE.md "MilestoneDefinition" and provisional decision 4.
+// Template editing rules: CLAUDE.md "MilestoneDefinition" and decision 4.
 
 const e = messages.templateForm.errors;
 

@@ -52,7 +52,7 @@ export const flightSchema = z
     std: requiredTime,
     etd: optionalTime,
   })
-  // Provisional decision 6.
+  // Decision 6 (CLAUDE.md).
   .refine((f) => f.std.getTime() > f.sta.getTime(), { path: ["std"], message: e.stdBeforeSta });
 
 export type FlightData = z.output<typeof flightSchema>;

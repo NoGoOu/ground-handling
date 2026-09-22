@@ -1,10 +1,10 @@
 # Ground Handling App – projektleírás
 
-*Verzió: 8 · 2026. szeptember 22.*
+*Verzió: 9 · 2026. szeptember 22.*
 
 Nyílt forráskódú webalkalmazás repülőtéri földi kiszolgálás (ground handling) szervezésére. Minden járatfordulóhoz egy task tartozik, benne mérföldkövekkel, amelyeknek van tervezett és tényleges időpontja. A mérföldkövek légitársaságonként testreszabható sablonokból jönnek. A hozzáférés szerepkör alapú.
 
-Ez a fájl a projekt fő leírása. Ha a domain logika nem egyértelmű, kérdezz, ne találj ki új üzleti szabályt. A még eldöntetlen kérdések a fájl végén, a „Nyitott kérdések és ideiglenes döntések” részben vannak.
+Ez a fájl a projekt fő leírása. Ha a domain logika nem egyértelmű, kérdezz, ne találj ki új üzleti szabályt. A korábban nyitott kérdések eldöntve a fájl végén, a „További eldöntött szabályok” részben vannak.
 
 ## Tech stack
 
@@ -157,9 +157,9 @@ Minden lépés végén futtatható állapot és egy commit.
 17. Admin: sablonok
 18. README + indítás tiszta állapotból
 
-## Nyitott kérdések és ideiglenes döntések
+## További eldöntött szabályok
 
-Az MVP ezekkel az ideiglenes döntésekkel készül, hogy végig lehessen építeni. Egyik sem végleges üzleti szabály, bármelyik módosítható.
+Ezeket a kérdéseket a megrendelő 2026. szeptember 22-én jóváhagyta; a kód is ezekre a számokra hivatkozik.
 
 1. **Napi járatlista:** naptári nap (00:00–24:00, Europe/Budapest), dátumválasztóval. Egy járat azon a napon jelenik meg, amelyre az STA-ja vagy az STD-je esik (az éjfélen átnyúló forduló mindkét napon). Rendezés STA szerint.
 2. **Lezárt task visszanyitása:** a státusz bármelyik irányba váltható. A pillanatkép minden lezáráskor elkészül; visszanyitáskor törlődik, és újra a sablon aktuális állapota számít.

@@ -327,7 +327,7 @@ export function computeTimeline({ flight, params, milestones, recorded }: Timeli
 
 /**
  * A required milestone without an actual time is flagged as missing once its
- * planned time has passed or the task is completed (provisional decision 5).
+ * planned time has passed or the task is completed (decision 5 in CLAUDE.md).
  */
 export function isRequiredMissing(
   row: Pick<TimelineRow, "milestone" | "actual" | "planned">,
