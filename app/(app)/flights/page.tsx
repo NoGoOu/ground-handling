@@ -73,9 +73,9 @@ export default async function FlightsPage(props: PageProps<"/flights">) {
               {tasks.map((task) => (
                 <tr key={task.id} className="align-top">
                   <td className="px-3 py-2">
-                    <div className="font-semibold">
+                    <Link href={`/tasks/${task.id}`} className="font-semibold text-sky-700 hover:underline">
                       {task.flight.inboundFlightNumber} / {task.flight.outboundFlightNumber}
-                    </div>
+                    </Link>
                     <div className="text-xs text-neutral-500">{task.flight.airline.name}</div>
                   </td>
                   <td className="px-3 py-2 font-medium">{task.flight.stand}</td>
