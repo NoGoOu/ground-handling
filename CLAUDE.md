@@ -1,6 +1,6 @@
 # Ground Handling App – projektleírás
 
-*Verzió: 6 · 2026. szeptember 22.*
+*Verzió: 7 · 2026. szeptember 22.*
 
 Nyílt forráskódú webalkalmazás repülőtéri földi kiszolgálás (ground handling) szervezésére. Minden járatfordulóhoz egy task tartozik, benne mérföldkövekkel, amelyeknek van tervezett és tényleges időpontja. A mérföldkövek légitársaságonként testreszabható sablonokból jönnek. A hozzáférés szerepkör alapú.
 
@@ -185,3 +185,4 @@ Mindegyiknél jelölve, melyik lépés előtt kell eldönteni.
 - Kis lépésekben haladj: minden lépés után legyen futtatható állapot és commit.
 - Új funkció előtt röviden vázold a tervet, és várd meg a jóváhagyást.
 - Ha ezt a fájlt módosítod, a tetején lévő verziószámot növeld eggyel, és frissítsd a dátumot.
+- A Next.js-re vonatkozó szabályok (a `next dev` tartja karban, kód írása előtt olvasd el): @AGENTS.md
