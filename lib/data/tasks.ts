@@ -2,10 +2,12 @@ import type { Prisma } from "@/generated/prisma/client";
 import type { TaskStatus } from "@/generated/prisma/enums";
 import { prisma } from "@/lib/db";
 import { parseTemplateSnapshot } from "@/lib/snapshot";
+import { getSettings } from "@/lib/settings";
 import { localDayRange } from "@/lib/time";
 import {
   computeTimeline,
   effectiveDepartureAgentId,
+  type DeviationThresholds,
   type MilestoneDef,
   type TemplateParams,
   type Timeline,
@@ -76,7 +78,7 @@ function templateFor(task: TaskWithRelations): { params: TemplateParams; milesto
   };
 }
 
-function toTaskView(task: TaskWithRelations): TaskView {
+function toTaskView(task: TaskWithRelations, thresholds: DeviationThresholds): TaskView {
   const { flight } = task;
   const { params, milestones, frozen } = templateFor(task);
   const records = new Map<string, RecordInfo>(
@@ -96,6 +98,7 @@ function toTaskView(task: TaskWithRelations): TaskView {
     params,
     milestones,
     recorded: new Map([...records].map(([id, r]) => [id, r.actualTime])),
+    thresholds,
   });
   const departureAgentId = effectiveDepartureAgentId(
     timeline.shape.type,
@@ -142,8 +145,11 @@ export function taskAssignment(task: TaskView) {
 }
 
 export async function getTaskView(id: string): Promise<TaskView | null> {
-  const task = await prisma.task.findUnique({ where: { id }, include: taskInclude });
-  return task ? toTaskView(task) : null;
+  const [task, settings] = await Promise.all([
+    prisma.task.findUnique({ where: { id }, include: taskInclude }),
+    getSettings(),
+  ]);
+  return task ? toTaskView(task, settings.deviationThresholds) : null;
 }
 
 /**
@@ -155,6 +161,7 @@ export async function listTaskViewsForDay(
   extraWhere: Prisma.TaskWhereInput = {},
 ): Promise<TaskView[]> {
   const { start, end } = localDayRange(localDate);
+  const settings = await getSettings();
   const tasks = await prisma.task.findMany({
     where: {
       ...extraWhere,
@@ -168,5 +175,5 @@ export async function listTaskViewsForDay(
     include: taskInclude,
     orderBy: { flight: { sta: "asc" } },
   });
-  return tasks.map(toTaskView);
+  return tasks.map((task) => toTaskView(task, settings.deviationThresholds));
 }

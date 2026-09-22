@@ -10,6 +10,7 @@ export default async function AdminPage() {
   const sections = [
     { href: "/admin/users", title: t.users, hint: t.usersHint },
     { href: "/admin/airlines", title: t.airlines, hint: t.airlinesHint },
+    { href: "/admin/settings", title: t.settings, hint: t.settingsHint },
   ];
   return (
     <div className="flex flex-col gap-4">

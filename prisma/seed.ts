@@ -1,6 +1,7 @@
 import "dotenv/config";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
+import { SETTINGS_ID } from "@/lib/settings";
 import { templateSnapshotJson } from "@/lib/snapshot";
 import { toLocalDate } from "@/lib/time";
 import {
@@ -26,6 +27,9 @@ async function main() {
   const passwordHash = await bcrypt.hash(DEMO_PASSWORD, 10);
 
   await prisma.$transaction(async (tx) => {
+    // Global settings: the defaults from the schema (decision 7).
+    await tx.setting.upsert({ where: { id: SETTINGS_ID }, create: { id: SETTINGS_ID }, update: {} });
+
     await tx.milestoneRecord.deleteMany();
     await tx.task.deleteMany();
     await tx.flight.deleteMany();

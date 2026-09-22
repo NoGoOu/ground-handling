@@ -41,8 +41,15 @@ export interface FlightTimes {
 /** Recorded actual times, keyed by milestone definition id. */
 export type RecordedTimes = ReadonlyMap<string, Date>;
 
-/** Rule 5 colour thresholds, in minutes. Meant to become configurable later. */
-export const DEVIATION_THRESHOLDS = { greenMax: 0, yellowMax: 5 } as const;
+export interface DeviationThresholds {
+  /** Deviation up to this many minutes is green. */
+  greenMax: number;
+  /** Deviation up to this many minutes is yellow, above it red. */
+  yellowMax: number;
+}
+
+/** Rule 5 defaults, in minutes; the live values come from the global setting. */
+export const DEVIATION_THRESHOLDS: DeviationThresholds = { greenMax: 0, yellowMax: 5 };
 
 const MINUTE_MS = 60_000;
 
@@ -126,7 +133,7 @@ export function plannedTimes(
 /** Rule 5 colouring of a deviation (actual − planned). */
 export function deviationLevel(
   minutes: number,
-  thresholds: { greenMax: number; yellowMax: number } = DEVIATION_THRESHOLDS,
+  thresholds: DeviationThresholds = DEVIATION_THRESHOLDS,
 ): DeviationLevel {
   if (minutes <= thresholds.greenMax) return "green";
   if (minutes <= thresholds.yellowMax) return "yellow";
@@ -278,9 +285,17 @@ export interface TimelineInput {
   params: TemplateParams;
   milestones: readonly MilestoneDef[];
   recorded: RecordedTimes;
+  /** Global setting (decision 7); the defaults are used when not given. */
+  thresholds?: DeviationThresholds;
 }
 
-export function computeTimeline({ flight, params, milestones, recorded }: TimelineInput): Timeline {
+export function computeTimeline({
+  flight,
+  params,
+  milestones,
+  recorded,
+  thresholds = DEVIATION_THRESHOLDS,
+}: TimelineInput): Timeline {
   const { ata, atd } = effectiveActuals(flight, milestones, recorded);
   const arrival = arrivalAnchor(flight, ata);
   const departure = departureAnchor(flight, arrival, params);
@@ -309,7 +324,7 @@ export function computeTimeline({ flight, params, milestones, recorded }: Timeli
       systemValue: systemValues.get(def.id) ?? null,
       actual,
       deviationMinutes: deviation,
-      deviationLevel: deviation === null ? null : deviationLevel(deviation),
+      deviationLevel: deviation === null ? null : deviationLevel(deviation, thresholds),
       orderConflictIds: conflicts.filter((c) => c.laterId === def.id).map((c) => c.earlierId),
     };
   });

@@ -120,6 +120,8 @@ export const hu = {
     usersHint: "Felhasználók létrehozása, szerepköre, aktiválása és jelszava.",
     airlines: "Légitársaságok és sablonok",
     airlinesHint: "Légitársaságok, fordulósablonok és mérföldkövek.",
+    settings: "Beállítások",
+    settingsHint: "Az eltérések színezésének küszöbei.",
     back: "‹ Vissza",
     edit: "Szerkesztés",
     active: "Aktív",
@@ -164,6 +166,20 @@ export const hu = {
       name: "Add meg a nevet (legfeljebb 100 karakter).",
       iataCode: "Az IATA-kód 2 karakter: betű vagy szám.",
       iataTaken: "Ez az IATA-kód már foglalt.",
+    },
+  },
+  settingsForm: {
+    title: "Beállítások",
+    deviationTitle: "Eltérés színküszöbei",
+    deviationHint:
+      "A tényleges és a tervezett idő különbsége eddig zöld, eddig sárga, fölötte piros. A beállítás minden taskra érvényes.",
+    green: "Zöld eddig",
+    yellow: "Sárga eddig",
+    minutesUnit: "perc",
+    example: "Mostani szabály: legfeljebb {green} perc zöld, {yellowFrom}–{yellow} perc sárga, {yellow} perc fölött piros.",
+    errors: {
+      minutes: "0 és 1440 közötti egész szám.",
+      order: "A sárga küszöb nem lehet kisebb a zöldnél.",
     },
   },
   templateForm: {

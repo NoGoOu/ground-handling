@@ -31,6 +31,16 @@ enum TaskStatus {
   COMPLETED
 }
 
+/// Global settings, a single row with id "global" (decision 7).
+model Setting {
+  id                        String   @id @default("global")
+  /// Deviation up to this many minutes is green.
+  deviationGreenMaxMinutes  Int      @default(0)
+  /// Deviation up to this many minutes is yellow, above it red.
+  deviationYellowMaxMinutes Int      @default(5)
+  updatedAt                 DateTime @updatedAt
+}
+
 model User {
   id           String   @id @default(cuid())
   name         String
