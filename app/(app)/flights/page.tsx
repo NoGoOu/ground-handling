@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { DelayBadge, StatusBadge, TypeBadge } from "@/components/badges";
 import { DateNav } from "@/components/date-nav";
 import { TimeStack } from "@/components/time-stack";
@@ -42,6 +43,9 @@ export default async function FlightsPage(props: PageProps<"/flights">) {
           <h1 className="text-2xl font-bold">{messages.pages.flights}</h1>
           <p className="text-sm text-neutral-600">{fmt(t.count, { count: tasks.length })}</p>
         </div>
+        <Link href="/flights/new" className="btn btn-primary">
+          {t.newFlight}
+        </Link>
       </div>
       <DateNav basePath="/flights" date={date} today={toLocalDate(new Date())} />
 
@@ -61,6 +65,9 @@ export default async function FlightsPage(props: PageProps<"/flights">) {
                 <th className="px-3 py-2">{t.columns.type}</th>
                 <th className="px-3 py-2">{t.columns.status}</th>
                 <th className="px-3 py-2">{t.columns.agents}</th>
+                <th className="px-3 py-2">
+                  <span className="sr-only">{t.edit}</span>
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-100">
@@ -104,6 +111,11 @@ export default async function FlightsPage(props: PageProps<"/flights">) {
                   </td>
                   <td className="px-3 py-2">
                     <AgentsCell task={task} />
+                  </td>
+                  <td className="px-3 py-2 text-right">
+                    <Link href={`/flights/${task.flight.id}/edit`} className="text-sky-700 hover:underline">
+                      {t.edit}
+                    </Link>
                   </td>
                 </tr>
               ))}

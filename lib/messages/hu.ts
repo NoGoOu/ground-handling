@@ -83,6 +83,37 @@ export const hu = {
     departureAgent: "Indulás",
     unassigned: "nincs kiosztva",
   },
+  form: {
+    save: "Mentés",
+    saving: "Mentés…",
+    cancel: "Mégse",
+    optional: "opcionális",
+    saved: "Mentve.",
+  },
+  flightForm: {
+    newTitle: "Új járat",
+    editTitle: "Járat szerkesztése",
+    template: "Légitársaság és sablon",
+    inbound: "Érkező járatszám",
+    outbound: "Induló járatszám",
+    stand: "Állóhely",
+    sta: "STA – tervezett érkezés",
+    eta: "ETA – várható érkezés",
+    std: "STD – tervezett indulás",
+    etd: "ETD – várható indulás",
+    timeHint: "Minden idő helyi idő (Budapest).",
+    create: "Létrehozás",
+    systemTimes: "A rendszerből kapott ATA: {ata}, ATD: {atd}",
+    none: "–",
+    errors: {
+      template: "Válassz sablont.",
+      flightNumber: "2–10 karakter, betűk és számok.",
+      stand: "Add meg az állóhelyet (legfeljebb 10 karakter).",
+      time: "Adj meg érvényes időpontot.",
+      stdBeforeSta: "Az STD-nek később kell lennie az STA-nál.",
+      templateLocked: "A sablon nem módosítható, mert a taskon már van rögzítés.",
+    },
+  },
 } as const;
 
 export type Messages = typeof hu;
