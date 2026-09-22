@@ -1,0 +1,32 @@
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ground_handling
+      POSTGRES_PASSWORD: ground_handling
+      POSTGRES_DB: ground_handling
+    ports:
+      - "5432:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ground_handling -d ground_handling"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  app:
+    build: .
+    environment:
+      DATABASE_URL: postgresql://ground_handling:ground_handling@db:5432/ground_handling
+      # Override in production, e.g. AUTH_SECRET=... docker compose up
+      AUTH_SECRET: ${AUTH_SECRET:-insecure-demo-secret-change-me}
+      AUTH_TRUST_HOST: "true"
+    ports:
+      - "3000:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  db-data:

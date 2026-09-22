@@ -43,3 +43,9 @@ next-env.d.ts
 # local Claude Code config
 /.claude/launch.json
 /.claude/settings.local.json
+
+# env example is committed
+!.env.example
+
+# generated Prisma client
+/generated
