@@ -3,30 +3,28 @@ import { DelayBadge, StatusBadge, TypeBadge } from "@/components/badges";
 import { DateNav } from "@/components/date-nav";
 import { TimeStack } from "@/components/time-stack";
 import { listTaskViewsForDay, type TaskView } from "@/lib/data/tasks";
+import { listAgentOptions } from "@/lib/data/users";
 import { messages } from "@/lib/messages";
 import { fmt } from "@/lib/messages/format";
 import { canManageFlights } from "@/lib/permissions";
 import { dateParam } from "@/lib/search-params";
 import { requireCapability } from "@/lib/session";
 import { toLocalDate } from "@/lib/time";
+import { assignAgents } from "./actions";
+import { AssignmentForm, type AgentOption } from "./assignment-form";
 
 const t = messages.flights;
 const tt = messages.times;
 
-function AgentsCell({ task }: { task: TaskView }) {
-  const rows = [
-    { label: t.arrivalAgent, agent: task.arrivalAgent },
-    { label: t.departureAgent, agent: task.effectiveDepartureAgent },
-  ];
+function AgentsCell({ task, agents }: { task: TaskView; agents: AgentOption[] }) {
   return (
-    <div className="flex flex-col gap-0.5">
-      {rows.map(({ label, agent }) => (
-        <span key={label}>
-          <span className="mr-1 text-xs text-neutral-500">{label}</span>
-          {agent ? agent.name : <span className="text-neutral-400">{t.unassigned}</span>}
-        </span>
-      ))}
-    </div>
+    <AssignmentForm
+      action={assignAgents.bind(null, task.id)}
+      type={task.timeline.shape.type}
+      agents={agents}
+      arrivalAgentId={task.arrivalAgent?.id ?? null}
+      departureAgentId={task.departureAgent?.id ?? null}
+    />
   );
 }
 
@@ -35,6 +33,7 @@ export default async function FlightsPage(props: PageProps<"/flights">) {
   const { date: dateValue } = await props.searchParams;
   const date = dateParam(dateValue);
   const tasks = await listTaskViewsForDay(date);
+  const agents = await listAgentOptions(tasks.flatMap((task) => [task.arrivalAgent?.id ?? null, task.departureAgent?.id ?? null]));
 
   return (
     <div className="flex flex-col gap-4">
@@ -110,7 +109,7 @@ export default async function FlightsPage(props: PageProps<"/flights">) {
                     <StatusBadge status={task.status} />
                   </td>
                   <td className="px-3 py-2">
-                    <AgentsCell task={task} />
+                    <AgentsCell task={task} agents={agents} />
                   </td>
                   <td className="px-3 py-2 text-right">
                     <Link href={`/flights/${task.flight.id}/edit`} className="text-sky-700 hover:underline">

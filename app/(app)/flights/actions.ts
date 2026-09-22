@@ -1,9 +1,12 @@
 "use server";
 
+import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
+import { ActionError, actionUser, runAction, type ActionResult } from "@/lib/action";
+import { getTaskView } from "@/lib/data/tasks";
 import { prisma } from "@/lib/db";
 import { messages } from "@/lib/messages";
-import { canManageFlights } from "@/lib/permissions";
+import { canAssignAgents, canManageFlights } from "@/lib/permissions";
 import { getCurrentUser } from "@/lib/session";
 import { toLocalDate } from "@/lib/time";
 import { FLIGHT_FIELDS, flightSchema, type FlightFormInput } from "@/lib/validation/flight";
@@ -65,4 +68,35 @@ export async function updateFlight(
 
   const flight = await prisma.flight.update({ where: { id: flightId }, data: result.data });
   redirect(`/flights?date=${toLocalDate(flight.sta)}`);
+}
+
+async function agentIdFrom(formData: FormData, key: string): Promise<string | null> {
+  const value = formData.get(key);
+  if (typeof value !== "string" || value === "") return null;
+  const agent = await prisma.user.findFirst({ where: { id: value, role: "AGENT", active: true }, select: { id: true } });
+  if (!agent) throw new ActionError(messages.assignment.invalidAgent);
+  return agent.id;
+}
+
+/**
+ * Assigns agents to the two parts of a task. On a quick turnaround the arrival
+ * agent does both parts (rule 8), so the departure part follows the arrival agent.
+ */
+export async function assignAgents(
+  taskId: string,
+  _previous: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  return runAction(async () => {
+    await actionUser(canAssignAgents);
+    const task = await getTaskView(taskId);
+    if (!task) throw new ActionError(messages.errors.notFound);
+
+    const arrivalAgentId = await agentIdFrom(formData, "arrivalAgentId");
+    const departureAgentId =
+      task.timeline.shape.type === "QUICK" ? arrivalAgentId : await agentIdFrom(formData, "departureAgentId");
+
+    await prisma.task.update({ where: { id: taskId }, data: { arrivalAgentId, departureAgentId } });
+    refresh();
+  });
 }

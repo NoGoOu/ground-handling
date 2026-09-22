@@ -83,6 +83,16 @@ export const hu = {
     departureAgent: "Indulás",
     unassigned: "nincs kiosztva",
   },
+  assignment: {
+    agent: "Ügynök",
+    arrival: "Érkezés",
+    departure: "Indulás",
+    none: "– nincs –",
+    inactive: "(inaktív)",
+    quickHint: "Gyors forduló: mindkét részt az érkezési ügynök végzi.",
+    invalidAgent: "Csak aktív ügynök választható.",
+    save: "Kiosztás mentése",
+  },
   form: {
     save: "Mentés",
     saving: "Mentés…",
