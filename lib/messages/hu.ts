@@ -4,9 +4,24 @@ export const hu = {
     name: "Ground Handling",
     description: "Repülőtéri földi kiszolgálás szervezése",
   },
+  roles: {
+    ADMIN: "Admin",
+    SHIFT_LEAD: "Műszakvezető",
+    AGENT: "Ügynök",
+  },
+  nav: {
+    logout: "Kilépés",
+  },
+  login: {
+    title: "Belépés",
+    username: "Felhasználónév",
+    password: "Jelszó",
+    submit: "Belépés",
+    submitting: "Belépés…",
+    invalid: "Hibás felhasználónév vagy jelszó.",
+  },
   home: {
-    underConstruction:
-      "Az alkalmazás fejlesztés alatt áll. A belépés és a járatlista a következő lépésekben készül el.",
+    signedInAs: "Bejelentkezve:",
   },
 } as const;
 
