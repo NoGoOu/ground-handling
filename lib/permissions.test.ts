@@ -6,6 +6,7 @@ import {
   canAssignAgents,
   canChangeTaskStatus,
   canManageFlights,
+  canManageShifts,
   canRecordMilestone,
   canViewTask,
   homePathFor,
@@ -39,6 +40,9 @@ describe("routes", () => {
     expect(canAccessPath("SHIFT_LEAD", "/flights/new")).toBe(true);
     expect(canAccessPath("SHIFT_LEAD", "/agent")).toBe(false);
     expect(canAccessPath("AGENT", "/agent")).toBe(true);
+    expect(canAccessPath("AGENT", "/shifts")).toBe(false);
+    expect(canAccessPath("SHIFT_LEAD", "/shifts")).toBe(true);
+    expect(canAccessPath("ADMIN", "/shifts")).toBe(true);
   });
 
   it("leaves shared routes to object-level checks", () => {
@@ -49,9 +53,10 @@ describe("routes", () => {
 });
 
 describe("role capabilities", () => {
-  it("lets managers handle flights and assignments, and only admins administer", () => {
+  it("lets managers handle flights, assignments and shifts, and only admins administer", () => {
     expect([admin, lead, anna].map(canManageFlights)).toEqual([true, true, false]);
     expect([admin, lead, anna].map(canAssignAgents)).toEqual([true, true, false]);
+    expect([admin, lead, anna].map(canManageShifts)).toEqual([true, true, false]);
     expect([admin, lead, anna].map(canAdminister)).toEqual([true, false, false]);
   });
 });

@@ -26,6 +26,7 @@ export function homePathFor(role: Role): string {
 const ROUTE_ROLES: [prefix: string, roles: Role[]][] = [
   ["/admin", ["ADMIN"]],
   ["/flights", ["ADMIN", "SHIFT_LEAD"]],
+  ["/shifts", ["ADMIN", "SHIFT_LEAD"]],
   ["/agent", ["ADMIN", "AGENT"]],
 ];
 
@@ -42,6 +43,11 @@ export function canManageFlights(actor: Actor): boolean {
 }
 
 export function canAssignAgents(actor: Actor): boolean {
+  return isManager(actor);
+}
+
+/** Shift rosters are kept by the shift lead and the admin. */
+export function canManageShifts(actor: Actor): boolean {
   return isManager(actor);
 }
 
