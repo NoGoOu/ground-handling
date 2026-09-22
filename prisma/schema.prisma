@@ -6,3 +6,147 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+// All DateTime values are stored in UTC and shown in Europe/Budapest time.
+
+enum Role {
+  ADMIN
+  SHIFT_LEAD
+  AGENT
+}
+
+enum MilestoneAnchor {
+  ARRIVAL
+  DEPARTURE
+}
+
+enum MilestonePart {
+  ARRIVAL_PART
+  DEPARTURE_PART
+}
+
+enum TaskStatus {
+  PLANNED
+  IN_PROGRESS
+  COMPLETED
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  username     String   @unique
+  passwordHash String
+  role         Role
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  arrivalTasks       Task[]            @relation("ArrivalAgent")
+  departureTasks     Task[]            @relation("DepartureAgent")
+  recordedMilestones MilestoneRecord[] @relation("RecordedBy")
+  updatedMilestones  MilestoneRecord[] @relation("UpdatedBy")
+}
+
+model Airline {
+  id        String               @id @default(cuid())
+  name      String
+  iataCode  String               @unique
+  templates TurnaroundTemplate[]
+  flights   Flight[]
+}
+
+model TurnaroundTemplate {
+  id                     String  @id @default(cuid())
+  airlineId              String
+  airline                Airline @relation(fields: [airlineId], references: [id])
+  name                   String
+  minTurnaroundMinutes   Int
+  travelMinutes          Int
+  postDepartureMinutes   Int
+  departureReportMinutes Int
+  minBreakMinutes        Int
+
+  milestones MilestoneDefinition[]
+  flights    Flight[]
+
+  @@unique([airlineId, name])
+}
+
+model MilestoneDefinition {
+  id            String             @id @default(cuid())
+  templateId    String
+  template      TurnaroundTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  order         Int
+  code          String
+  name          String
+  anchor        MilestoneAnchor
+  offsetMinutes Int
+  required      Boolean
+  part          MilestonePart
+
+  records MilestoneRecord[]
+
+  @@unique([templateId, code])
+}
+
+model Flight {
+  id                   String             @id @default(cuid())
+  airlineId            String
+  airline              Airline            @relation(fields: [airlineId], references: [id])
+  templateId           String
+  template             TurnaroundTemplate @relation(fields: [templateId], references: [id])
+  inboundFlightNumber  String
+  outboundFlightNumber String
+  sta                  DateTime
+  eta                  DateTime?
+  std                  DateTime
+  etd                  DateTime?
+  stand                String
+  /// From the external system.
+  ata                  DateTime?
+  /// From the external system.
+  atd                  DateTime?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  task Task?
+
+  @@index([sta])
+  @@index([std])
+}
+
+model Task {
+  id               String     @id @default(cuid())
+  flightId         String     @unique
+  flight           Flight     @relation(fields: [flightId], references: [id], onDelete: Cascade)
+  status           TaskStatus @default(PLANNED)
+  arrivalAgentId   String?
+  arrivalAgent     User?      @relation("ArrivalAgent", fields: [arrivalAgentId], references: [id])
+  departureAgentId String?
+  departureAgent   User?      @relation("DepartureAgent", fields: [departureAgentId], references: [id])
+  /// Template parameters and milestone definitions frozen when the task is completed.
+  templateSnapshot Json?
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+
+  records MilestoneRecord[]
+}
+
+model MilestoneRecord {
+  id                    String              @id @default(cuid())
+  taskId                String
+  task                  Task                @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  milestoneDefinitionId String
+  milestoneDefinition   MilestoneDefinition @relation(fields: [milestoneDefinitionId], references: [id])
+  /// Minute precision (seconds cut off).
+  actualTime            DateTime
+  recordedById          String
+  recordedBy            User                @relation("RecordedBy", fields: [recordedById], references: [id])
+  recordedAt            DateTime            @default(now())
+  /// Set on the first correction, null until then.
+  updatedById           String?
+  updatedBy             User?               @relation("UpdatedBy", fields: [updatedById], references: [id])
+  updatedAt             DateTime?
+
+  @@unique([taskId, milestoneDefinitionId])
+}
