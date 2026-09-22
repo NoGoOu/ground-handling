@@ -181,12 +181,95 @@ export interface TimelineRow {
   orderConflictIds: string[];
 }
 
+export type TurnaroundType = "QUICK" | "LONG";
+
+/** A half-open interval [start, end). */
+export interface TimeWindow {
+  start: Date;
+  end: Date;
+}
+
+export interface OccupancyWindow extends TimeWindow {
+  /** WHOLE for a quick turnaround, otherwise the part the window belongs to. */
+  part: Part | "WHOLE";
+}
+
+export interface TurnaroundShape {
+  type: TurnaroundType;
+  breakMinutes: number;
+  arrivalWindowEnd: Date;
+  departureWindowStart: Date;
+  windows: OccupancyWindow[];
+}
+
+/** Planned time of the last arrival-part milestone; the arrival anchor if there is none. */
+export function lastArrivalPlanned(
+  milestones: readonly MilestoneDef[],
+  planned: ReadonlyMap<string, Date>,
+  arrival: Date,
+): Date {
+  const arrivalPart = sortByOrder(milestones).filter((m) => m.part === "ARRIVAL_PART");
+  const last = arrivalPart.at(-1);
+  return (last && planned.get(last.id)) ?? arrival;
+}
+
+/** Rule 8 and "Ügynök-foglaltság": turnaround type and occupancy windows. */
+export function turnaroundShape(
+  params: TemplateParams,
+  arrival: Date,
+  departure: Date,
+  lastArrival: Date,
+): TurnaroundShape {
+  const arrivalWindowEnd = addMinutes(lastArrival, params.travelMinutes);
+  const departureWindowStart = addMinutes(
+    departure,
+    -params.departureReportMinutes - params.travelMinutes,
+  );
+  const breakMinutes = diffMinutes(departureWindowStart, arrivalWindowEnd);
+  const start = addMinutes(arrival, -params.travelMinutes);
+  const end = addMinutes(departure, params.postDepartureMinutes);
+
+  if (breakMinutes >= params.minBreakMinutes) {
+    return {
+      type: "LONG",
+      breakMinutes,
+      arrivalWindowEnd,
+      departureWindowStart,
+      windows: [
+        { part: "ARRIVAL_PART", start, end: arrivalWindowEnd },
+        { part: "DEPARTURE_PART", start: departureWindowStart, end },
+      ],
+    };
+  }
+  return {
+    type: "QUICK",
+    breakMinutes,
+    arrivalWindowEnd,
+    departureWindowStart,
+    windows: [{ part: "WHOLE", start, end }],
+  };
+}
+
+export function windowsOverlap(a: TimeWindow, b: TimeWindow): boolean {
+  return a.start.getTime() < b.end.getTime() && b.start.getTime() < a.end.getTime();
+}
+
+/** Rule 8: on a quick turnaround the arrival agent also does the departure part. */
+export function effectiveDepartureAgentId(
+  type: TurnaroundType,
+  arrivalAgentId: string | null,
+  departureAgentId: string | null,
+): string | null {
+  return type === "QUICK" ? arrivalAgentId : departureAgentId;
+}
+
 export interface Timeline {
   arrivalAnchor: Date;
   departureAnchor: Date;
   effectiveAta: Date | null;
   effectiveAtd: Date | null;
   delayMinutes: number | null;
+  shape: TurnaroundShape;
   rows: TimelineRow[];
 }
 
@@ -237,6 +320,7 @@ export function computeTimeline({ flight, params, milestones, recorded }: Timeli
     effectiveAta: ata,
     effectiveAtd: atd,
     delayMinutes: delayMinutes(flight.std, atd),
+    shape: turnaroundShape(params, arrival, departure, lastArrivalPlanned(milestones, planned, arrival)),
     rows,
   };
 }
