@@ -1,10 +1,10 @@
 # Ground Handling App – projektleírás
 
-*Verzió: 7 · 2026. szeptember 22.*
+*Verzió: 8 · 2026. szeptember 22.*
 
 Nyílt forráskódú webalkalmazás repülőtéri földi kiszolgálás (ground handling) szervezésére. Minden járatfordulóhoz egy task tartozik, benne mérföldkövekkel, amelyeknek van tervezett és tényleges időpontja. A mérföldkövek légitársaságonként testreszabható sablonokból jönnek. A hozzáférés szerepkör alapú.
 
-Ez a fájl a projekt fő leírása. Ha a domain logika nem egyértelmű, kérdezz, ne találj ki új üzleti szabályt. A még eldöntetlen kérdések a fájl végén, a „Nyitott kérdések” részben vannak.
+Ez a fájl a projekt fő leírása. Ha a domain logika nem egyértelmű, kérdezz, ne találj ki új üzleti szabályt. A még eldöntetlen kérdések a fájl végén, a „Nyitott kérdések és ideiglenes döntések” részben vannak.
 
 ## Tech stack
 
@@ -157,14 +157,16 @@ Minden lépés végén futtatható állapot és egy commit.
 17. Admin: sablonok
 18. README + indítás tiszta állapotból
 
-## Nyitott kérdések
+## Nyitott kérdések és ideiglenes döntések
 
-Mindegyiknél jelölve, melyik lépés előtt kell eldönteni.
+Az MVP ezekkel az ideiglenes döntésekkel készül, hogy végig lehessen építeni. Egyik sem végleges üzleti szabály, bármelyik módosítható.
 
-1. **Napi járatlista** (9. lépés előtt): a 24 órás időszak a naptári nap (00:00–24:00 helyi idő), vagy választható kezdőponttól (pl. mostantól) indul? Mi szerint rendezzünk: STA, érkezési horgony vagy STD?
-2. **Lezárt task visszanyitása** (13. lépés előtt): visszanyitható-e a COMPLETED task? Ha igen, visszanyitáskor újra a sablon aktuális állapota számít, vagy a pillanatkép marad?
-3. **Rögzítés javítása és törlése** (13. lépés előtt): egyelőre a Szerepkörök szerinti szabály marad (az ügynök a sajátját, a műszakvezető bármelyiket javíthatja), és a felület mutatja, ki rögzítette és ki módosította. Törölhető-e egy rögzítés (pl. véletlen „Most” után), és ki törölheti?
-4. **Sablon szerkesztése** (17. lépés előtt): mi történjen, ha olyan mérföldkövet törölnek, amihez egy nyitott taskon már van rögzítés? Módosítható-e az ATA/ATD horgonya, offsetje, része és sorrendi helye? Kötelező-e, hogy az érkezési rész mérföldkövei a sorrendben mind az indulási rész előtt legyenek?
+1. **Napi járatlista:** naptári nap (00:00–24:00, Europe/Budapest), dátumválasztóval. Egy járat azon a napon jelenik meg, amelyre az STA-ja vagy az STD-je esik (az éjfélen átnyúló forduló mindkét napon). Rendezés STA szerint.
+2. **Lezárt task visszanyitása:** a státusz bármelyik irányba váltható. A pillanatkép minden lezáráskor elkészül; visszanyitáskor törlődik, és újra a sablon aktuális állapota számít.
+3. **Rögzítés törlése:** nincs törlés, csak javítás (a Szerepkörök szerint).
+4. **Sablon szerkesztése:** rögzítéssel rendelkező mérföldkő nem törölhető. Az ATA és az ATD horgonya, offsetje, része és kötelező volta zárolt (ATA: ARRIVAL, 0, érkezési; ATD: DEPARTURE, 0, indulási). Az ATA az első, az ATD az utolsó, és az érkezési rész mérföldkövei mind az indulási rész előtt vannak.
+5. **Hiányzó kötelező mérföldkő jelölése:** akkor jelöljük, ha a tervezett ideje már elmúlt, vagy a task lezárt.
+6. **Járat űrlap:** az STD-nek később kell lennie az STA-nál; a járat sablonja nem módosítható, ha a taskon már van rögzítés.
 
 ## Később (most ne építsd)
 
