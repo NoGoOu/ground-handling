@@ -68,7 +68,6 @@ export const hu = {
     empty: "Erre a napra nincs járat.",
     count: "{count} járat",
     newFlight: "Új járat",
-    open: "Megnyitás",
     edit: "Szerkesztés",
     columns: {
       flight: "Járat",
@@ -78,11 +77,7 @@ export const hu = {
       type: "Típus",
       status: "Státusz",
       agents: "Ügynökök",
-      delay: "Késés",
     },
-    arrivalAgent: "Érkezés",
-    departureAgent: "Indulás",
-    unassigned: "nincs kiosztva",
   },
   task: {
     back: "‹ Vissza",
@@ -107,7 +102,6 @@ export const hu = {
     correct: "Javítás",
     timeInput: "Időpont (helyi idő)",
     saveTime: "Mentés",
-    saved: "Rögzítve.",
     orderWarningSaved: "Mentve, de a sorrend eltér: {names}",
     invalidTime: "Adj meg érvényes időpontot.",
     conflict: "Közben valaki más rögzítette ezt a mérföldkövet. Frissítsd az oldalt.",
@@ -130,8 +124,6 @@ export const hu = {
     edit: "Szerkesztés",
     active: "Aktív",
     inactive: "Inaktív",
-    yes: "igen",
-    no: "nem",
   },
   userForm: {
     newTitle: "Új felhasználó",
@@ -175,7 +167,6 @@ export const hu = {
     },
   },
   templateForm: {
-    newTemplate: "Új sablon",
     newName: "Új sablon neve",
     create: "Sablon létrehozása",
     createHint: "A paraméterek a demo sablon értékeivel indulnak; az ATA és az ATD mérföldkő automatikusan létrejön.",
