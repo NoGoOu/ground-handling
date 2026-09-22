@@ -3,6 +3,7 @@ import { cache } from "react";
 import { auth } from "@/auth";
 import type { Role } from "@/generated/prisma/enums";
 import { prisma } from "@/lib/db";
+import { homePathFor } from "@/lib/permissions";
 
 export interface CurrentUser {
   id: string;
@@ -32,5 +33,12 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
 export async function requireUser(): Promise<CurrentUser> {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+  return user;
+}
+
+/** For pages: also redirects to the user's home page when the capability check fails. */
+export async function requireCapability(allowed: (user: CurrentUser) => boolean): Promise<CurrentUser> {
+  const user = await requireUser();
+  if (!allowed(user)) redirect(homePathFor(user.role));
   return user;
 }

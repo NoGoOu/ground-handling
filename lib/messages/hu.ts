@@ -11,6 +11,19 @@ export const hu = {
   },
   nav: {
     logout: "Kilépés",
+    flights: "Járatok",
+    myTasks: "Taskjaim",
+    admin: "Admin",
+  },
+  errors: {
+    forbidden: "Ehhez nincs jogosultságod.",
+    notFound: "A keresett elem nem található.",
+    invalidInput: "Hibás adatok, ellenőrizd a mezőket.",
+  },
+  pages: {
+    flights: "Napi járatlista",
+    agent: "Taskjaim",
+    admin: "Admin",
   },
   login: {
     title: "Belépés",
@@ -19,9 +32,6 @@ export const hu = {
     submit: "Belépés",
     submitting: "Belépés…",
     invalid: "Hibás felhasználónév vagy jelszó.",
-  },
-  home: {
-    signedInAs: "Bejelentkezve:",
   },
 } as const;
 
