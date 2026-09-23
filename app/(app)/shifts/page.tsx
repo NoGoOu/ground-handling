@@ -1,8 +1,9 @@
+import Link from "next/link";
 import { DateNav } from "@/components/date-nav";
 import { listShiftsForDay } from "@/lib/data/shifts";
 import { messages } from "@/lib/messages";
 import { fmt } from "@/lib/messages/format";
-import { canViewRoster } from "@/lib/permissions";
+import { canManageSegmentTypes, canViewRoster } from "@/lib/permissions";
 import { dateParam } from "@/lib/search-params";
 import { requireCapability } from "@/lib/session";
 import { formatTimeOnDay, toLocalDate } from "@/lib/time";
@@ -10,16 +11,23 @@ import { formatTimeOnDay, toLocalDate } from "@/lib/time";
 const t = messages.roster;
 
 export default async function RosterPage(props: PageProps<"/shifts">) {
-  await requireCapability(canViewRoster);
+  const user = await requireCapability(canViewRoster);
   const { date: dateValue } = await props.searchParams;
   const date = dateParam(dateValue);
   const shifts = await listShiftsForDay(date, "ACTUAL");
 
   return (
     <div className="flex flex-col gap-4">
-      <div>
-        <h1 className="text-2xl font-bold">{messages.pages.shifts}</h1>
-        <p className="text-sm text-neutral-600">{fmt(t.count, { count: shifts.length })}</p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold">{messages.pages.shifts}</h1>
+          <p className="text-sm text-neutral-600">{fmt(t.count, { count: shifts.length })}</p>
+        </div>
+        {canManageSegmentTypes(user) && (
+          <Link href="/shifts/types" className="btn btn-secondary">
+            {messages.nav.segmentTypes}
+          </Link>
+        )}
       </div>
       <DateNav basePath="/shifts" date={date} today={toLocalDate(new Date())} />
 
