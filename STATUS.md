@@ -9,6 +9,7 @@
 - 2. mérföldkő, 3. lépés: rétegelt beosztás adatmodellje (SegmentType, Publication, Shift, ShiftSegment), migráció a régi műszakokból, bővített seed.
 - 2. mérföldkő, 4. lépés: rétegjogosultságok – a tervezet csak a tervezőé, a publikált réteg mindenkinek zárolt, a valós a szerkesztési jog szerint; a beosztás olvasása a hatókört követi. Tesztekkel.
 - 2. mérföldkő, 5. lépés: résztípusok kezelése (`/shifts/types`) – létrehozás, szerkesztés, operatív és aktív jelölés, használatszám; típus nem törölhető.
+- 2. mérföldkő, 11. lépés: drag and drop kiosztás mindhárom ütközés figyelmeztetésével (a mentés soha nem tiltott, az érintett dobozok jelölve maradnak).
 - 2. mérföldkő, 10. lépés: a sávos nézet olvasásra – a nem operatív blokkok mintázott dobozként jelennek meg a sávon (típus, helyszín, leírás és az utazással számolt idő a buboréksúgóban).
 - 2. mérföldkő, 9. lépés: a sávos nézet adatrétege az új modellre – a sávok a valós réteg operatív részeiből, a blokkok a nem operatív részekből (utazási idővel) állnak, és a háromféle ütközés (task–task átfedés, task–blokk ütközés, műszakon kívüli task) mind vizsgálva van, unit tesztekkel.
 - 2. mérföldkő, 8. lépés: a valós réteg szerkesztése ugyanazokkal az űrlapokkal, és az eltérések kiemelése a cellában (a publikált és a valós rész is jelölve, ha a kettő nem egyezik).
@@ -17,10 +18,10 @@
 
 ## Állapot
 
-- Utolsó commit: `df98334` – feat: compute blocks and the third conflict on the band view (a 10. lépés még commit előtt áll)
+- Utolsó commit: `ad4dcfa` – feat: show the blocks on the band view (a 11. lépés még commit előtt áll)
 - Tesztek: `npm test` → 160 teszt, mind zöld
 - Lint és build: `npm run lint` hibátlan, `npx tsc --noEmit` tiszta
-- Kézi próba: a valós réteg műszakjának módosítása után a publikált és a valós rész is „Eltér a publikálttól” jelölést kapott; tervezőként egy hét publikálása (a tervezetek publikálttá váltak, a valós másolat elkészült, az újrapublikálás elutasítva); tervezet-műszak felvitele, TRN rész blokkal (Blokk: 14:40 – 16:55), átfedő rész elutasítása, rész és műszak eltávolítása; műszakvezetőként a tervezet réteg nem látszik, a `/shifts/types` tiltott. A próbaadatok törölve.
+- Kézi próba: a valós beosztás átalakítása után egy kiosztatlan doboz ráhúzása az ügynök sávjára mindhárom ütközést jelezte („Kiosztva, de ütközés van: A műszakon kívülre esik, Átfedés egy másik taskkal, Ütközik egy blokkal”), és a mentés így is megtörtént; a valós réteg műszakjának módosítása után a publikált és a valós rész is „Eltér a publikálttól” jelölést kapott; tervezőként egy hét publikálása (a tervezetek publikálttá váltak, a valós másolat elkészült, az újrapublikálás elutasítva); tervezet-műszak felvitele, TRN rész blokkal (Blokk: 14:40 – 16:55), átfedő rész elutasítása, rész és műszak eltávolítása; műszakvezetőként a tervezet réteg nem látszik, a `/shifts/types` tiltott. A próbaadatok törölve.
 
 ## Eltérések a CLAUDE.md-től
 
@@ -34,4 +35,4 @@
 
 ## Következő lépés
 
-- 2. mérföldkő, 11. lépés: drag and drop kiosztás a háromféle ütközés figyelmeztetésével.
+- 2. mérföldkő, 12. lépés: ügynök nézet – a saját blokkjai megjelennek.
