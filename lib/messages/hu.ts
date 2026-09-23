@@ -41,7 +41,12 @@ export const hu = {
       OUTSIDE_SHIFT: "A műszakon kívülre esik",
     },
     legend: "A műszak ideje kiemelt, a piros szegély ütközést jelez. A dobozok a hatályos időkből számolnak.",
+    dragHint: "A dobozt húzd egy ügynök sávjára a kiosztáshoz, a „Kiosztatlan” sávra a kiosztás törléséhez.",
     boxTitle: "{flight} · {stand} állóhely · {from}–{to}",
+    conflictWarning: "Kiosztva, de ütközés van: {reasons}",
+    assigned: "Kiosztva.",
+    cleared: "A kiosztás törölve.",
+    dropHere: "Ide húzható",
   },
   shiftForm: {
     newTitle: "Új műszak",

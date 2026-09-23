@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  assignmentUpdate,
   boardRange,
   buildBoard,
   conflictsFor,
@@ -119,6 +120,39 @@ describe("conflicts", () => {
       ...taskBoxes(task({ id: "t3", windows: [{ part: "WHOLE", start: at("08:00"), end: at("09:00") }] })),
     ];
     expect(conflictsFor(touching, [{ start: at("06:00"), end: at("14:00") }]).size).toBe(0);
+  });
+});
+
+describe("assignment from a drop", () => {
+  const current = { arrivalAgentId: "anna", departureAgentId: "bela" };
+
+  it("gives both parts to the arrival agent on a quick turnaround", () => {
+    expect(assignmentUpdate("WHOLE", "QUICK", "cili", current)).toEqual({
+      arrivalAgentId: "cili",
+      departureAgentId: "cili",
+    });
+  });
+
+  it("changes only the dropped part on a long turnaround", () => {
+    expect(assignmentUpdate("ARRIVAL_PART", "LONG", "cili", current)).toEqual({
+      arrivalAgentId: "cili",
+      departureAgentId: "bela",
+    });
+    expect(assignmentUpdate("DEPARTURE_PART", "LONG", "cili", current)).toEqual({
+      arrivalAgentId: "anna",
+      departureAgentId: "cili",
+    });
+  });
+
+  it("clears the assignment when dropped on the unassigned lane", () => {
+    expect(assignmentUpdate("WHOLE", "QUICK", null, current)).toEqual({
+      arrivalAgentId: null,
+      departureAgentId: null,
+    });
+    expect(assignmentUpdate("DEPARTURE_PART", "LONG", null, current)).toEqual({
+      arrivalAgentId: "anna",
+      departureAgentId: null,
+    });
   });
 });
 

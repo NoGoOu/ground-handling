@@ -107,6 +107,27 @@ export function conflictsFor(boxes: readonly BoardBox[], shifts: readonly TimeWi
   return result;
 }
 
+export interface Assignment {
+  arrivalAgentId: string | null;
+  departureAgentId: string | null;
+}
+
+/**
+ * Dropping a box on a lane: the arrival box sets the arrival agent, the
+ * departure box the departure agent. A quick turnaround has one box and both
+ * parts go to the arrival agent (rule 8). A null agent clears the assignment.
+ */
+export function assignmentUpdate(
+  part: Part | "WHOLE",
+  type: TurnaroundType,
+  agentId: string | null,
+  current: Assignment,
+): Assignment {
+  if (part === "DEPARTURE_PART") return { ...current, departureAgentId: agentId };
+  if (type === "QUICK") return { arrivalAgentId: agentId, departureAgentId: agentId };
+  return { ...current, arrivalAgentId: agentId };
+}
+
 const HOUR_MS = 3_600_000;
 
 /**
