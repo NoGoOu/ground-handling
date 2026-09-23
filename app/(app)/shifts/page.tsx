@@ -1,12 +1,21 @@
 import Link from "next/link";
 import type { RosterLayer } from "@/generated/prisma/client";
+import { isPublished, listPublicationsInRange } from "@/lib/data/publications";
 import { listRosterAgents, listShiftsInRange, type RosterShift } from "@/lib/data/shifts";
 import { messages } from "@/lib/messages";
 import { fmt } from "@/lib/messages/format";
-import { canManageSegmentTypes, canViewRoster, rosterVisibleUserIds, visibleLayers } from "@/lib/permissions";
+import {
+  canManageSegmentTypes,
+  canPublishRoster,
+  canViewRoster,
+  rosterVisibleUserIds,
+  visibleLayers,
+} from "@/lib/permissions";
 import { dateParam } from "@/lib/search-params";
 import { requireCapability } from "@/lib/session";
 import { addDays, formatDayShort, formatTimeOnDay, startOfWeek, toLocalDate, weekdayIndex } from "@/lib/time";
+import { publishPeriod } from "./actions";
+import { PublishForm } from "./publish-form";
 
 const t = messages.roster;
 const DAYS = 7;
@@ -105,9 +114,12 @@ export default async function RosterPage(props: PageProps<"/shifts">) {
   const layers = visibleLayers(user);
   const userIds = rosterVisibleUserIds(user);
 
-  const [agents, shifts] = await Promise.all([
+  const weekEnd = addDays(weekStart, DAYS - 1);
+
+  const [agents, shifts, publications] = await Promise.all([
     listRosterAgents(userIds),
     listShiftsInRange({ startLocalDate: weekStart, days: DAYS, layers, userIds }),
+    listPublicationsInRange(weekStart, weekEnd),
   ]);
   const cells = groupByCell(shifts);
   const today = toLocalDate(new Date());
@@ -118,7 +130,7 @@ export default async function RosterPage(props: PageProps<"/shifts">) {
         <div>
           <h1 className="text-2xl font-bold">{messages.pages.shifts}</h1>
           <p className="text-sm text-neutral-600">
-            {fmt(t.week, { start: formatDayShort(weekStart), end: formatDayShort(addDays(weekStart, DAYS - 1)) })}
+            {fmt(t.week, { start: formatDayShort(weekStart), end: formatDayShort(weekEnd) })}
           </p>
         </div>
         {canManageSegmentTypes(user) && (
@@ -128,6 +140,10 @@ export default async function RosterPage(props: PageProps<"/shifts">) {
         )}
       </div>
       <WeekNav weekStart={weekStart} thisWeek={startOfWeek(today)} />
+
+      {canPublishRoster(user) && (
+        <PublishForm action={publishPeriod} defaultStart={weekStart} defaultEnd={weekEnd} />
+      )}
 
       {agents.length === 0 ? (
         <p className="rounded-lg border border-dashed border-neutral-300 p-8 text-center text-neutral-600">
@@ -142,6 +158,9 @@ export default async function RosterPage(props: PageProps<"/shifts">) {
                 {days.map((day) => (
                   <th key={day} className={`px-3 py-2 ${day === today ? "text-sky-800" : ""}`}>
                     {t.weekdays[weekdayIndex(day)]} {formatDayShort(day)}
+                    {isPublished(day, publications) && (
+                      <span className="ml-1 font-normal text-neutral-400 normal-case">{messages.publish.publishedDay}</span>
+                    )}
                   </th>
                 ))}
               </tr>

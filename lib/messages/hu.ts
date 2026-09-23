@@ -86,6 +86,21 @@ export const hu = {
       notFound: "A típus nem található.",
     },
   },
+  publish: {
+    title: "Publikálás",
+    hint: "A kiválasztott időszak tervezetei publikálttá válnak, és a valós beosztás a másolatukként jön létre. Egy nap csak egyszer publikálható.",
+    start: "Kezdő nap",
+    end: "Záró nap",
+    submit: "Publikálás",
+    done: "Publikálva.",
+    nothingToPublish: "Publikálva, de ebben az időszakban nem volt tervezet.",
+    publishedDay: "Publikálva",
+    errors: {
+      date: "Adj meg érvényes napot.",
+      endBeforeStart: "A záró nap nem lehet korábbi a kezdőnél.",
+      alreadyPublished: "Ez az időszak már publikálva van: {start} – {end}.",
+    },
+  },
   shiftForm: {
     title: "Műszak",
     segmentType: "Típus",
