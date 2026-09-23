@@ -2,13 +2,21 @@
 
 Nyílt forráskódú webalkalmazás repülőtéri földi kiszolgálás (ground handling) szervezésére. Minden járatfordulóhoz egy task tartozik, benne légitársaságonként testreszabható mérföldkövekkel, tervezett és tényleges időpontokkal. A részletes leírás és az üzleti szabályok: [CLAUDE.md](CLAUDE.md).
 
-## Mit tud (1. mérföldkő)
+## Mit tud
+
+**1. mérföldkő – napi munka**
 
 - **Napi járatlista** (műszakvezető): a nap járatai STA szerint, várható és tényleges időkkel, forduló típusával (gyors / hosszú), státusszal, késéssel és ügynök-kiosztással.
 - **Járat létrehozása és szerkesztése**: a task automatikusan létrejön.
 - **Task nézet**: mérföldkövenként tervezett és tényleges idő, színezett eltérés, „Most” gomb és kézi időmegadás, ki rögzítette és ki módosította, sorrend-figyelmeztetés, státuszváltás. Az ATA és az ATD sorában a rendszerből kapott érték és az ügynök saját rögzítése egymás mellett látszik.
 - **Ügynök nézet**: a saját taskok telefonra optimalizálva.
-- **Admin**: felhasználók, légitársaságok, sablonok és mérföldkövek szerkesztése.
+- **Admin**: felhasználók, légitársaságok, sablonok és mérföldkövek szerkesztése, valamint a globális beállítások (az eltérés színküszöbei, alapérték 0 és 5 perc).
+
+**2. mérföldkő – műszakbeosztás és sávos nézet**
+
+- **Műszakbeosztás** (műszakvezető és admin): ügynökönként szabadon megadott kezdés és vég, opcionális megjegyzéssel. A műszak átnyúlhat éjfélen, és ugyanannak az ügynöknek nem lehet két átfedő műszakja.
+- **Sávos nézet**: ügynökönként egy sáv a műszak kiemelésével, a taskok a foglaltsági ablakaik szerinti dobozokkal (hosszú fordulónál kettő, gyorsnál egy), felül a „Kiosztatlan” sáv, és mozgó vonal a mostani időnél.
+- **Kiosztás húzással**: a doboz ráhúzása egy sávra hozzárendeli az adott részt, a „Kiosztatlan” sávra húzva törli. Ütközéskor – ha két foglaltsági ablak átfed, vagy a task kilóg a műszakból – a rendszer figyelmeztet, de menti, és a dobozt piros szegéllyel jelöli.
 
 ## Indítás Docker Compose-zal
 
@@ -80,6 +88,7 @@ Ha a Docker nem elérhető, a Prisma saját helyi Postgrese is megfelel fejleszt
 | Hely | Tartalom |
 |---|---|
 | `lib/turnaround.ts` | Időszámítási és foglaltsági szabályok, tiszta függvények tesztekkel |
+| `lib/board.ts` | A sávos nézet modellje: dobozok, sávok, ütközésvizsgálat |
 | `lib/permissions.ts` | Jogosultsági szabályok (a proxy, az oldalak és minden szerverművelet ezt használja) |
 | `lib/time.ts` | Átváltás UTC és Europe/Budapest között |
 | `lib/messages/hu.ts` | A felület összes magyar szövege |
