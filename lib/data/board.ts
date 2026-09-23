@@ -18,20 +18,25 @@ function toBoardTask(task: TaskView): BoardTask {
 
 /** The band view of one Budapest day: lanes, boxes and conflicts. */
 export async function getBoardForDay(localDate: string): Promise<Board> {
-  const [tasks, shifts] = await Promise.all([listTaskViewsForDay(localDate), listShiftsForDay(localDate)]);
+  const [tasks, shifts] = await Promise.all([listTaskViewsForDay(localDate), listShiftsForDay(localDate, "ACTUAL")]);
   const agents = await listAgentOptions([
     ...tasks.flatMap((task) => [task.arrivalAgent?.id ?? null, task.departureAgent?.id ?? null]),
     ...shifts.map((shift) => shift.user.id),
   ]);
 
+  // Lanes show the operative segments of the actual roster; blocks come later.
   return buildBoard({
     tasks: tasks.map(toBoardTask),
-    shifts: shifts.map((shift) => ({
-      id: shift.id,
-      userId: shift.user.id,
-      start: shift.startsAt,
-      end: shift.endsAt,
-    })),
+    shifts: shifts.flatMap((shift) =>
+      shift.segments
+        .filter((segment) => segment.type.operative)
+        .map((segment) => ({
+          id: segment.id,
+          userId: shift.user.id,
+          start: segment.start,
+          end: segment.end,
+        })),
+    ),
     agents,
   });
 }

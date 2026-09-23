@@ -46,6 +46,13 @@ export const hu = {
     cleared: "A kiosztás törölve.",
     dropHere: "Ide húzható",
   },
+  roster: {
+    count: "{count} műszak",
+    empty: "Erre a napra nincs műszak a valós beosztásban.",
+    layerDraft: "Tervezet",
+    layerPublished: "Publikált",
+    layerActual: "Valós",
+  },
   shiftForm: {
     newTitle: "Új műszak",
     agent: "Ügynök",

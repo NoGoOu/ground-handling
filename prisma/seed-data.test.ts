@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { computeTimeline, windowsOverlap, type MilestoneDef } from "@/lib/turnaround";
-import { buildSeedFlights, buildSeedShifts, SEED_MILESTONES, SEED_TEMPLATE, SEED_USERS } from "./seed-data";
+import { buildSeedFlights, SEED_MILESTONES, SEED_TEMPLATE, SEED_USERS } from "./seed-data";
+import { SEED_SHIFTS, segmentTimes, type SeedShift } from "./seed-roster";
 
 const milestones: MilestoneDef[] = SEED_MILESTONES.map((m) => ({ ...m, id: m.code }));
 const flights = buildSeedFlights("2026-09-22");
@@ -11,10 +12,11 @@ function shapeOf(flight: (typeof flights)[number]) {
 }
 
 describe("seed data", () => {
-  it("has one admin, one shift lead and two agents", () => {
+  it("has one admin, one shift lead, one planner and two agents", () => {
     const roles = SEED_USERS.flatMap((u) => u.roles);
     expect(roles.filter((r) => r === "Admin")).toHaveLength(1);
     expect(roles.filter((r) => r === "Műszakvezető")).toHaveLength(1);
+    expect(roles.filter((r) => r === "Tervező")).toHaveLength(1);
     expect(roles.filter((r) => r === "Ügynök")).toHaveLength(2);
     expect(SEED_USERS.filter((u) => u.agent)).toHaveLength(2);
   });
@@ -50,19 +52,56 @@ describe("seed data", () => {
   });
 });
 
-describe("seed shifts", () => {
-  const shifts = buildSeedShifts("2026-09-22");
+const DAY = "2026-09-22";
 
-  it("gives each demo agent one shift that does not overlap another of theirs", () => {
-    for (const shift of shifts) {
-      const others = shifts.filter((s) => s !== shift && s.agent === shift.agent);
-      for (const other of others) {
-        expect(windowsOverlap({ start: shift.startsAt, end: shift.endsAt }, { start: other.startsAt, end: other.endsAt })).toBe(false);
+interface SeedWindow {
+  agent: string;
+  start: Date;
+  end: Date;
+  operative: boolean;
+}
+
+/** Every segment of one layer as a concrete window. */
+function windowsOf(layer: "PUBLISHED" | "ACTUAL"): SeedWindow[] {
+  return SEED_SHIFTS.filter((shift: SeedShift) => shift.layers.includes(layer)).flatMap((shift) =>
+    shift.segments.map((segment) => ({
+      agent: shift.agent as string,
+      ...segmentTimes(DAY, segment),
+      operative: segment.typeCode === "SHIFT",
+    })),
+  );
+}
+
+describe("seed roster", () => {
+  const actual = windowsOf("ACTUAL");
+  const published = windowsOf("PUBLISHED");
+
+  it("never lets two segments of the same agent overlap", () => {
+    for (const layer of [actual, published]) {
+      for (const window of layer) {
+        for (const other of layer) {
+          if (window === other || window.agent !== other.agent) continue;
+          expect(windowsOverlap(window, other), `${window.agent} ${window.start.toISOString()}`).toBe(false);
+        }
       }
     }
   });
 
-  it("covers the occupancy windows of the assigned demo tasks", () => {
+  it("has a non-operative segment with travel time that makes a block", () => {
+    const block = SEED_SHIFTS.flatMap((s) => s.segments).find((segment) => segment.createBlock);
+    expect(block).toBeDefined();
+    expect(block!.typeCode).not.toBe("SHIFT");
+    expect(block!.travelBeforeMinutes).toBeGreaterThan(0);
+    expect(block!.travelAfterMinutes).toBeGreaterThan(0);
+  });
+
+  it("has a day where the actual roster differs from the published one", () => {
+    const key = (w: SeedWindow) => `${w.agent} ${w.start.toISOString()} ${w.end.toISOString()}`;
+    const publishedKeys = new Set(published.map(key));
+    expect(actual.some((w) => !publishedKeys.has(key(w)))).toBe(true);
+  });
+
+  it("covers the occupancy windows of the assigned demo tasks with operative segments", () => {
     for (const flight of flights) {
       const recorded = new Map(flight.records.map((r) => [r.code, r.time]));
       const { shape } = computeTimeline({ flight, params: SEED_TEMPLATE, milestones, recorded });
@@ -70,10 +109,14 @@ describe("seed shifts", () => {
         const agent =
           window.part === "DEPARTURE_PART" && shape.type === "LONG" ? flight.departureAgent : flight.arrivalAgent;
         if (!agent) continue;
-        const shift = shifts.find((s) => s.agent === agent);
-        expect(shift, `${flight.inboundFlightNumber}: ${agent}`).toBeDefined();
-        expect(window.start.getTime(), `${flight.inboundFlightNumber} start`).toBeGreaterThanOrEqual(shift!.startsAt.getTime());
-        expect(window.end.getTime(), `${flight.inboundFlightNumber} end`).toBeLessThanOrEqual(shift!.endsAt.getTime());
+        const covering = actual.find(
+          (segment) =>
+            segment.operative &&
+            segment.agent === agent &&
+            segment.start.getTime() <= window.start.getTime() &&
+            segment.end.getTime() >= window.end.getTime(),
+        );
+        expect(covering, `${flight.inboundFlightNumber}: ${agent}`).toBeDefined();
       }
     }
   });

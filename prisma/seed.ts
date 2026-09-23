@@ -4,10 +4,9 @@ import { prisma } from "@/lib/db";
 import { DEFAULT_ROLES } from "@/lib/permissions";
 import { SETTINGS_ID } from "@/lib/settings";
 import { templateSnapshotJson } from "@/lib/snapshot";
-import { toLocalDate } from "@/lib/time";
+import { localDayRange, addDays, toLocalDate } from "@/lib/time";
 import {
   buildSeedFlights,
-  buildSeedShifts,
   DEMO_PASSWORD,
   SEED_AIRLINE,
   SEED_MILESTONES,
@@ -15,6 +14,12 @@ import {
   SEED_TEAM,
   SEED_USERS,
 } from "./seed-data";
+import {
+  SEED_PUBLICATION_DAYS,
+  SEED_SEGMENT_TYPES,
+  SEED_SHIFTS,
+  segmentTimes,
+} from "./seed-roster";
 
 // Usage: tsx prisma/seed.ts [--if-empty]
 // Replaces all data with the demo data set for today (Europe/Budapest).
@@ -34,6 +39,8 @@ async function main() {
     await tx.setting.upsert({ where: { id: SETTINGS_ID }, create: { id: SETTINGS_ID }, update: {} });
 
     await tx.shift.deleteMany();
+    await tx.publication.deleteMany();
+    await tx.segmentType.deleteMany();
     await tx.milestoneRecord.deleteMany();
     await tx.task.deleteMany();
     await tx.flight.deleteMany();
@@ -93,9 +100,43 @@ async function main() {
     });
     const milestoneId = new Map(template.milestones.map((m) => [m.code, m.id]));
 
-    for (const shift of buildSeedShifts(localDate)) {
-      const { agent, ...shiftData } = shift;
-      await tx.shift.create({ data: { ...shiftData, userId: userId(agent)! } });
+    // Roster: segment types, one published period and the actual layer.
+    const segmentTypeIds = new Map<string, string>();
+    for (const type of SEED_SEGMENT_TYPES) {
+      const created = await tx.segmentType.create({ data: type });
+      segmentTypeIds.set(created.code, created.id);
+    }
+
+    const publication = await tx.publication.create({
+      data: {
+        startDate: localDayRange(localDate).start,
+        endDate: localDayRange(addDays(localDate, SEED_PUBLICATION_DAYS - 1)).start,
+        publishedById: userId("tervezo")!,
+      },
+    });
+
+    for (const shift of SEED_SHIFTS) {
+      for (const layer of shift.layers) {
+        await tx.shift.create({
+          data: {
+            userId: userId(shift.agent)!,
+            layer,
+            publicationId: layer === "PUBLISHED" ? publication.id : null,
+            note: shift.note ?? null,
+            segments: {
+              create: shift.segments.map((segment) => ({
+                ...segmentTimes(localDate, segment),
+                segmentTypeId: segmentTypeIds.get(segment.typeCode)!,
+                location: segment.location ?? null,
+                description: segment.description ?? null,
+                createBlock: segment.createBlock ?? false,
+                travelBeforeMinutes: segment.travelBeforeMinutes ?? 0,
+                travelAfterMinutes: segment.travelAfterMinutes ?? 0,
+              })),
+            },
+          },
+        });
+      }
     }
 
     for (const flight of buildSeedFlights(localDate)) {

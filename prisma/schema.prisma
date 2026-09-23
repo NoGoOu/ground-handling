@@ -56,6 +56,7 @@ model User {
   roles              UserRole[]
   permissions        UserPermission[]
   ledTeams           Team[]            @relation("TeamLeader")
+  publications       Publication[]     @relation("PublishedBy")
   arrivalTasks       Task[]            @relation("ArrivalAgent")
   departureTasks     Task[]            @relation("DepartureAgent")
   recordedMilestones MilestoneRecord[] @relation("RecordedBy")
@@ -119,19 +120,79 @@ model Team {
   members User[] @relation("TeamMembers")
 }
 
-/// One agent's shift; start and end are free, and it may cross midnight.
-model Shift {
+/// The three layers of the roster (CLAUDE.md, "Beosztás rétegei").
+enum RosterLayer {
+  DRAFT
+  PUBLISHED
+  ACTUAL
+}
+
+/// Types of shift segment; only operative ones may carry flight tasks.
+model SegmentType {
   id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  startsAt  DateTime
-  endsAt    DateTime
-  note      String?
+  name      String   @unique
+  code      String   @unique
+  operative Boolean  @default(true)
+  active    Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@index([userId, startsAt])
-  @@index([startsAt])
+  segments ShiftSegment[]
+}
+
+/// One published period; the days it covers cannot be published again.
+model Publication {
+  id            String   @id @default(cuid())
+  /// Local (Europe/Budapest) days, stored as the UTC instant of local midnight.
+  startDate     DateTime
+  endDate       DateTime
+  publishedById String
+  publishedBy   User     @relation("PublishedBy", fields: [publishedById], references: [id])
+  publishedAt   DateTime @default(now())
+
+  shifts Shift[]
+
+  @@index([startDate])
+}
+
+/// One agent's shift in one layer; its start and end come from its segments.
+model Shift {
+  id            String       @id @default(cuid())
+  userId        String
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  layer         RosterLayer
+  publicationId String?
+  publication   Publication? @relation(fields: [publicationId], references: [id])
+  note          String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  segments ShiftSegment[]
+
+  @@index([userId, layer])
+}
+
+/// A part of a shift: time, type, and optionally a block with travel time.
+model ShiftSegment {
+  id                  String      @id @default(cuid())
+  shiftId             String
+  shift               Shift       @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+  start               DateTime
+  end                 DateTime
+  segmentTypeId       String
+  segmentType         SegmentType @relation(fields: [segmentTypeId], references: [id])
+  location            String?
+  description         String?
+  /// Non-operative segments can show up as a block in the daily assignment.
+  createBlock         Boolean     @default(false)
+  /// Travel to and from the segment, in minutes; the block is widened by these.
+  travelBeforeMinutes Int         @default(0)
+  travelAfterMinutes  Int         @default(0)
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+
+  @@index([shiftId])
+  @@index([start])
 }
 
 model Airline {

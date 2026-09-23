@@ -8,6 +8,7 @@ export const DEMO_PASSWORD = "demo1234";
 export const SEED_USERS = [
   { username: "admin", name: "Admin Adél", roles: ["Admin"], agent: false },
   { username: "vezeto", name: "Vezető Viktor", roles: ["Műszakvezető"], agent: false },
+  { username: "tervezo", name: "Tervező Tamás", roles: ["Tervező"], agent: false },
   { username: "ugynok1", name: "Kiss Péter", roles: ["Ügynök"], agent: true },
   { username: "ugynok2", name: "Nagy Eszter", roles: ["Ügynök"], agent: true },
 ] as const;
@@ -20,22 +21,6 @@ export type SeedUsername = (typeof SEED_USERS)[number]["username"];
 export const SEED_AIRLINE = { name: "Demo Fapados", iataCode: "ZZ" };
 export const SEED_TEMPLATE = { name: "Alap", ...DEMO_TEMPLATE_PARAMS };
 export const SEED_MILESTONES = DEMO_MILESTONES;
-
-export interface SeedShift {
-  agent: SeedUsername;
-  startsAt: Date;
-  endsAt: Date;
-  note: string | null;
-}
-
-/** Shifts that cover the demo flights of the day. */
-export function buildSeedShifts(localDate: string): SeedShift[] {
-  const at = localTimeOn(localDate);
-  return [
-    { agent: "ugynok1", startsAt: at("06:00"), endsAt: at("14:00"), note: "Reggeles" },
-    { agent: "ugynok2", startsAt: at("11:00"), endsAt: at("19:00"), note: null },
-  ];
-}
 
 export interface SeedFlight {
   inboundFlightNumber: string;
