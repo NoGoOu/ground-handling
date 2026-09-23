@@ -102,9 +102,17 @@ function Lane({
         {sublabel && <div className="truncate text-xs text-orange-700">{sublabel}</div>}
       </div>
       <div
+        // Both dragenter and dragover have to allow the drop, or some browsers
+        // refuse it.
+        onDragEnter={(event) => {
+          if (!canAssign || !dropTarget.active) return;
+          event.preventDefault();
+          setOver(true);
+        }}
         onDragOver={(event) => {
           if (!canAssign || !dropTarget.active) return;
           event.preventDefault();
+          event.dataTransfer.dropEffect = "move";
           setOver(true);
         }}
         onDragLeave={() => setOver(false)}
