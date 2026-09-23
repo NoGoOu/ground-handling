@@ -1,23 +1,23 @@
 # Állapot – Ground Handling App
 
-*Frissítve: 2026. szeptember 23. 18:05 · CLAUDE.md verzió: 18*
+*Frissítve: 2026. szeptember 23. 19:05 · CLAUDE.md verzió: 18*
 
 ## Mi készült el
 
-- 1. mérföldkő (MVP) és a hozzá tartozó utómunka: kész (korábbi commitok).
-- 2. mérföldkő, 1. lépés: jogosultsági rendszer adatrétege. A jogosultságok listája a kódban van magyar megnevezéssel (`lib/permissions/catalog.ts`), a szerepkörök, csapatok, felhasználói szerepkörök és egyéni jogosultságok az adatbázisban. A tényleges jogosultság a szerepkörök és az egyéni kiegészítések uniója, hatókörnél a legszélesebb nyer. A proxy, az oldalak és a szerverműveletek jogosultságra ellenőriznek, szerepkörnévre sehol.
-- Migráció: a négy alapértelmezett szerepkör (Admin zárolt, Tervező, Műszakvezető, Ügynök) létrejött, a meglévő felhasználók a korábbi szerepkörüknek megfelelőt kapták, a két demo ügynök a műszakvezető vezette „Demo csapat” tagja lett, és csak ezután került ki a régi `role` oszlop.
+- 1. mérföldkő (MVP) és az utómunka: kész (korábbi commitok).
+- 2. mérföldkő, 1. lépés: jogosultsági rendszer adatrétege – jogosultságkatalógus a kódban, szerepkörök, csapatok, felhasználói szerepkörök és egyéni jogosultságok az adatbázisban, hatókörrel; a proxy, az oldalak és a szerverműveletek jogosultságra ellenőriznek. Migráció a meglévő felhasználók viselkedésének megtartásával.
+- 2. mérföldkő, 2. lépés: jogosultsági admin felület – `/admin/roles` szerepkör × jogosultság mátrix pipákkal és hatókör-választóval (az Admin szerepkör zárolva), új szerepkör létrehozása; `/admin/teams` csapatok létrehozása és szerkesztése a vezetővel és a taglistával; a felhasználó adatlapján több szerepkör, csapat, egyéni jogosultságok, és a tényleges jogosultságok táblázata forrásonként.
 
 ## Állapot
 
-- Utolsó commit: `51b0c1a` – fix: allow the drop on dragenter as well (az 1. lépés még commit előtt áll)
-- Tesztek: `npm test` → 134 teszt, mind zöld (ebből 18 új a jogosultságokra)
+- Utolsó commit: `99dd189` – feat: replace roles with a configurable permission system (a 2. lépés még commit előtt áll)
+- Tesztek: `npm test` → 135 teszt, mind zöld
 - Lint és build: `npm run lint` hibátlan, `npx tsc --noEmit` tiszta
-- Kézi próba: műszakvezető, ügynök és admin belépés után változatlan menü és hozzáférés; az `/admin` a műszakvezetőt visszairányítja; az utolsó aktív admintól nem vehető el az Admin szerepkör.
+- Kézi próba: új szerepkör létrehozása és csapat hatókörű jogosultság mentése (újratöltés után is megmarad); egyéni jogosultság hozzáadása után a tényleges lista „Ügynök (Saját), Egyéni jogosultság (Csapat)” forrásokat mutat; csapatvezetőként megnyílt a csapattárs taskja, de rögzíteni nem lehetett rajta. A próbák után a demo adatok újratöltve.
 
 ## Eltérések a CLAUDE.md-től
 
-- **„Ügynök” a kódban = csapattag.** A szerepkörnév megszűnt, ezért a kiosztható emberek listája (és a „Taskjaim” menüpont) a csapattagságból adódik, a CLAUDE.md „Minden ügynök egy csapat tagja” mondata alapján. Így a demo viselkedése változatlan: a műszakvezető és az admin nem kerül az ügynökválasztóba.
+- **„Ügynök” a kódban = csapattag.** A szerepkörnév megszűnt, ezért a kiosztható emberek listája és a „Taskjaim” menüpont a csapattagságból adódik, a CLAUDE.md „Minden ügynök egy csapat tagja” mondata alapján. A demo viselkedése így változatlan.
 
 ## Kérdések a tervezéshez
 
@@ -25,4 +25,4 @@
 
 ## Következő lépés
 
-- 2. mérföldkő, 2. lépés: jogosultsági admin felület – szerepkör × jogosultság táblázat pipákkal és hatókörrel, új szerepkör, csapatok kezelése, felhasználónként szerepkörök és egyéni jogosultságok, valamint a tényleges jogosultságok a forrásukkal.
+- 2. mérföldkő, 3. lépés: Prisma – PLANNER szerepkör, `SegmentType`, `Publication`, `Shift` (réteggel), `ShiftSegment`, migráció a régi egyszerű műszakokból, és a bővített seed (tervező, Műszak és TRN típus, publikált és valós beosztás, utazási idős TRN blokk, egy eltérő nap).

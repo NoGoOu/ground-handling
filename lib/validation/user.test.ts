@@ -7,6 +7,7 @@ const input = {
   username: " Teszt.Elek ",
   password: "titkos123",
   active: "on",
+  teamId: "",
 };
 
 describe("user form validation", () => {
@@ -16,6 +17,11 @@ describe("user form validation", () => {
 
   it("reads an unticked checkbox as inactive", () => {
     expect(newUserSchema.parse({ ...input, active: "" }).active).toBe(false);
+  });
+
+  it("reads an empty team as no team", () => {
+    expect(newUserSchema.parse(input).teamId).toBeNull();
+    expect(newUserSchema.parse({ ...input, teamId: "team-1" }).teamId).toBe("team-1");
   });
 
   it("rejects bad usernames and short passwords", () => {

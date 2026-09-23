@@ -6,7 +6,16 @@ import { Prisma } from "@/generated/prisma/client";
 import { countActiveAdmins } from "@/lib/data/users";
 import { prisma } from "@/lib/db";
 import { messages } from "@/lib/messages";
-import { BUILT_IN_ADMIN_ROLE, canManageUsers } from "@/lib/permissions";
+import { refresh } from "next/cache";
+import { ActionError, actionUser, runAction, type ActionResult } from "@/lib/action";
+import {
+  BUILT_IN_ADMIN_ROLE,
+  canManageUsers,
+  isPermission,
+  isScope,
+  PERMISSIONS,
+  type Scope,
+} from "@/lib/permissions";
 import { getCurrentUser } from "@/lib/session";
 import { fieldErrors, formValues, type FormState } from "@/lib/validation/form";
 import { editUserSchema, newUserSchema, USER_FIELDS, type UserFormInput } from "@/lib/validation/user";
@@ -22,6 +31,13 @@ function isUniqueViolation(error: unknown): boolean {
 /** Submitted values without the password, so it is never sent back to the browser. */
 function echo(values: Record<string, string>, roleIds: string[]): Partial<UserFormInput> {
   return { ...values, password: "", roleIds } as Partial<UserFormInput>;
+}
+
+/** Only an existing team may be set. */
+async function validTeamId(teamId: string | null): Promise<string | null> {
+  if (!teamId) return null;
+  const team = await prisma.team.findUnique({ where: { id: teamId }, select: { id: true } });
+  return team?.id ?? null;
 }
 
 /** Only roles that exist may be assigned. */
@@ -56,6 +72,7 @@ export async function createUser(_previous: UserFormState, formData: FormData): 
     await prisma.user.create({
       data: {
         ...data,
+        teamId: await validTeamId(data.teamId),
         passwordHash: await bcrypt.hash(password, 10),
         roles: { create: roleIds.map((roleId) => ({ roleId })) },
       },
@@ -65,6 +82,38 @@ export async function createUser(_previous: UserFormState, formData: FormData): 
     throw error;
   }
   redirect("/admin/users");
+}
+
+/** Individual grants on top of the roles; there is no individual revoke. */
+export async function saveUserPermissions(
+  userId: string,
+  _previous: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  return runAction(async () => {
+    await actionUser(canManageUsers);
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { id: true } });
+    if (!user) throw new ActionError(messages.errors.notFound);
+
+    const grants = new Map<string, Scope>();
+    for (const value of formData.getAll("granted")) {
+      if (typeof value !== "string" || !isPermission(value)) continue;
+      const rawScope = formData.get(`scope:${value}`);
+      grants.set(value, PERMISSIONS[value].scoped && isScope(rawScope) ? rawScope : "ALL");
+    }
+
+    await prisma.$transaction(async (tx) => {
+      await tx.userPermission.deleteMany({ where: { userId, permission: { notIn: [...grants.keys()] } } });
+      for (const [permission, scope] of grants) {
+        await tx.userPermission.upsert({
+          where: { userId_permission: { userId, permission } },
+          create: { userId, permission, scope },
+          update: { scope },
+        });
+      }
+    });
+    refresh();
+  });
 }
 
 export async function updateUser(userId: string, _previous: UserFormState, formData: FormData): Promise<UserFormState> {
@@ -85,7 +134,11 @@ export async function updateUser(userId: string, _previous: UserFormState, formD
     await prisma.$transaction(async (tx) => {
       await tx.user.update({
         where: { id: userId },
-        data: { ...data, ...(password ? { passwordHash: await bcrypt.hash(password, 10) } : {}) },
+        data: {
+          ...data,
+          teamId: await validTeamId(data.teamId),
+          ...(password ? { passwordHash: await bcrypt.hash(password, 10) } : {}),
+        },
       });
       await tx.userRole.deleteMany({ where: { userId, roleId: { notIn: roleIds.length > 0 ? roleIds : ["-"] } } });
       for (const roleId of roleIds) {

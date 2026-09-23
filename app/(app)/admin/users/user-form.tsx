@@ -19,14 +19,16 @@ export function UserForm({
   initial,
   isNew,
   roles,
+  teams,
 }: {
   action: (state: UserFormState, formData: FormData) => Promise<UserFormState>;
   initial: UserFormInput;
   isNew: boolean;
   roles: RoleOption[];
+  teams: RoleOption[];
 }) {
   const [state, formAction, pending] = useActionState(action, {});
-  const value = (key: "name" | "username" | "active") => state.values?.[key] ?? initial[key];
+  const value = (key: "name" | "username" | "active" | "teamId") => state.values?.[key] ?? initial[key];
   const roleIds = state.values?.roleIds ?? initial.roleIds;
 
   return (
@@ -55,6 +57,17 @@ export function UserForm({
         ))}
         <p className="text-sm text-neutral-600">{t.rolesHint}</p>
       </fieldset>
+
+      <FormField label={t.team} hint={t.teamHint}>
+        <select name="teamId" defaultValue={value("teamId")} className="input">
+          <option value="">{t.noTeam}</option>
+          {teams.map((team) => (
+            <option key={team.id} value={team.id}>
+              {team.name}
+            </option>
+          ))}
+        </select>
+      </FormField>
 
       <FormField
         label={isNew ? t.password : t.newPassword}

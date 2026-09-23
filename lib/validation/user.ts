@@ -3,7 +3,7 @@ import { messages } from "@/lib/messages";
 
 const e = messages.userForm.errors;
 
-export const USER_FIELDS = ["name", "username", "password", "active"] as const;
+export const USER_FIELDS = ["name", "username", "password", "active", "teamId"] as const;
 export type UserFormInput = Record<(typeof USER_FIELDS)[number], string> & { roleIds: string[] };
 
 const base = {
@@ -15,6 +15,8 @@ const base = {
     .pipe(z.string().regex(/^[a-z0-9._-]{3,32}$/, e.username)),
   // Checkbox: "on" when ticked, "" when not.
   active: z.string().transform((value) => value === "on"),
+  // Empty means "no team"; the id itself is checked against the database.
+  teamId: z.string().transform((value) => (value === "" ? null : value)),
 };
 
 export const newUserSchema = z.object({
