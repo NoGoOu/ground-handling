@@ -7,6 +7,9 @@ import {
   canAssignTask,
   canChangeTaskStatus,
   canRecordMilestone,
+  canEditLayer,
+  canViewLayer,
+  canViewLayerOf,
   canViewRosterOf,
   canViewTask,
   DEFAULT_ROLES,
@@ -14,7 +17,9 @@ import {
   homePathFor,
   INDIVIDUAL_SOURCE,
   inScope,
+  rosterVisibleUserIds,
   scopeOf,
+  visibleLayers,
   type Actor,
   type TaskAssignment,
 } from "@/lib/permissions";
@@ -187,6 +192,40 @@ describe("roster visibility", () => {
   });
 });
 
+describe("roster layers", () => {
+  it("shows the draft only to whoever may plan", () => {
+    expect(visibleLayers(planner)).toEqual(["DRAFT", "PUBLISHED", "ACTUAL"]);
+    expect(visibleLayers(admin)).toEqual(["DRAFT", "PUBLISHED", "ACTUAL"]);
+    expect(visibleLayers(lead)).toEqual(["PUBLISHED", "ACTUAL"]);
+    expect(visibleLayers(anna)).toEqual([]);
+    expect(canViewLayer(lead, "DRAFT")).toBe(false);
+  });
+
+  it("locks the published layer for everyone", () => {
+    for (const actor of [admin, planner, lead]) {
+      expect(canEditLayer(actor, "PUBLISHED")).toBe(false);
+    }
+  });
+
+  it("lets the planner edit the draft and both of them the actual roster", () => {
+    expect(canEditLayer(planner, "DRAFT")).toBe(true);
+    expect(canEditLayer(lead, "DRAFT")).toBe(false);
+    expect(canEditLayer(planner, "ACTUAL")).toBe(true);
+    expect(canEditLayer(lead, "ACTUAL")).toBe(true);
+    expect(canEditLayer(anna, "ACTUAL")).toBe(false);
+  });
+
+  it("limits a team-scoped viewer to their own team", () => {
+    expect(rosterVisibleUserIds(lead)).toBeNull();
+    expect(rosterVisibleUserIds(planner)).toBeNull();
+    expect(rosterVisibleUserIds(teamLeader)).toEqual(["cili", "anna"]);
+    expect(rosterVisibleUserIds(anna)).toEqual([]);
+    expect(canViewLayerOf(teamLeader, "ACTUAL", "anna")).toBe(true);
+    expect(canViewLayerOf(teamLeader, "ACTUAL", "bela")).toBe(false);
+    expect(canViewLayerOf(teamLeader, "DRAFT", "anna")).toBe(false);
+  });
+});
+
 describe("routes", () => {
   it("guards each area with its permission", () => {
     expect(canAccessPath(anna, "/admin")).toBe(false);
@@ -199,6 +238,13 @@ describe("routes", () => {
     expect(canAccessPath(planner, "/shifts")).toBe(true);
     expect(canAccessPath(planner, "/flights")).toBe(false);
     expect(canAccessPath(admin, "/admin/roles")).toBe(true);
+  });
+
+  it("keeps the segment types with the planner", () => {
+    expect(canAccessPath(planner, "/shifts/types")).toBe(true);
+    expect(canAccessPath(admin, "/shifts/types")).toBe(true);
+    expect(canAccessPath(lead, "/shifts/types")).toBe(false);
+    expect(canAccessPath(lead, "/shifts")).toBe(true);
   });
 
   it("leaves shared routes to object-level checks", () => {

@@ -157,6 +157,45 @@ export function canViewRosterOf(actor: Actor, userId: string): boolean {
   return inScope(actor, "ROSTER_VIEW", [userId]);
 }
 
+export const ROSTER_LAYERS = ["DRAFT", "PUBLISHED", "ACTUAL"] as const;
+export type RosterLayerName = (typeof ROSTER_LAYERS)[number];
+
+/**
+ * The draft is the planner's workspace, so only they and the admin see it; the
+ * other two layers follow the roster permission (CLAUDE.md, "Beosztás rétegei").
+ */
+export function canViewLayer(actor: Actor, layer: RosterLayerName): boolean {
+  if (layer === "DRAFT") return can(actor, "ROSTER_DRAFT");
+  return can(actor, "ROSTER_VIEW") || can(actor, "ROSTER_DRAFT");
+}
+
+export function visibleLayers(actor: Actor): RosterLayerName[] {
+  return ROSTER_LAYERS.filter((layer) => canViewLayer(actor, layer));
+}
+
+/** A roster row belongs to one agent, so the scope of ROSTER_VIEW applies too. */
+export function canViewLayerOf(actor: Actor, layer: RosterLayerName, userId: string): boolean {
+  if (layer === "DRAFT") return can(actor, "ROSTER_DRAFT");
+  return can(actor, "ROSTER_DRAFT") || canViewRosterOf(actor, userId);
+}
+
+/** The published layer is locked once published; changes go to the actual one. */
+export function canEditLayer(actor: Actor, layer: RosterLayerName): boolean {
+  if (layer === "DRAFT") return can(actor, "ROSTER_DRAFT");
+  if (layer === "ACTUAL") return can(actor, "ROSTER_ACTUAL_EDIT");
+  return false;
+}
+
+/** Agents whose roster the actor may read; null means everyone. */
+export function rosterVisibleUserIds(actor: Actor): string[] | null {
+  if (can(actor, "ROSTER_DRAFT")) return null;
+  const scope = scopeOf(actor, "ROSTER_VIEW");
+  if (!scope) return [];
+  if (scope === "ALL") return null;
+  if (scope === "TEAM") return [actor.id, ...actor.teamMemberIds];
+  return [actor.id];
+}
+
 // Thin, readable wrappers over `can`. They check permissions, never role names.
 export const canManageFlights = (actor: Actor) => can(actor, "FLIGHT_MANAGE");
 export const canAssignTasks = (actor: Actor) => can(actor, "TASK_ASSIGN");
@@ -182,6 +221,7 @@ const ROUTE_PERMISSIONS: [prefix: string, permissions: Permission[]][] = [
   ["/admin/settings", ["SETTINGS_MANAGE"]],
   ["/admin", ["USER_MANAGE", "ROLE_MANAGE", "TEAM_MANAGE", "AIRLINE_MANAGE", "SETTINGS_MANAGE"]],
   ["/flights", ["FLIGHT_MANAGE"]],
+  ["/shifts/types", ["SEGMENT_TYPE_MANAGE"]],
   ["/shifts", ["ROSTER_VIEW", "ROSTER_DRAFT"]],
   ["/board", ["BOARD_VIEW"]],
   ["/agent", ["TASK_VIEW"]],
