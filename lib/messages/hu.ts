@@ -37,6 +37,7 @@ export const hu = {
     now: "Most",
     conflicts: {
       OVERLAP: "Átfedés egy másik taskkal",
+      BLOCK: "Ütközik egy blokkal",
       OUTSIDE_SHIFT: "A műszakon kívülre esik",
     },
     legend: "A műszak ideje kiemelt, a piros szegély ütközést jelez. A dobozok a hatályos időkből számolnak.",

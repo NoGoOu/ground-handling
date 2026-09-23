@@ -7,7 +7,8 @@ import {
   hourTicks,
   mergeWindows,
   taskBoxes,
-  type BoardShift,
+  blocksOf,
+  type BoardSegment,
   type BoardTask,
 } from "@/lib/board";
 
@@ -44,12 +45,37 @@ const longTask = task({
   ],
 });
 
-const shift = (userId: string, from: string, to: string, id = `${userId}-${from}`): BoardShift => ({
-  id,
+const segment = (
+  userId: string,
+  from: string,
+  to: string,
+  overrides: Partial<BoardSegment> = {},
+): BoardSegment => ({
+  id: `${userId}-${from}`,
   userId,
   start: at(from),
   end: at(to),
+  typeName: "Műszak",
+  operative: true,
+  createBlock: false,
+  travelBeforeMinutes: 0,
+  travelAfterMinutes: 0,
+  location: null,
+  description: null,
+  ...overrides,
 });
+
+/** A training segment that casts a block, travel time included. */
+const training = (userId: string, from: string, to: string, travel = 0): BoardSegment =>
+  segment(userId, from, to, {
+    id: `${userId}-trn-${from}`,
+    typeName: "Oktatás",
+    operative: false,
+    createBlock: true,
+    travelBeforeMinutes: travel,
+    travelAfterMinutes: travel,
+    location: "Oktatóterem",
+  });
 
 describe("boxes", () => {
   it("makes one box for a quick turnaround and two for a long one", () => {
@@ -178,7 +204,7 @@ describe("view range", () => {
 describe("board", () => {
   const board = buildBoard({
     tasks: [task(), longTask, task({ id: "t4", arrivalAgentId: null, departureAgentId: null })],
-    shifts: [shift("anna", "06:00", "14:00")],
+    segments: [segment("anna", "06:00", "14:00")],
     agents,
   });
 
@@ -202,5 +228,55 @@ describe("board", () => {
     const anna = board.lanes.find((l) => l.agent.id === "anna")!;
     expect(anna.boxes.every((b) => b.conflicts.length === 0)).toBe(true);
     expect(anna.boxes.map((b) => b.taskId)).toEqual(["t1", "t2"]);
+  });
+});
+
+describe("blocks", () => {
+  it("widens a non-operative segment with the travel time", () => {
+    const [block] = blocksOf([training("anna", "09:00", "10:30", 20)]);
+    expect(block.start).toEqual(at("08:40"));
+    expect(block.end).toEqual(at("10:50"));
+    expect(block.segment).toEqual({ start: at("09:00"), end: at("10:30") });
+    expect(block.label).toBe("Oktatás");
+    expect(block.location).toBe("Oktatóterem");
+  });
+
+  it("only makes a block from a non-operative segment that asks for one", () => {
+    const plain = segment("anna", "09:00", "10:30", { operative: false, createBlock: false });
+    const operativeBlock = segment("anna", "09:00", "10:30", { createBlock: true });
+    expect(blocksOf([plain, operativeBlock])).toEqual([]);
+  });
+
+  it("flags a box that runs into a block, travel time included", () => {
+    const boxes = taskBoxes(task({ windows: [{ part: "WHOLE", start: at("10:40"), end: at("11:30") }] }));
+    const shifts = [{ start: at("06:00"), end: at("14:00") }];
+    const blocks = blocksOf([training("anna", "09:00", "10:30", 20)]);
+    expect(conflictsFor(boxes, shifts, blocks).get("t1:WHOLE")).toEqual(["BLOCK"]);
+  });
+
+  it("leaves a box that only touches the block alone", () => {
+    const boxes = taskBoxes(task({ windows: [{ part: "WHOLE", start: at("10:50"), end: at("11:30") }] }));
+    const shifts = [{ start: at("06:00"), end: at("14:00") }];
+    const blocks = blocksOf([training("anna", "09:00", "10:30", 20)]);
+    expect(conflictsFor(boxes, shifts, blocks).size).toBe(0);
+  });
+
+  it("puts the blocks on the lane and keeps the operative time as the shift", () => {
+    const board = buildBoard({
+      tasks: [task()],
+      segments: [segment("anna", "06:00", "14:00"), training("anna", "09:00", "10:30", 20)],
+      agents,
+    });
+    const lane = board.lanes.find((l) => l.agent.id === "anna")!;
+    expect(lane.shifts).toEqual([{ start: at("06:00"), end: at("14:00") }]);
+    expect(lane.blocks).toHaveLength(1);
+    expect(lane.hasShift).toBe(true);
+  });
+
+  it("gives a lane to an agent who only has a block that day", () => {
+    const board = buildBoard({ tasks: [], segments: [training("bela", "09:00", "10:30", 20)], agents });
+    const lane = board.lanes.find((l) => l.agent.id === "bela")!;
+    expect(lane.hasShift).toBe(false);
+    expect(lane.blocks).toHaveLength(1);
   });
 });

@@ -4,7 +4,12 @@ import { windowsOverlap, type OccupancyWindow, type Part, type TimeWindow, type 
 // Model of the band view (CLAUDE.md, "Sávos idősoros nézet"). Pure functions:
 // the data layer passes in tasks and shifts, and gets lanes and boxes back.
 
-export type ConflictKind = "OVERLAP" | "OUTSIDE_SHIFT";
+/**
+ * The three conflicts of the band view (CLAUDE.md, "Kiosztás és ütközés"): two
+ * occupancy windows of the same agent overlap, an occupancy window runs into a
+ * non-operative block, or it is not inside the agent's operative segments.
+ */
+export type ConflictKind = "OVERLAP" | "BLOCK" | "OUTSIDE_SHIFT";
 
 /** What the view needs from a task; the data layer maps a TaskView onto this. */
 export interface BoardTask {
@@ -19,9 +24,50 @@ export interface BoardTask {
   windows: OccupancyWindow[];
 }
 
-export interface BoardShift extends TimeWindow {
+/** One segment of the actual roster, operative or not. */
+export interface BoardSegment extends TimeWindow {
   id: string;
   userId: string;
+  typeName: string;
+  operative: boolean;
+  createBlock: boolean;
+  travelBeforeMinutes: number;
+  travelAfterMinutes: number;
+  location: string | null;
+  description: string | null;
+}
+
+/** A non-operative segment shown on the lane, travel time included. */
+export interface BoardBlock extends TimeWindow {
+  id: string;
+  label: string;
+  location: string | null;
+  description: string | null;
+  /** The segment itself, without the travel time. */
+  segment: TimeWindow;
+}
+
+const MINUTE_MS = 60_000;
+
+/** Block: segment start − travel there → segment end + travel back. */
+export function blockOf(segment: BoardSegment): BoardBlock {
+  return {
+    id: segment.id,
+    label: segment.typeName,
+    location: segment.location,
+    description: segment.description,
+    start: new Date(segment.start.getTime() - segment.travelBeforeMinutes * MINUTE_MS),
+    end: new Date(segment.end.getTime() + segment.travelAfterMinutes * MINUTE_MS),
+    segment: { start: segment.start, end: segment.end },
+  };
+}
+
+/** The blocks of one agent's day, in time order. */
+export function blocksOf(segments: readonly BoardSegment[]): BoardBlock[] {
+  return segments
+    .filter((segment) => !segment.operative && segment.createBlock)
+    .map(blockOf)
+    .sort((a, b) => a.start.getTime() - b.start.getTime());
 }
 
 export interface BoardBox extends TimeWindow {
@@ -38,7 +84,9 @@ export interface BoardBox extends TimeWindow {
 
 export interface BoardLane {
   agent: { id: string; name: string };
+  /** Operative stretches: the time the agent may work flights. */
   shifts: TimeWindow[];
+  blocks: BoardBlock[];
   /** False when the agent has tasks that day but no shift (marked in the view). */
   hasShift: boolean;
   boxes: BoardBox[];
@@ -87,10 +135,14 @@ function isCovered(box: TimeWindow, stretches: readonly TimeWindow[]): boolean {
 }
 
 /**
- * Conflicts of one agent: two occupancy windows overlapping, and a box that
- * sticks out of the agent's shifts.
+ * Conflicts of one agent: two occupancy windows overlapping, a window running
+ * into a block, and a window outside the operative segments.
  */
-export function conflictsFor(boxes: readonly BoardBox[], shifts: readonly TimeWindow[]): Map<string, ConflictKind[]> {
+export function conflictsFor(
+  boxes: readonly BoardBox[],
+  shifts: readonly TimeWindow[],
+  blocks: readonly TimeWindow[] = [],
+): Map<string, ConflictKind[]> {
   const stretches = mergeWindows(shifts);
   const result = new Map<string, ConflictKind[]>();
   const add = (id: string, kind: ConflictKind) => {
@@ -103,6 +155,7 @@ export function conflictsFor(boxes: readonly BoardBox[], shifts: readonly TimeWi
     for (const other of boxes) {
       if (other.id !== box.id && windowsOverlap(box, other)) add(box.id, "OVERLAP");
     }
+    if (blocks.some((block) => windowsOverlap(box, block))) add(box.id, "BLOCK");
   }
   return result;
 }
@@ -153,27 +206,32 @@ export function hourTicks(range: TimeWindow): Date[] {
 /** Lanes for agents with a shift that day, plus agents that only have tasks. */
 export function buildBoard({
   tasks,
-  shifts,
+  segments,
   agents,
 }: {
   tasks: readonly BoardTask[];
-  shifts: readonly BoardShift[];
+  segments: readonly BoardSegment[];
   agents: readonly { id: string; name: string }[];
 }): Board {
   const boxes = tasks.flatMap(taskBoxes);
   const byId = new Map(agents.map((agent) => [agent.id, agent]));
   const laneIds = new Set<string>();
-  for (const shift of shifts) laneIds.add(shift.userId);
+  for (const segment of segments) laneIds.add(segment.userId);
   for (const box of boxes) if (box.agentId) laneIds.add(box.agentId);
 
   const lanes = [...laneIds]
     .map((id) => {
-      const agentShifts = shifts.filter((shift) => shift.userId === id).map(({ start, end }) => ({ start, end }));
+      const agentSegments = segments.filter((segment) => segment.userId === id);
+      const agentShifts = agentSegments
+        .filter((segment) => segment.operative)
+        .map(({ start, end }) => ({ start, end }));
+      const agentBlocks = blocksOf(agentSegments);
       const laneBoxes = boxes.filter((box) => box.agentId === id);
-      const conflicts = conflictsFor(laneBoxes, agentShifts);
+      const conflicts = conflictsFor(laneBoxes, agentShifts, agentBlocks);
       return {
         agent: byId.get(id) ?? { id, name: id },
         shifts: agentShifts,
+        blocks: agentBlocks,
         hasShift: agentShifts.length > 0,
         boxes: laneBoxes
           .map((box) => ({ ...box, conflicts: conflicts.get(box.id) ?? [] }))

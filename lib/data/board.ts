@@ -24,18 +24,24 @@ export async function getBoardForDay(localDate: string): Promise<Board> {
     ...shifts.map((shift) => shift.user.id),
   ]);
 
-  // Lanes show the operative segments of the actual roster; blocks come later.
+  // Lanes come from the actual roster: operative segments are working time,
+  // non-operative ones may cast a block.
   return buildBoard({
     tasks: tasks.map(toBoardTask),
-    shifts: shifts.flatMap((shift) =>
-      shift.segments
-        .filter((segment) => segment.type.operative)
-        .map((segment) => ({
-          id: segment.id,
-          userId: shift.user.id,
-          start: segment.start,
-          end: segment.end,
-        })),
+    segments: shifts.flatMap((shift) =>
+      shift.segments.map((segment) => ({
+        id: segment.id,
+        userId: shift.user.id,
+        start: segment.start,
+        end: segment.end,
+        typeName: segment.type.name,
+        operative: segment.type.operative,
+        createBlock: segment.createBlock,
+        travelBeforeMinutes: segment.travelBeforeMinutes,
+        travelAfterMinutes: segment.travelAfterMinutes,
+        location: segment.location,
+        description: segment.description,
+      })),
     ),
     agents,
   });
