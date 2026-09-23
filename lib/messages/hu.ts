@@ -35,12 +35,15 @@ export const hu = {
     empty: "Erre a napra nincs task.",
     allAssigned: "Minden rész ki van osztva.",
     now: "Most",
+    blockTitle: "{label} {from}–{to}",
+    blockWithTravel: "Utazással: {from} – {to}",
     conflicts: {
       OVERLAP: "Átfedés egy másik taskkal",
       BLOCK: "Ütközik egy blokkal",
       OUTSIDE_SHIFT: "A műszakon kívülre esik",
     },
-    legend: "A műszak ideje kiemelt, a piros szegély ütközést jelez. A dobozok a hatályos időkből számolnak.",
+    legend:
+      "A műszak ideje kiemelt, a mintázott doboz nem operatív blokk (utazási idővel együtt), a piros szegély ütközést jelez. A dobozok a hatályos időkből számolnak.",
     dragHint: "A dobozt húzd egy ügynök sávjára a kiosztáshoz, a „Kiosztatlan” sávra a kiosztás törléséhez.",
     boxTitle: "{flight} · {stand} állóhely · {from}–{to}",
     conflictWarning: "Kiosztva, de ütközés van: {reasons}",

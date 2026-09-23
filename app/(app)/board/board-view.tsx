@@ -4,7 +4,7 @@ import Link from "next/link";
 import { startTransition, useActionState, useState, type DragEvent } from "react";
 import { ActionFeedback } from "@/components/action-feedback";
 import type { ActionResult } from "@/lib/action";
-import type { Board, BoardBox, ConflictKind } from "@/lib/board";
+import type { Board, BoardBlock, BoardBox, ConflictKind } from "@/lib/board";
 import { messages } from "@/lib/messages";
 import { fmt } from "@/lib/messages/format";
 import { formatTime, formatTimeOnDay } from "@/lib/time";
@@ -68,6 +68,33 @@ function TaskBox({
   );
 }
 
+/** A non-operative segment: striped, behind the task boxes. */
+function Block({ block, range, day }: { block: BoardBlock; range: Range; day: string }) {
+  const title = [
+    fmt(t.blockTitle, {
+      label: block.label,
+      from: formatTimeOnDay(block.segment.start, day),
+      to: formatTimeOnDay(block.segment.end, day),
+    }),
+    fmt(t.blockWithTravel, { from: formatTimeOnDay(block.start, day), to: formatTimeOnDay(block.end, day) }),
+    block.location,
+    block.description,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
+  return (
+    <div
+      title={title}
+      aria-label={title}
+      style={windowStyle(range, block)}
+      className="absolute inset-y-1 z-0 flex items-center overflow-hidden rounded border border-violet-300 bg-violet-100 px-1.5 text-[11px] leading-tight text-violet-900 [background-image:repeating-linear-gradient(45deg,transparent,transparent_4px,rgba(124,58,237,0.18)_4px,rgba(124,58,237,0.18)_8px)]"
+    >
+      <span className="truncate font-medium">{block.label}</span>
+    </div>
+  );
+}
+
 function Lane({
   label,
   sublabel,
@@ -75,6 +102,7 @@ function Lane({
   day,
   boxes,
   shifts,
+  blocks,
   emptyText,
   dropTarget,
   canAssign,
@@ -87,6 +115,7 @@ function Lane({
   day: string;
   boxes: BoardBox[];
   shifts?: TimeWindow[];
+  blocks?: BoardBlock[];
   emptyText?: string;
   dropTarget: { id: string; active: boolean };
   canAssign: boolean;
@@ -126,10 +155,13 @@ function Lane({
         {shifts?.map((shift, index) => (
           <div key={index} className="absolute inset-y-1 rounded bg-sky-50" style={windowStyle(range, shift)} />
         ))}
+        {blocks?.map((block) => (
+          <Block key={block.id} block={block} range={range} day={day} />
+        ))}
         {boxes.map((box) => (
           <TaskBox key={box.id} box={box} range={range} day={day} draggable={canAssign} onDragStart={onDragStart} />
         ))}
-        {boxes.length === 0 && emptyText && (
+        {boxes.length === 0 && !blocks?.length && emptyText && (
           <span className="absolute inset-0 flex items-center justify-center text-xs text-neutral-500">
             {over ? t.dropHere : emptyText}
           </span>
@@ -230,6 +262,7 @@ export function BoardView({
               day={day}
               boxes={lane.boxes}
               shifts={lane.shifts}
+              blocks={lane.blocks}
               dropTarget={{ id: lane.agent.id, active: true }}
               canAssign={canAssign}
               onDragStart={onDragStart}
