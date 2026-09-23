@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db";
 import { messages } from "@/lib/messages";
 import { fmt } from "@/lib/messages/format";
 import { canEditLayer, canViewLayer, canViewLayerOf, canViewRoster, visibleLayers } from "@/lib/permissions";
+import { segmentDifferences } from "@/lib/roster";
 import { requireCapability } from "@/lib/session";
 import { formatDayShort, formatTimeOnDay, parseLocalDate, toLocalDateTimeInput } from "@/lib/time";
 import { addSegment, createShift, removeSegment, removeShift, updateSegment } from "./actions";
@@ -54,10 +55,14 @@ function emptyValues(date: string, typeId: string, note = ""): SegmentValues {
   };
 }
 
-function SegmentSummary({ segment, date }: { segment: RosterSegment; date: string }) {
+function SegmentSummary({ segment, date, changed }: { segment: RosterSegment; date: string; changed: boolean }) {
   const hint = blockHint(segment, date);
   return (
-    <li className="flex flex-wrap items-baseline gap-2 text-sm">
+    <li
+      className={`flex flex-wrap items-baseline gap-2 text-sm ${
+        changed ? "border-l-2 border-amber-400 bg-amber-50 pl-2" : ""
+      }`}
+    >
       <span
         className={`rounded-md px-2 py-1 ${
           segment.type.operative ? "bg-sky-50 text-sky-900" : "bg-violet-50 text-violet-900"
@@ -71,6 +76,7 @@ function SegmentSummary({ segment, date }: { segment: RosterSegment; date: strin
       {segment.location && <span className="text-neutral-600">{segment.location}</span>}
       {segment.description && <span className="text-neutral-500">{segment.description}</span>}
       {hint && <span className="text-violet-700">{hint}</span>}
+      {changed && <span className="text-amber-700">{t.changed}</span>}
     </li>
   );
 }
@@ -82,6 +88,7 @@ function LayerSection({
   userId,
   editable,
   types,
+  changed,
 }: {
   layer: RosterLayer;
   shifts: RosterShift[];
@@ -89,6 +96,8 @@ function LayerSection({
   userId: string;
   editable: boolean;
   types: SegmentTypeOption[];
+  /** Segments that differ between the published and the actual layer. */
+  changed: ReadonlySet<string>;
 }) {
   return (
     <section className="flex flex-col gap-3 rounded-xl border border-neutral-200 bg-white p-4">
@@ -106,7 +115,7 @@ function LayerSection({
           {shift.note && <p className="text-sm text-neutral-600">{shift.note}</p>}
           <ul className="flex flex-col gap-1">
             {shift.segments.map((segment) => (
-              <SegmentSummary key={segment.id} segment={segment} date={date} />
+              <SegmentSummary key={segment.id} segment={segment} date={date} changed={changed.has(segment.id)} />
             ))}
           </ul>
 
@@ -168,6 +177,14 @@ export default async function RosterCellPage(props: PageProps<"/shifts/[userId]/
   ]);
   if (!agent) notFound();
 
+  const segmentsOf = (layer: RosterLayer) =>
+    shifts
+      .filter((shift) => shift.layer === layer)
+      .flatMap((shift) => shift.segments)
+      .map((segment) => ({ id: segment.id, typeId: segment.type.id, start: segment.start, end: segment.end }));
+  const differences = segmentDifferences(segmentsOf("PUBLISHED"), segmentsOf("ACTUAL"));
+  const changed = new Set([...differences.publishedOnly, ...differences.actualOnly]);
+
   const types: SegmentTypeOption[] = segmentTypes.map((type) => ({
     id: type.id,
     name: type.name,
@@ -194,9 +211,9 @@ export default async function RosterCellPage(props: PageProps<"/shifts/[userId]/
             shifts={shifts.filter((shift) => shift.layer === layer)}
             date={date}
             userId={userId}
-            // The actual layer is opened for editing in a later step.
-            editable={layer === "DRAFT" && canEditLayer(user, layer)}
+            editable={canEditLayer(user, layer)}
             types={types}
+            changed={changed}
           />
         ))}
     </div>

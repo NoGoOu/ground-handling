@@ -9,15 +9,16 @@
 - 2. mérföldkő, 3. lépés: rétegelt beosztás adatmodellje (SegmentType, Publication, Shift, ShiftSegment), migráció a régi műszakokból, bővített seed.
 - 2. mérföldkő, 4. lépés: rétegjogosultságok – a tervezet csak a tervezőé, a publikált réteg mindenkinek zárolt, a valós a szerkesztési jog szerint; a beosztás olvasása a hatókört követi. Tesztekkel.
 - 2. mérföldkő, 5. lépés: résztípusok kezelése (`/shifts/types`) – létrehozás, szerkesztés, operatív és aktív jelölés, használatszám; típus nem törölhető.
+- 2. mérföldkő, 8. lépés: a valós réteg szerkesztése ugyanazokkal az űrlapokkal, és az eltérések kiemelése a cellában (a publikált és a valós rész is jelölve, ha a kettő nem egyezik).
 - 2. mérföldkő, 7. lépés: publikálás időszakra – a tervezet publikálttá és zárolttá válik, a valós réteg a másolataként jön létre, egy nap csak egyszer publikálható, a táblázat fejléce jelzi a publikált napokat.
 - 2. mérföldkő, 6. lépés: beosztás táblázat (név × nap, heti nézet, cellánként a publikált és a valós műszak, az eltérő cella kiemelve) és a cellán belül a tervezet szerkesztése (műszak és részek felvitele, módosítása, eltávolítása, átfedés-ellenőrzéssel, blokk és utazási idő a nem operatív részeken).
 
 ## Állapot
 
-- Utolsó commit: `437f742` – feat: add the roster table and draft editing (a 7. lépés még commit előtt áll)
-- Tesztek: `npm test` → 150 teszt, mind zöld
+- Utolsó commit: `f4e2fee` – feat: publish a roster period (a 8. lépés még commit előtt áll)
+- Tesztek: `npm test` → 154 teszt, mind zöld
 - Lint és build: `npm run lint` hibátlan, `npx tsc --noEmit` tiszta
-- Kézi próba: tervezőként egy hét publikálása (a tervezetek publikálttá váltak, a valós másolat elkészült, az újrapublikálás elutasítva); tervezet-műszak felvitele, TRN rész blokkal (Blokk: 14:40 – 16:55), átfedő rész elutasítása, rész és műszak eltávolítása; műszakvezetőként a tervezet réteg nem látszik, a `/shifts/types` tiltott. A próbaadatok törölve.
+- Kézi próba: a valós réteg műszakjának módosítása után a publikált és a valós rész is „Eltér a publikálttól” jelölést kapott; tervezőként egy hét publikálása (a tervezetek publikálttá váltak, a valós másolat elkészült, az újrapublikálás elutasítva); tervezet-műszak felvitele, TRN rész blokkal (Blokk: 14:40 – 16:55), átfedő rész elutasítása, rész és műszak eltávolítása; műszakvezetőként a tervezet réteg nem látszik, a `/shifts/types` tiltott. A próbaadatok törölve.
 
 ## Eltérések a CLAUDE.md-től
 
@@ -31,4 +32,4 @@
 
 ## Következő lépés
 
-- 2. mérföldkő, 8. lépés: a valós réteg szerkesztése és az eltérések kiemelése a cellában.
+- 2. mérföldkő, 9. lépés: szerveroldali adatréteg – foglaltsági ablakok, a nem operatív részekből számolt blokkok és a háromféle ütközés vizsgálata, unit tesztekkel.

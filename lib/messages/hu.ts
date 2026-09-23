@@ -121,6 +121,7 @@ export const hu = {
     locked: "A publikált beosztás nem módosítható.",
     readOnly: "Ebben a rétegben nincs szerkesztési jogosultságod.",
     blockHint: "Blokk: {start} – {end}",
+    changed: "Eltér a publikálttól",
     hint: "Minden idő helyi idő (Budapest). Egy műszak részei nem fedhetik át egymást, és a műszak átnyúlhat éjfélen.",
     errors: {
       segmentType: "Válassz típust.",
