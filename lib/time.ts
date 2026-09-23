@@ -126,3 +126,22 @@ export function localDayRange(localDate: string): { start: Date; end: Date } {
     end: localToUtc(next.year, next.month, next.day, 0, 0),
   };
 }
+
+/** Day of the week of a Budapest date: 0 = Monday … 6 = Sunday. */
+export function weekdayIndex(localDate: string): number {
+  const d = parseLocalDate(localDate);
+  if (!d) throw new Error(`Invalid date: ${localDate}`);
+  return (new Date(Date.UTC(d.year, d.month - 1, d.day)).getUTCDay() + 6) % 7;
+}
+
+/** The Monday of the week containing the given day. */
+export function startOfWeek(localDate: string): string {
+  return addDays(localDate, -weekdayIndex(localDate));
+}
+
+/** "MM. DD." for the roster table header. */
+export function formatDayShort(localDate: string): string {
+  const d = parseLocalDate(localDate);
+  if (!d) throw new Error(`Invalid date: ${localDate}`);
+  return `${pad(d.month)}. ${pad(d.day)}.`;
+}

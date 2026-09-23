@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   addDays,
+  formatDayShort,
   formatTime,
   formatTimeOnDay,
   localDayRange,
@@ -9,6 +10,8 @@ import {
   parseLocalDateTime,
   toLocalDate,
   toLocalDateTimeInput,
+  startOfWeek,
+  weekdayIndex,
 } from "@/lib/time";
 
 describe("Budapest time conversion", () => {
@@ -72,5 +75,23 @@ describe("calendar days", () => {
     const hours = (r: { start: Date; end: Date }) => (r.end.getTime() - r.start.getTime()) / 3_600_000;
     expect(hours(localDayRange("2026-03-29"))).toBe(23);
     expect(hours(localDayRange("2026-10-25"))).toBe(25);
+  });
+});
+
+describe("week helpers", () => {
+  it("counts the week from Monday", () => {
+    expect(weekdayIndex("2026-09-21")).toBe(0); // Monday
+    expect(weekdayIndex("2026-09-23")).toBe(2);
+    expect(weekdayIndex("2026-09-27")).toBe(6); // Sunday
+  });
+
+  it("steps back to the Monday of the same week", () => {
+    expect(startOfWeek("2026-09-23")).toBe("2026-09-21");
+    expect(startOfWeek("2026-09-21")).toBe("2026-09-21");
+    expect(startOfWeek("2026-09-27")).toBe("2026-09-21");
+  });
+
+  it("formats a short day label", () => {
+    expect(formatDayShort("2026-09-03")).toBe("09. 03.");
   });
 });

@@ -1,6 +1,6 @@
 import type { Prisma, RosterLayer } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db";
-import { localDayRange } from "@/lib/time";
+import { addDays, localDayRange, toLocalDate } from "@/lib/time";
 
 // The roster lives in three layers (CLAUDE.md, "Beosztás rétegei"). A shift has
 // no start and end of its own: they come from its segments.
@@ -88,4 +88,58 @@ export async function listSegmentTypes(onlyActive = false) {
     where: onlyActive ? { active: true } : undefined,
     orderBy: [{ operative: "desc" }, { name: "asc" }],
   });
+}
+
+/** Active agents (team members) whose roster the actor may read. */
+export async function listRosterAgents(userIds: string[] | null) {
+  return prisma.user.findMany({
+    where: { active: true, teamId: { not: null }, ...(userIds ? { id: { in: userIds } } : {}) },
+    select: { id: true, name: true },
+    orderBy: { name: "asc" },
+  });
+}
+
+/**
+ * Shifts of a period for the roster table. A shift belongs to the day its first
+ * segment starts on, so the query reaches one day back and filters afterwards.
+ */
+export async function listShiftsInRange({
+  startLocalDate,
+  days,
+  layers,
+  userIds,
+}: {
+  startLocalDate: string;
+  days: number;
+  layers: RosterLayer[];
+  userIds: string[] | null;
+}): Promise<RosterShift[]> {
+  const from = localDayRange(addDays(startLocalDate, -1)).start;
+  const to = localDayRange(addDays(startLocalDate, days - 1)).end;
+  const shifts = await prisma.shift.findMany({
+    where: {
+      layer: { in: layers },
+      ...(userIds ? { userId: { in: userIds } } : {}),
+      segments: { some: { start: { gte: from, lt: to } } },
+    },
+    include: shiftInclude,
+    orderBy: [{ user: { name: "asc" } }],
+  });
+  const first = startLocalDate;
+  const last = addDays(startLocalDate, days - 1);
+  return shifts.map(toRosterShift).filter((shift) => {
+    if (!shift.start) return false;
+    const day = toLocalDate(shift.start);
+    return day >= first && day <= last;
+  });
+}
+
+/** Every layer of one agent's shifts that start on the given day. */
+export async function getCellShifts(userId: string, localDate: string): Promise<RosterShift[]> {
+  const { start, end } = localDayRange(localDate);
+  const shifts = await prisma.shift.findMany({
+    where: { userId, segments: { some: { start: { gte: localDayRange(addDays(localDate, -1)).start, lt: end } } } },
+    include: shiftInclude,
+  });
+  return shifts.map(toRosterShift).filter((shift) => shift.start && shift.start >= start && shift.start < end);
 }

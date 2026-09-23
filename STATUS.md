@@ -1,25 +1,28 @@
 # Állapot – Ground Handling App
 
-*Frissítve: 2026. szeptember 23. 19:55 · CLAUDE.md verzió: 18*
+*Frissítve: 2026. szeptember 23. 20:20 · CLAUDE.md verzió: 18*
 
 ## Mi készült el
 
 - 1. mérföldkő (MVP) és az utómunka: kész (korábbi commitok).
-- 2. mérföldkő, 1. lépés: jogosultsági rendszer adatrétege – jogosultságkatalógus a kódban, szerepkörök, csapatok, felhasználói szerepkörök és egyéni jogosultságok az adatbázisban, hatókörrel; a proxy, az oldalak és a szerverműveletek jogosultságra ellenőriznek.
-- 2. mérföldkő, 2. lépés: jogosultsági admin felület – `/admin/roles` szerepkör × jogosultság mátrix, új szerepkör; `/admin/teams` csapatok; a felhasználó adatlapján több szerepkör, csapat, egyéni jogosultságok és a tényleges jogosultságok táblázata forrásonként.
-- 2. mérföldkő, 3. lépés: beosztás adatmodellje – `SegmentType`, `Publication`, rétegelt `Shift` (DRAFT | PUBLISHED | ACTUAL) és `ShiftSegment` (utazási idővel, blokk jelzéssel), migráció a régi egyszerű műszakokból (a meglévő műszakok a valós réteg egy operatív részévé alakultak), bővített seed: tervező felhasználó, Műszak és Oktatás (TRN) típus, publikált és valós beosztás két napra, utazási idős TRN blokk, és egy nap, ahol a valós eltér a publikálttól. A `/shifts` oldal és a sávos nézet már az új modellből olvas.
+- 2. mérföldkő, 1–2. lépés: konfigurálható jogosultsági rendszer (katalógus a kódban, szerepkörök, csapatok, egyéni jogosultságok, hatókörök) és a hozzá tartozó admin felület.
+- 2. mérföldkő, 3. lépés: rétegelt beosztás adatmodellje (SegmentType, Publication, Shift, ShiftSegment), migráció a régi műszakokból, bővített seed.
+- 2. mérföldkő, 4. lépés: rétegjogosultságok – a tervezet csak a tervezőé, a publikált réteg mindenkinek zárolt, a valós a szerkesztési jog szerint; a beosztás olvasása a hatókört követi. Tesztekkel.
+- 2. mérföldkő, 5. lépés: résztípusok kezelése (`/shifts/types`) – létrehozás, szerkesztés, operatív és aktív jelölés, használatszám; típus nem törölhető.
+- 2. mérföldkő, 6. lépés: beosztás táblázat (név × nap, heti nézet, cellánként a publikált és a valós műszak, az eltérő cella kiemelve) és a cellán belül a tervezet szerkesztése (műszak és részek felvitele, módosítása, eltávolítása, átfedés-ellenőrzéssel, blokk és utazási idő a nem operatív részeken).
 
 ## Állapot
 
-- Utolsó commit: `b5e3d56` – feat: add the permission admin screens (a 3. lépés még commit előtt áll)
-- Tesztek: `npm test` → 128 teszt, mind zöld (a régi műszak-validáció tesztjei megszűntek, helyettük seed-beosztás tesztek)
+- Utolsó commit: `3a4adea` – feat: let the planner manage segment types (a 6. lépés még commit előtt áll)
+- Tesztek: `npm test` → 148 teszt, mind zöld
 - Lint és build: `npm run lint` hibátlan, `npx tsc --noEmit` tiszta
-- Kézi próba: seed újrafuttatva, a `/shifts` a valós réteget mutatja részekkel (Kiss Péter Műszak 06:00–14:00; Nagy Eszter Oktatás 09:00–10:30 + Műszak 11:00–19:00), a sávos nézet sávjai az operatív részekből állnak.
+- Kézi próba: tervezőként tervezet-műszak felvitele, TRN rész blokkal (Blokk: 14:40 – 16:55), átfedő rész elutasítása, rész és műszak eltávolítása; műszakvezetőként a tervezet réteg nem látszik, a `/shifts/types` tiltott. A próbaadatok törölve.
 
 ## Eltérések a CLAUDE.md-től
 
-- **„Ügynök” a kódban = csapattag.** A szerepkörnév megszűnt, ezért a kiosztható emberek listája és a „Taskjaim” menüpont a csapattagságból adódik, a CLAUDE.md „Minden ügynök egy csapat tagja” mondata alapján. A demo viselkedése így változatlan.
-- **A `/shifts` oldal átmenetileg csak olvasható.** A régi egyszerű műszak-szerkesztő törölve, a rétegelt beosztás szerkesztése a 6–8. lépésben készül el, ugyanezen az útvonalon.
+- **„Ügynök” a kódban = csapattag.** A szerepkörnév megszűnt, ezért a kiosztható emberek listája és a „Taskjaim” menüpont a csapattagságból adódik, a CLAUDE.md „Minden ügynök egy csapat tagja” mondata alapján.
+- **A beosztás táblázat heti ablakban jelenik meg** (hétfőtől vasárnapig, hét-léptetővel). A CLAUDE.md csak „név × nap táblázatot” ír, időszakot nem.
+- **A tervezet és a valós rétegben a rész és a műszak eltávolítható.** Enélkül a beosztás nem tervezhető; a publikált réteg változatlanul zárolt, és a CLAUDE.md törlési tilalma (11. döntés) a járatra, légitársaságra, sablonra, felhasználóra és rögzítésre vonatkozik. Ha ez nem kívánt, szólj, és kiveszem.
 
 ## Kérdések a tervezéshez
 
@@ -27,4 +30,4 @@
 
 ## Következő lépés
 
-- 2. mérföldkő, 4. lépés: a tervezői és beosztás-jogosultságok bekötése (`ROSTER_*`, `SEGMENT_TYPE_MANAGE`) a felületre és a szerverműveletekre, unit tesztekkel.
+- 2. mérföldkő, 7. lépés: publikálás időszakra – a tervezet publikálttá válik, a valós réteg a másolataként jön létre, a publikált utána zárolt.
