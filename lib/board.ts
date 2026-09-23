@@ -107,6 +107,28 @@ export function conflictsFor(boxes: readonly BoardBox[], shifts: readonly TimeWi
   return result;
 }
 
+const HOUR_MS = 3_600_000;
+
+/**
+ * Time range of the view: the day, widened to whole hours so that boxes and
+ * shifts reaching outside the day (night shifts, long turnarounds) still fit.
+ */
+export function boardRange(day: TimeWindow, windows: readonly TimeWindow[]): TimeWindow {
+  const startMs = Math.min(day.start.getTime(), ...windows.map((w) => w.start.getTime()));
+  const endMs = Math.max(day.end.getTime(), ...windows.map((w) => w.end.getTime()));
+  return {
+    start: new Date(Math.floor(startMs / HOUR_MS) * HOUR_MS),
+    end: new Date(Math.ceil(endMs / HOUR_MS) * HOUR_MS),
+  };
+}
+
+/** Whole hours of the range, for the axis labels. */
+export function hourTicks(range: TimeWindow): Date[] {
+  const ticks: Date[] = [];
+  for (let ms = range.start.getTime(); ms <= range.end.getTime(); ms += HOUR_MS) ticks.push(new Date(ms));
+  return ticks;
+}
+
 /** Lanes for agents with a shift that day, plus agents that only have tasks. */
 export function buildBoard({
   tasks,

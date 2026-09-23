@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { buildBoard, conflictsFor, mergeWindows, taskBoxes, type BoardShift, type BoardTask } from "@/lib/board";
+import {
+  boardRange,
+  buildBoard,
+  conflictsFor,
+  hourTicks,
+  mergeWindows,
+  taskBoxes,
+  type BoardShift,
+  type BoardTask,
+} from "@/lib/board";
 
 const at = (hhmm: string) => new Date(`2026-09-22T${hhmm}:00Z`);
 const agents = [
@@ -110,6 +119,25 @@ describe("conflicts", () => {
       ...taskBoxes(task({ id: "t3", windows: [{ part: "WHOLE", start: at("08:00"), end: at("09:00") }] })),
     ];
     expect(conflictsFor(touching, [{ start: at("06:00"), end: at("14:00") }]).size).toBe(0);
+  });
+});
+
+describe("view range", () => {
+  const day = { start: at("22:00"), end: new Date("2026-09-23T22:00:00Z") };
+
+  it("keeps the day when everything fits inside it", () => {
+    expect(boardRange(day, [{ start: at("23:00"), end: new Date("2026-09-23T05:00:00Z") }])).toEqual(day);
+  });
+
+  it("widens to whole hours around boxes that reach outside", () => {
+    const range = boardRange(day, [{ start: at("21:35"), end: new Date("2026-09-23T22:10:00Z") }]);
+    expect(range.start.toISOString()).toBe("2026-09-22T21:00:00.000Z");
+    expect(range.end.toISOString()).toBe("2026-09-23T23:00:00.000Z");
+  });
+
+  it("lists one tick per hour, both ends included", () => {
+    const ticks = hourTicks({ start: at("06:00"), end: at("09:00") });
+    expect(ticks.map((d) => d.toISOString().slice(11, 16))).toEqual(["06:00", "07:00", "08:00", "09:00"]);
   });
 });
 

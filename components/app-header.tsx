@@ -8,7 +8,10 @@ import type { CurrentUser } from "@/lib/session";
 function linksFor(user: CurrentUser) {
   const links: { href: string; label: string }[] = [];
   if (canManageFlights(user)) links.push({ href: "/flights", label: messages.nav.flights });
-  if (canManageShifts(user)) links.push({ href: "/shifts", label: messages.nav.shifts });
+  if (canManageShifts(user)) {
+    links.push({ href: "/board", label: messages.nav.board });
+    links.push({ href: "/shifts", label: messages.nav.shifts });
+  }
   if (user.role === "AGENT") links.push({ href: "/agent", label: messages.nav.myTasks });
   if (canAdminister(user)) links.push({ href: "/admin", label: messages.nav.admin });
   return links;

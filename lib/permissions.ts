@@ -27,6 +27,7 @@ const ROUTE_ROLES: [prefix: string, roles: Role[]][] = [
   ["/admin", ["ADMIN"]],
   ["/flights", ["ADMIN", "SHIFT_LEAD"]],
   ["/shifts", ["ADMIN", "SHIFT_LEAD"]],
+  ["/board", ["ADMIN", "SHIFT_LEAD"]],
   ["/agent", ["ADMIN", "AGENT"]],
 ];
 

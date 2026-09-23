@@ -12,6 +12,7 @@ export const hu = {
   nav: {
     logout: "Kilépés",
     flights: "Járatok",
+    board: "Sávos nézet",
     shifts: "Műszakok",
     myTasks: "Taskjaim",
     admin: "Admin",
@@ -24,9 +25,23 @@ export const hu = {
   },
   pages: {
     flights: "Napi járatlista",
+    board: "Sávos nézet",
     shifts: "Műszakbeosztás",
     agent: "Taskjaim",
     admin: "Admin",
+  },
+  board: {
+    unassigned: "Kiosztatlan",
+    noShift: "nincs műszakja",
+    empty: "Erre a napra nincs task.",
+    allAssigned: "Minden rész ki van osztva.",
+    now: "Most",
+    conflicts: {
+      OVERLAP: "Átfedés egy másik taskkal",
+      OUTSIDE_SHIFT: "A műszakon kívülre esik",
+    },
+    legend: "A műszak ideje kiemelt, a piros szegély ütközést jelez. A dobozok a hatályos időkből számolnak.",
+    boxTitle: "{flight} · {stand} állóhely · {from}–{to}",
   },
   shiftForm: {
     newTitle: "Új műszak",
