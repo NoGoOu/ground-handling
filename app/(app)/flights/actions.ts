@@ -4,9 +4,10 @@ import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import { ActionError, actionUser, runAction, type ActionResult } from "@/lib/action";
 import { getTaskView } from "@/lib/data/tasks";
+import { findAssignableAgent } from "@/lib/data/users";
 import { prisma } from "@/lib/db";
 import { messages } from "@/lib/messages";
-import { canAssignAgents, canManageFlights } from "@/lib/permissions";
+import { canAssignTasks, canManageFlights } from "@/lib/permissions";
 import { getCurrentUser } from "@/lib/session";
 import { toLocalDate } from "@/lib/time";
 import { FLIGHT_FIELDS, flightSchema, type FlightFormInput } from "@/lib/validation/flight";
@@ -73,7 +74,7 @@ export async function updateFlight(
 async function agentIdFrom(formData: FormData, key: string): Promise<string | null> {
   const value = formData.get(key);
   if (typeof value !== "string" || value === "") return null;
-  const agent = await prisma.user.findFirst({ where: { id: value, role: "AGENT", active: true }, select: { id: true } });
+  const agent = await findAssignableAgent(value);
   if (!agent) throw new ActionError(messages.assignment.invalidAgent);
   return agent.id;
 }
@@ -88,7 +89,7 @@ export async function assignAgents(
   formData: FormData,
 ): Promise<ActionResult> {
   return runAction(async () => {
-    await actionUser(canAssignAgents);
+    await actionUser(canAssignTasks);
     const task = await getTaskView(taskId);
     if (!task) throw new ActionError(messages.errors.notFound);
 

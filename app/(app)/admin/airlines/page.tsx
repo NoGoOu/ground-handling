@@ -2,13 +2,13 @@ import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { messages } from "@/lib/messages";
 import { fmt } from "@/lib/messages/format";
-import { canAdminister } from "@/lib/permissions";
+import { canManageAirlines } from "@/lib/permissions";
 import { requireCapability } from "@/lib/session";
 
 const t = messages.airlineForm;
 
 export default async function AirlinesPage() {
-  await requireCapability(canAdminister);
+  await requireCapability(canManageAirlines);
   const airlines = await prisma.airline.findMany({
     include: { _count: { select: { templates: true } } },
     orderBy: { name: "asc" },

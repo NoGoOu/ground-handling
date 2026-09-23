@@ -3,10 +3,11 @@
 import { refresh } from "next/cache";
 import { ActionError, actionUser, runAction, type ActionResult } from "@/lib/action";
 import { listShiftsOfAgent } from "@/lib/data/shifts";
+import { findAssignableAgent } from "@/lib/data/users";
 import { prisma } from "@/lib/db";
 import { messages } from "@/lib/messages";
 import { fmt } from "@/lib/messages/format";
-import { canManageShifts } from "@/lib/permissions";
+import { canEditActualRoster } from "@/lib/permissions";
 import { formatDateTime } from "@/lib/time";
 import { fieldErrors, formValues } from "@/lib/validation/form";
 import { findOverlappingShift, SHIFT_FIELDS, shiftSchema, type ShiftData } from "@/lib/validation/shift";
@@ -18,10 +19,7 @@ async function parseShift(formData: FormData, shiftId?: string): Promise<ShiftDa
   const parsed = shiftSchema.safeParse(formValues(formData, SHIFT_FIELDS));
   if (!parsed.success) throw new ActionError(Object.values(fieldErrors(parsed.error))[0]);
 
-  const agent = await prisma.user.findFirst({
-    where: { id: parsed.data.userId, role: "AGENT", active: true },
-    select: { id: true },
-  });
+  const agent = await findAssignableAgent(parsed.data.userId);
   if (!agent) throw new ActionError(e.notAgent);
 
   // "Ugyanannak az embernek nem lehet két átfedő műszakja."
@@ -36,7 +34,7 @@ async function parseShift(formData: FormData, shiftId?: string): Promise<ShiftDa
 
 export async function createShift(_previous: ActionResult | null, formData: FormData): Promise<ActionResult> {
   return runAction(async () => {
-    await actionUser(canManageShifts);
+    await actionUser(canEditActualRoster);
     await prisma.shift.create({ data: await parseShift(formData) });
     refresh();
   });
@@ -48,7 +46,7 @@ export async function updateShift(
   formData: FormData,
 ): Promise<ActionResult> {
   return runAction(async () => {
-    await actionUser(canManageShifts);
+    await actionUser(canEditActualRoster);
     const existing = await prisma.shift.findUnique({ where: { id: shiftId }, select: { id: true } });
     if (!existing) throw new ActionError(messages.errors.notFound);
     await prisma.shift.update({ where: { id: shiftId }, data: await parseShift(formData, shiftId) });
@@ -58,7 +56,7 @@ export async function updateShift(
 
 export async function deleteShift(shiftId: string): Promise<ActionResult> {
   return runAction(async () => {
-    await actionUser(canManageShifts);
+    await actionUser(canEditActualRoster);
     const existing = await prisma.shift.findUnique({ where: { id: shiftId }, select: { id: true } });
     if (!existing) throw new ActionError(messages.errors.notFound);
     await prisma.shift.delete({ where: { id: shiftId } });

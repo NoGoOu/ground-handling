@@ -1,24 +1,25 @@
-import NextAuth from "next-auth";
 import { NextResponse } from "next/server";
-import { authConfig } from "@/auth.config";
+import { auth } from "@/auth";
 import { canAccessPath, homePathFor } from "@/lib/permissions";
+import { loadUser } from "@/lib/session";
 
-// Optimistic, route-level checks only. Pages and server actions check again on the server.
-const { auth } = NextAuth(authConfig);
-
-export default auth((request) => {
+// Route-level checks on permissions, never on role names. Pages and server
+// actions check again on the object level.
+export default auth(async (request) => {
   const { pathname, search } = request.nextUrl;
   if (pathname === "/login") return;
 
-  const role = request.auth?.user?.role;
-  if (!role) {
+  const userId = request.auth?.user?.id;
+  const user = userId ? await loadUser(userId) : null;
+  if (!user) {
     const loginUrl = new URL("/login", request.nextUrl);
     if (pathname !== "/") loginUrl.searchParams.set("callbackUrl", pathname + search);
     return NextResponse.redirect(loginUrl);
   }
 
-  if (!canAccessPath(role, pathname)) {
-    return NextResponse.redirect(new URL(homePathFor(role), request.nextUrl));
+  if (!canAccessPath(user, pathname)) {
+    const home = homePathFor(user);
+    if (home !== pathname) return NextResponse.redirect(new URL(home, request.nextUrl));
   }
 });
 

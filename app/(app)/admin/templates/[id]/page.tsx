@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { messages } from "@/lib/messages";
 import { fmt } from "@/lib/messages/format";
-import { canAdminister } from "@/lib/permissions";
+import { canManageAirlines } from "@/lib/permissions";
 import { requireCapability } from "@/lib/session";
 import { addMinutes, computeTimeline, diffMinutes, sortByOrder } from "@/lib/turnaround";
 import { isLockedCode } from "@/lib/validation/template";
@@ -14,7 +14,7 @@ import { AddMilestoneForm, MilestoneRowForm, TemplateParamsForm } from "../templ
 const t = messages.templateForm;
 
 export default async function TemplatePage(props: PageProps<"/admin/templates/[id]">) {
-  await requireCapability(canAdminister);
+  await requireCapability(canManageAirlines);
   const { id } = await props.params;
   const template = await prisma.turnaroundTemplate.findUnique({
     where: { id },

@@ -5,10 +5,11 @@ import { ActionError, actionUser, runAction, type ActionResult } from "@/lib/act
 import { assignmentUpdate, type ConflictKind } from "@/lib/board";
 import { getBoardForDay } from "@/lib/data/board";
 import { getTaskView } from "@/lib/data/tasks";
+import { findAssignableAgent } from "@/lib/data/users";
 import { prisma } from "@/lib/db";
 import { messages } from "@/lib/messages";
 import { fmt } from "@/lib/messages/format";
-import { canAssignAgents } from "@/lib/permissions";
+import { canAssignTasks, canAssignToAgent } from "@/lib/permissions";
 import type { Part } from "@/lib/turnaround";
 
 // Dropping a box on a lane. Conflicts only warn, they never block (CLAUDE.md,
@@ -31,7 +32,7 @@ async function conflictWarning(localDate: string, boxId: string): Promise<string
 
 export async function assignBox(localDate: string, _previous: ActionResult | null, formData: FormData): Promise<ActionResult> {
   return runAction(async () => {
-    await actionUser(canAssignAgents);
+    await actionUser(canAssignTasks);
 
     const taskId = formData.get("taskId");
     const part = formData.get("part");
@@ -43,13 +44,14 @@ export async function assignBox(localDate: string, _previous: ActionResult | nul
 
     let agentId: string | null = null;
     if (typeof rawAgentId === "string" && rawAgentId !== "") {
-      const agent = await prisma.user.findFirst({
-        where: { id: rawAgentId, role: "AGENT", active: true },
-        select: { id: true },
-      });
+      const agent = await findAssignableAgent(rawAgentId);
       if (!agent) throw new ActionError(messages.assignment.invalidAgent);
       agentId = agent.id;
     }
+
+    // Assigning has to stay inside the actor's scope.
+    const actor = await actionUser(canAssignTasks);
+    if (!canAssignToAgent(actor, agentId)) throw new ActionError(messages.errors.forbidden);
 
     const update = assignmentUpdate(part, task.timeline.shape.type, agentId, {
       arrivalAgentId: task.arrivalAgent?.id ?? null,

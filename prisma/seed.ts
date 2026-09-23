@@ -1,6 +1,7 @@
 import "dotenv/config";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
+import { DEFAULT_ROLES } from "@/lib/permissions";
 import { SETTINGS_ID } from "@/lib/settings";
 import { templateSnapshotJson } from "@/lib/snapshot";
 import { toLocalDate } from "@/lib/time";
@@ -11,6 +12,7 @@ import {
   SEED_AIRLINE,
   SEED_MILESTONES,
   SEED_TEMPLATE,
+  SEED_TEAM,
   SEED_USERS,
 } from "./seed-data";
 
@@ -38,14 +40,47 @@ async function main() {
     await tx.milestoneDefinition.deleteMany();
     await tx.turnaroundTemplate.deleteMany();
     await tx.airline.deleteMany();
+    await tx.team.deleteMany();
     await tx.user.deleteMany();
+    await tx.role.deleteMany();
+
+    // Roles carry the permissions; the default set keeps the known behaviour.
+    const roleIds = new Map<string, string>();
+    for (const role of DEFAULT_ROLES) {
+      const created = await tx.role.create({
+        data: {
+          name: role.name,
+          builtIn: role.builtIn,
+          permissions: {
+            create: Object.entries(role.permissions).map(([permission, scope]) => ({ permission, scope })),
+          },
+        },
+      });
+      roleIds.set(role.name, created.id);
+    }
 
     const users = new Map<string, string>();
     for (const user of SEED_USERS) {
-      const created = await tx.user.create({ data: { ...user, passwordHash } });
+      const created = await tx.user.create({
+        data: {
+          username: user.username,
+          name: user.name,
+          passwordHash,
+          roles: { create: user.roles.map((name) => ({ roleId: roleIds.get(name)! })) },
+        },
+      });
       users.set(user.username, created.id);
     }
     const userId = (username: string | null) => (username ? users.get(username)! : null);
+
+    // Every agent belongs to a team, led by the shift lead.
+    const team = await tx.team.create({
+      data: { name: SEED_TEAM.name, leaderId: userId(SEED_TEAM.leader)! },
+    });
+    await tx.user.updateMany({
+      where: { id: { in: SEED_USERS.filter((u) => u.agent).map((u) => userId(u.username)!) } },
+      data: { teamId: team.id },
+    });
 
     const airline = await tx.airline.create({ data: SEED_AIRLINE });
     const template = await tx.turnaroundTemplate.create({

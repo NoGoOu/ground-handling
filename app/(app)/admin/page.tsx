@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { messages } from "@/lib/messages";
-import { canAdminister } from "@/lib/permissions";
+import { canOpenAdmin } from "@/lib/permissions";
 import { requireCapability } from "@/lib/session";
 
 const t = messages.admin;
 
 export default async function AdminPage() {
-  await requireCapability(canAdminister);
+  await requireCapability(canOpenAdmin);
   const sections = [
     { href: "/admin/users", title: t.users, hint: t.usersHint },
     { href: "/admin/airlines", title: t.airlines, hint: t.airlinesHint },

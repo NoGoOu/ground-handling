@@ -1,36 +1,28 @@
 # Állapot – Ground Handling App
 
-*Frissítve: 2026. szeptember 23. 10:10 · CLAUDE.md verzió: 13*
+*Frissítve: 2026. szeptember 23. 18:05 · CLAUDE.md verzió: 18*
 
 ## Mi készült el
 
-- 1. mérföldkő (MVP): mind a 18 lépés kész.
-- Utómunka: az eltérés színküszöbei globális beállítássá váltak (`Setting`, alap 0 és 5 perc, `/admin/settings`); a számítás tiszta maradt, a küszöb paraméterként megy be.
-- 2. mérföldkő, 1. lépés: `Shift` modell, migráció, seed a demo ügynökök műszakjaival.
-- 2. mérföldkő, 2. lépés: `/shifts` oldal (felvitel, szerkesztés, törlés, átfedés-ellenőrzés).
-- 2. mérföldkő, 3. lépés: `lib/board.ts` – dobozok, sávok, ütközésvizsgálat tiszta függvényekkel.
-- 2. mérföldkő, 4. lépés: `/board` sávos nézet (óratengely, ügynöksávok a műszakkal, kiosztatlan sáv, most-vonal).
-- 2. mérföldkő, 5. lépés: drag and drop kiosztás, ütközés-figyelmeztetéssel (a mentés engedett, a doboz piros szegéllyel jelölve marad).
-- 2. mérföldkő, 6. lépés: README frissítve. **A 2. mérföldkő kész.**
+- 1. mérföldkő (MVP) és a hozzá tartozó utómunka: kész (korábbi commitok).
+- 2. mérföldkő, 1. lépés: jogosultsági rendszer adatrétege. A jogosultságok listája a kódban van magyar megnevezéssel (`lib/permissions/catalog.ts`), a szerepkörök, csapatok, felhasználói szerepkörök és egyéni jogosultságok az adatbázisban. A tényleges jogosultság a szerepkörök és az egyéni kiegészítések uniója, hatókörnél a legszélesebb nyer. A proxy, az oldalak és a szerverműveletek jogosultságra ellenőriznek, szerepkörnévre sehol.
+- Migráció: a négy alapértelmezett szerepkör (Admin zárolt, Tervező, Műszakvezető, Ügynök) létrejött, a meglévő felhasználók a korábbi szerepkörüknek megfelelőt kapták, a két demo ügynök a műszakvezető vezette „Demo csapat” tagja lett, és csak ezután került ki a régi `role` oszlop.
 
 ## Állapot
 
-- Utolsó commit: `d34eec2` – docs: document shifts, the band view and settings in the README
-- Tesztek: `npm test` → 16 fájl, 131 teszt, mind zöld
+- Utolsó commit: `51b0c1a` – fix: allow the drop on dragenter as well (az 1. lépés még commit előtt áll)
+- Tesztek: `npm test` → 134 teszt, mind zöld (ebből 18 új a jogosultságokra)
 - Lint és build: `npm run lint` hibátlan, `npx tsc --noEmit` tiszta
-- Docker: `docker compose down -v` után az `up --build` tiszta állapotból lefutott (migráció, seed, `/api/health` → `{"db":"ok"}`).
-- Kézi próba valódi egérhúzással: kiosztás ügynökre („Átfedés egy másik taskkal”, illetve „A műszakon kívülre esik” figyelmeztetéssel), visszahúzás a „Kiosztatlan” sávra (a kiosztás törlődött), hosszú fordulónál csak a húzott rész mozdult.
+- Kézi próba: műszakvezető, ügynök és admin belépés után változatlan menü és hozzáférés; az `/admin` a műszakvezetőt visszairányítja; az utolsó aktív admintól nem vehető el az Admin szerepkör.
 
 ## Eltérések a CLAUDE.md-től
 
-- nincs
+- **„Ügynök” a kódban = csapattag.** A szerepkörnév megszűnt, ezért a kiosztható emberek listája (és a „Taskjaim” menüpont) a csapattagságból adódik, a CLAUDE.md „Minden ügynök egy csapat tagja” mondata alapján. Így a demo viselkedése változatlan: a műszakvezető és az admin nem kerül az ügynökválasztóba.
 
 ## Kérdések a tervezéshez
 
-- **Sávos nézet sűrűsége:** 24 órás tengelyen a 20–45 perces dobozok feliratai csonkolódnak (a teljes adat az egérmutató alatt látszik). Maradjon így, vagy szűküljön a tengely, esetleg legyen nagyítás?
-- **Kiosztás egér nélkül:** a sávos nézeten csak húzással lehet kiosztani; a napi járatlistán továbbra is legördülővel. Kell-e a sávos nézeten is billentyűzetes megoldás?
-- **Több műszak egy napon:** most bármennyi nem átfedő műszak felvehető egy ügynöknek; ha ez nem kívánatos, kérek szabályt.
+- nincs
 
 ## Következő lépés
 
-- Nincs kiosztott lépés. A CLAUDE.md „Később” listája szerint a 3. mérföldkő az üzenetek (MVT, CPM, LDM, UCM, PST, PTM) fogadása és tárolása; ehhez tervezési döntések kellenek.
+- 2. mérföldkő, 2. lépés: jogosultsági admin felület – szerepkör × jogosultság táblázat pipákkal és hatókörrel, új szerepkör, csapatok kezelése, felhasználónként szerepkörök és egyéni jogosultságok, valamint a tényleges jogosultságok a forrásukkal.

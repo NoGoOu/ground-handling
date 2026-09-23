@@ -23,7 +23,7 @@ export function fieldErrors(error: z.ZodError): FieldErrors {
 }
 
 /** State shared by the form server actions and their client forms. */
-export interface FormState<V extends Record<string, string> = Record<string, string>> {
+export interface FormState<V extends Record<string, string | string[]> = Record<string, string>> {
   errors?: FieldErrors;
   /** Submitted values, so the form keeps them after a failed attempt. */
   values?: Partial<V>;

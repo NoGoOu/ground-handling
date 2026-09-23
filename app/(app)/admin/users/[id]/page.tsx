@@ -1,15 +1,19 @@
 import { notFound } from "next/navigation";
+import { listRoles } from "@/lib/data/users";
 import { prisma } from "@/lib/db";
 import { messages } from "@/lib/messages";
-import { canAdminister } from "@/lib/permissions";
+import { canManageUsers } from "@/lib/permissions";
 import { requireCapability } from "@/lib/session";
 import { updateUser } from "../actions";
 import { UserForm } from "../user-form";
 
 export default async function EditUserPage(props: PageProps<"/admin/users/[id]">) {
-  await requireCapability(canAdminister);
+  await requireCapability(canManageUsers);
   const { id } = await props.params;
-  const user = await prisma.user.findUnique({ where: { id } });
+  const [user, roles] = await Promise.all([
+    prisma.user.findUnique({ where: { id }, include: { roles: true } }),
+    listRoles(),
+  ]);
   if (!user) notFound();
 
   return (
@@ -20,12 +24,13 @@ export default async function EditUserPage(props: PageProps<"/admin/users/[id]">
       <UserForm
         action={updateUser.bind(null, user.id)}
         isNew={false}
+        roles={roles.map((role) => ({ id: role.id, name: role.name }))}
         initial={{
           name: user.name,
           username: user.username,
-          role: user.role,
           password: "",
           active: user.active ? "on" : "",
+          roleIds: user.roles.map((entry) => entry.roleId),
         }}
       />
     </div>

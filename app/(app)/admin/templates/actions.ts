@@ -7,7 +7,7 @@ import { ActionError, actionUser, runAction, type ActionResult } from "@/lib/act
 import { prisma } from "@/lib/db";
 import { DEMO_MILESTONES, DEMO_TEMPLATE_PARAMS } from "@/lib/demo-template";
 import { messages } from "@/lib/messages";
-import { canAdminister } from "@/lib/permissions";
+import { canManageAirlines } from "@/lib/permissions";
 import { getCurrentUser } from "@/lib/session";
 import { ATA_CODE, ATD_CODE } from "@/lib/turnaround";
 import { fieldErrors, formValues, type FormState } from "@/lib/validation/form";
@@ -40,7 +40,7 @@ function isUniqueViolation(error: unknown): boolean {
 
 async function isAdmin(): Promise<boolean> {
   const user = await getCurrentUser();
-  return !!user && canAdminister(user);
+  return !!user && canManageAirlines(user);
 }
 
 export async function createTemplate(
@@ -135,7 +135,7 @@ export async function updateMilestone(
   formData: FormData,
 ): Promise<ActionResult> {
   return runAction(async () => {
-    await actionUser(canAdminister);
+    await actionUser(canManageAirlines);
     const milestones = await loadMilestones(templateId);
     const target = milestones.find((m) => m.id === milestoneId);
     if (!target) throw new ActionError(messages.errors.notFound);
@@ -153,7 +153,7 @@ export async function addMilestone(
   formData: FormData,
 ): Promise<ActionResult> {
   return runAction(async () => {
-    await actionUser(canAdminister);
+    await actionUser(canManageAirlines);
     const milestones = await loadMilestones(templateId);
     const data = parseMilestone(formData);
 
@@ -179,7 +179,7 @@ export async function moveMilestone(
   formData: FormData,
 ): Promise<ActionResult> {
   return runAction(async () => {
-    await actionUser(canAdminister);
+    await actionUser(canManageAirlines);
     const direction = formData.get("direction");
     if (direction !== "up" && direction !== "down") throw new ActionError(messages.errors.invalidInput);
 
@@ -193,7 +193,7 @@ export async function moveMilestone(
 
 export async function deleteMilestone(templateId: string, milestoneId: string): Promise<ActionResult> {
   return runAction(async () => {
-    await actionUser(canAdminister);
+    await actionUser(canManageAirlines);
     const milestones = await loadMilestones(templateId);
     const target = milestones.find((m) => m.id === milestoneId);
     if (!target) throw new ActionError(messages.errors.notFound);

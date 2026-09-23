@@ -6,18 +6,20 @@ import { prisma } from "@/lib/db";
 import { messages } from "@/lib/messages";
 import { canAccessPath, homePathFor } from "@/lib/permissions";
 import { safeCallbackPath } from "@/lib/safe-redirect";
+import { loadUser } from "@/lib/session";
 
 export interface LoginState {
   error?: string;
 }
 
-/** The requested page if the user's role may open it, otherwise their home page. */
+/** The requested page if the user may open it, otherwise their home page. */
 async function targetFor(username: unknown, requested: string): Promise<string> {
   if (typeof username !== "string") return "/";
-  const user = await prisma.user.findUnique({ where: { username: username.trim() }, select: { role: true } });
+  const found = await prisma.user.findUnique({ where: { username: username.trim() }, select: { id: true } });
+  const user = found ? await loadUser(found.id) : null;
   if (!user) return "/";
   const { pathname } = new URL(requested, "http://localhost");
-  return canAccessPath(user.role, pathname) ? requested : homePathFor(user.role);
+  return canAccessPath(user, pathname) ? requested : homePathFor(user);
 }
 
 export async function login(_previous: LoginState, formData: FormData): Promise<LoginState> {

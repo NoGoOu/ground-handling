@@ -204,7 +204,7 @@ export default async function TaskPage(props: PageProps<"/tasks/[id]">) {
   if (!task || !canViewTask(user, taskAssignment(task))) notFound();
 
   const ctx: ViewContext = { task, user, day: toLocalDate(task.timeline.arrivalAnchor), now: new Date() };
-  const backHref = canManageFlights(user) ? `/flights?date=${toLocalDate(task.flight.sta)}` : homePathFor(user.role);
+  const backHref = canManageFlights(user) ? `/flights?date=${toLocalDate(task.flight.sta)}` : homePathFor(user);
 
   return (
     <div className="flex flex-col gap-4">

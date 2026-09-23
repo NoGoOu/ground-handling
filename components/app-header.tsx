@@ -2,18 +2,17 @@ import Link from "next/link";
 import { logout } from "@/app/(app)/actions";
 import { NavLinks } from "@/components/nav-links";
 import { messages } from "@/lib/messages";
-import { canAdminister, canManageFlights, canManageShifts } from "@/lib/permissions";
+import { canManageFlights, canOpenAdmin, canViewBoard, canViewOwnTasks, canViewRoster } from "@/lib/permissions";
 import type { CurrentUser } from "@/lib/session";
 
 function linksFor(user: CurrentUser) {
   const links: { href: string; label: string }[] = [];
   if (canManageFlights(user)) links.push({ href: "/flights", label: messages.nav.flights });
-  if (canManageShifts(user)) {
-    links.push({ href: "/board", label: messages.nav.board });
-    links.push({ href: "/shifts", label: messages.nav.shifts });
-  }
-  if (user.role === "AGENT") links.push({ href: "/agent", label: messages.nav.myTasks });
-  if (canAdminister(user)) links.push({ href: "/admin", label: messages.nav.admin });
+  if (canViewBoard(user)) links.push({ href: "/board", label: messages.nav.board });
+  if (canViewRoster(user)) links.push({ href: "/shifts", label: messages.nav.shifts });
+  // "My tasks" is the agents' view; agents are the users who belong to a team.
+  if (user.teamId && canViewOwnTasks(user)) links.push({ href: "/agent", label: messages.nav.myTasks });
+  if (canOpenAdmin(user)) links.push({ href: "/admin", label: messages.nav.admin });
   return links;
 }
 
@@ -27,7 +26,10 @@ export function AppHeader({ user }: { user: CurrentUser }) {
         <NavLinks links={linksFor(user)} />
         <div className="ml-auto flex items-center gap-3 text-sm">
           <span className="text-neutral-700">
-            {user.name} <span className="text-neutral-500">({messages.roles[user.role]})</span>
+            {user.name}{" "}
+            <span className="text-neutral-500">
+              ({user.roleNames.join(", ") || messages.userForm.noRole})
+            </span>
           </span>
           <form action={logout}>
             <button type="submit" className="btn btn-secondary">

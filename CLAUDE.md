@@ -1,6 +1,6 @@
 # Ground Handling App – projektleírás
 
-*Verzió: 13 · 2026. szeptember 22.*
+*Verzió: 18 · 2026. szeptember 23.*
 
 Nyílt forráskódú webalkalmazás repülőtéri földi kiszolgálás (ground handling) szervezésére. Minden járatfordulóhoz egy task tartozik, benne mérföldkövekkel, amelyeknek van tervezett és tényleges időpontja. A mérföldkövek légitársaságonként testreszabható sablonokból jönnek. A hozzáférés szerepkör alapú.
 
@@ -30,19 +30,30 @@ Ez a fájl a projekt fő leírása. Ha a domain logika nem egyértelmű, kérdez
 
 ## Szerepkörök
 
+Az alábbi táblázat az alapértelmezett szerepköröket írja le. A 2. mérföldkőtől a szerepkörök adatként szerkeszthetők, a jogosultsági rendszer szerint (lásd a táblázat alatt).
+
 | Szerepkör | Jogosultság |
 |---|---|
 | ADMIN | Mindenhez hozzáfér. Felhasználókat, légitársaságokat és sablonokat kezel. |
-| SHIFT_LEAD (műszakvezető) | Járatokat hoz létre és módosít; a járathoz a task automatikusan létrejön. Ügynököket rendel a taskokhoz. Minden taskot lát, bármelyik rögzített időt javíthatja, a task státuszát módosíthatja. |
+| PLANNER (tervező, 2. mérföldkő) | Műszakbeosztást készít (tervezet), szabadon választott időszakra publikálja, a valós beosztást módosíthatja, a műszakrész-típusokat kezeli. A járatokat és a taskokat nem kezeli. |
+| SHIFT_LEAD (műszakvezető) | Járatokat hoz létre és módosít; a járathoz a task automatikusan létrejön. Ügynököket rendel a taskokhoz. Minden taskot lát, bármelyik rögzített időt javíthatja, a task státuszát módosíthatja. A publikált és a valós beosztást látja, a valósat módosíthatja (2. mérföldkő). |
 | AGENT (ügynök) | Csak a hozzá rendelt taskokat látja, a műszakbeosztástól függetlenül. Csak a hozzá rendelt rész mérföldköveit rögzítheti, a saját rögzítéseit javíthatja. A hozzá rendelt task státuszát ő váltja. |
 
 - Hosszú fordulónál a két ügynök nem nyúlhat egymás részébe: az érkezési ügynök csak az érkezési, az indulási ügynök csak az indulási rész mérföldköveit rögzítheti. Gyors fordulónál mindkét rész az érkezési ügynöké (8. szabály).
 - Minden rögzítésnél látszik a felületen, ki rögzítette és ki módosította utoljára.
+- **Jogosultsági rendszer (2. mérföldkő, 1–2. lépés):**
+  - A kód jogosultságokat ellenőriz (pl. taskok megtekintése, rögzítés, kiosztás, beosztás publikálása), nem szerepkörneveket. A jogosultságok listája a kódban van, magyar megnevezéssel.
+  - A szerepkör adat: egy név és a hozzá pipált jogosultságok. Az admin egy szerepkör × jogosultság táblázatban pipál, és új szerepkört is létrehozhat. A seed a fenti táblázat szerinti alapértelmezett szerepköröket hozza létre, így a viselkedés nem változik.
+  - Hatókör: ahol értelmes, a jogosultsághoz hatókör tartozik: saját, csapat vagy összes. A csapat hatókör a felhasználó által vezetett csapatok tagjait és a felhasználót magát jelenti. Egy task a csapat hatókörébe esik, ha az érkezési vagy az indulási ügynöke a csapat tagja.
+  - Egy felhasználónak több szerepköre lehet, és egyénileg további jogosultságokat is kaphat. A tényleges jogosultság ezek uniója; hatókörnél a legszélesebb érvényes. Egyéni megvonás nincs.
+  - A felhasználó admin oldalán látszik a tényleges jogosultsága és hatóköre, mindegyiknél a forrásával (melyik szerepkörből vagy egyéni kiegészítésből jön).
+  - Aki taskot oszthat ki, a kiosztatlan taskokat a hatókörétől függetlenül látja, különben nem tudná kiosztani őket.
+  - Az Admin beépített szerepkör: nem szerkeszthető és nem törölhető, és az utolsó aktív admin nem veszítheti el.
 - A jogosultságot szerveroldalon is ellenőrizni kell, nem elég a felületen elrejteni.
 
 ## Adatmodell
 
-- **User:** name, username, passwordHash, role (ADMIN | SHIFT_LEAD | AGENT), active
+- **User:** name, username, passwordHash, roles (egy vagy több szerepkör, 2. mérföldkő), egyéni jogosultságok (2. mérföldkő), team (opcionális, 2. mérföldkő), active
 - **Airline:** name, iataCode
 - **TurnaroundTemplate:** airline, name, és a paraméterek:
   - `minTurnaroundMinutes` (gyors forduló ATA-tól off-blockig): 25
@@ -56,7 +67,12 @@ Ez a fájl a projekt fő leírása. Ha a domain logika nem egyértelmű, kérdez
 - **Task:** flight (1:1, a járat létrehozásakor automatikusan létrejön), status (PLANNED | IN_PROGRESS | COMPLETED), arrivalAgent (opcionális), departureAgent (opcionális). A két ügynök lehet ugyanaz a személy.
 - **MilestoneRecord:** task, milestoneDefinition, actualTime, recordedBy, recordedAt, updatedBy, updatedAt. Taskonként és mérföldkövenként legfeljebb egy rekord.
 - **Setting** (globális beállítások, egyetlen sor): az eltérés színküszöbei percben (alapérték: zöld legfeljebb 0, sárga legfeljebb 5). Az admin szerkeszti.
-- **Shift** (2. mérföldkő): user, start, end, note (opcionális). A kezdés korábbi a végnél; a műszak átnyúlhat éjfélen; ugyanannak az embernek nem lehet két átfedő műszakja.
+- **Role** (2. mérföldkő): name, builtIn, a hozzá tartozó jogosultságok hatókörrel. Alapértelmezett szerepkörök: Admin (beépített, zárolt), Tervező, Műszakvezető, Ügynök.
+- **Team** (2. mérföldkő): name, leader (User). Minden ügynök egy csapat tagja; egy felhasználó több csapatot is vezethet.
+- **SegmentType** (2. mérföldkő): name, code, operative (igen/nem), active. A tervező bővíti; használatban lévő típus nem törölhető, csak inaktiválható.
+- **Publication** (2. mérföldkő): startDate, endDate (napok, Europe/Budapest), publishedBy, publishedAt. Egy nap legfeljebb egy publikációhoz tartozhat.
+- **Shift** (2. mérföldkő): user, layer (DRAFT | PUBLISHED | ACTUAL), publication (opcionális), note (opcionális). A kezdete és a vége a részeiből adódik. A műszak átnyúlhat éjfélen; ugyanannak az embernek egy rétegen belül nem lehet két átfedő műszakja.
+- **ShiftSegment** (2. mérföldkő): shift, start, end, segmentType, location (opcionális), description (opcionális), createBlock (igen/nem), travelBeforeMinutes, travelAfterMinutes (alapérték 0, nem negatív). Egy műszak részei nem fedhetik át egymást.
 - **Lezárt task pillanatképe:** amikor a task COMPLETED lesz, elmenti a sablon akkori paramétereit és mérföldkő-definícióit. A lezárt task ezután ebből számol, a sablon későbbi módosítása nem változtatja meg.
 
 Minden időpontot UTC-ben tárolunk, a felületen helyi időben (Europe/Budapest) jelenítjük meg.
@@ -164,39 +180,67 @@ Minden lépés végén futtatható állapot és egy commit.
 
 Az MVP után ezt építjük, a lenti lépésterv szerint.
 
-### Műszakbeosztás
+### Beosztás rétegei
 
-- Külön oldal, a műszakvezető és az admin kezeli.
-- Egy műszak: ügynök, kezdés és vég szabadon megadva (nincsenek előre definiált műszaktípusok), opcionális megjegyzés.
-- A műszak átnyúlhat éjfélen. Ugyanannak az embernek nem lehet két átfedő műszakja.
+- **Tervezet:** a tervező szerkeszti, csak a tervező és az admin látja.
+- **Publikált:** a tervező egy szabadon választott időszakot (kezdő és záró nap, Europe/Budapest) publikál; az időszak tervezetei ekkor publikálttá válnak. A publikált beosztás ezután nem módosítható. Egy nap csak egyszer publikálható.
+- **Valós:** publikáláskor a publikált beosztás másolataként jön létre. Minden későbbi változás (csere, új műszak, átalakított részek) ide kerül; a tervező és a műszakvezető módosíthatja.
+- A sávos nézet és a kiosztás mindig a valós rétegből dolgozik.
+
+### Műszak és műszakrészek
+
+- Egy műszak egy ügynöké, és egy vagy több részből áll. Minden résznek kezdete, vége és típusa van, opcionálisan helyszíne és leírása. Egy műszak részei nem fedhetik át egymást.
+- A műszak átnyúlhat éjfélen; a táblázatban a kezdése napjánál jelenik meg. Ugyanannak az embernek egy rétegen belül nem lehet két átfedő műszakja.
+- A résztípusok listáját a tervező bővíti (pl. Műszak, TRN). Minden típusnál jelölve van, hogy operatív-e: járatos taskot csak operatív részre lehet kiosztani.
+
+### Nem operatív részek blokkja
+
+- Egy részen a tervező bepipálhatja, hogy a napi kiosztásban blokként jelenjen meg (pl. oktatás).
+- A részhez oda- és visszautazási idő adható meg. A blokk: a rész kezdete − odautazás → a rész vége + visszautazás. Így az ügynök nem kerülhet olyan járatra, amelyről nem érne oda.
+- A blokk a részből származik, nem külön rögzített elem: ha a rész változik, a blokk vele mozog. Nincsenek mérföldkövei és státusza.
+- A blokk az ügynök sávján és az ügynök nézetében is látszik, a típussal, a helyszínnel és a leírással.
+
+### Beosztás felülete
+
+- Név × nap táblázat, cellánként a publikált és a valós műszakkal; ahol a kettő eltér, az kiemelve.
+- A cellára kattintva a műszak részei rétegenként látszanak, és ott szerkeszthetők, a jogosultság szerint.
+- A tervező a tervezetet ugyanitt készíti, és innen publikál időszakot.
 
 ### Sávos idősoros nézet
 
-Műszakvezetői és admin nézet, asztali gépre. Telefonon ne törjön el, de nem arra optimalizált.
+Műszakvezetői, tervezői és admin nézet, asztali gépre. Telefonon ne törjön el, de nem arra optimalizált.
 
 - Napválasztó, ugyanaz a naptári nap, mint a napi járatlistán.
-- Egy sáv egy ügynök, akinek arra a napra van műszakja. A sávon a műszak ideje kiemelt, a rajta kívüli idő halvány.
-- A taskok a foglaltsági ablakaik szerinti dobozok (lásd Ügynök-foglaltság). Hosszú fordulónál két külön doboz, gyors fordulónál egy. A dobozon a járatszám és az állóhely látszik.
-- A dobozok a hatályos időkből számolnak, így a valós helyzetnek megfelelően mozognak.
-- Legfelül „Kiosztatlan” sáv a még ki nem osztott részekkel.
-- Függőleges vonal jelzi a mostani időt.
-- Ha egy ügynöknek van kiosztott taskja, de arra a napra nincs műszakja, akkor is kap sávot, megjelölve.
+- Egy sáv egy ügynök, akinek arra a napra van valós műszakja. Az operatív részek kiemeltek, a nem operatív részek a típusuk szerinti mintázattal jelennek meg, a műszakon kívüli idő halvány.
+- A taskok a foglaltsági ablakaik szerinti dobozok (lásd Ügynök-foglaltság). Hosszú fordulónál két külön doboz, gyors fordulónál egy. A dobozon a járatszám és az állóhely látszik. A dobozok a hatályos időkből számolnak, így a valós helyzetnek megfelelően mozognak.
+- A nem operatív részek blokkjai is megjelennek a sávon.
+- Legfelül „Kiosztatlan” sáv a még ki nem osztott részekkel. Függőleges vonal jelzi a mostani időt.
+- Ha egy ügynöknek van kiosztott taskja, de arra a napra nincs valós műszakja, akkor is kap sávot, megjelölve.
 - Létszámigény ezen a nézeten nem jelenik meg.
 
 ### Kiosztás és ütközés
 
-- A doboz ráhúzása egy sávra hozzárendelés: az érkezési doboz az érkezési, az indulási doboz az indulási ügynököt állítja be. Gyors fordulónál egy doboz van, és mindkét rész az érkezési ügynöké (8. szabály).
-- A kiosztatlan sávra visszahúzva a hozzárendelés törlődik.
-- Ütközéskor a rendszer figyelmeztet, de engedi a mentést, és az érintett dobozok jelölve maradnak. Ütközés az, ha ugyanannál az ügynöknél két foglaltsági ablak átfed (félig nyitott intervallumok), és az is, ha a task ablaka kilóg az ügynök műszakjából.
+- A doboz ráhúzása egy sávra hozzárendelés: az érkezési doboz az érkezési, az indulási doboz az indulási ügynököt állítja be. Gyors fordulónál egy doboz van, és mindkét rész az érkezési ügynöké (8. szabály). A kiosztatlan sávra visszahúzva a hozzárendelés törlődik.
+- Ütközéskor a rendszer figyelmeztet, de engedi a mentést, és az érintett dobozok jelölve maradnak. Ütközés (félig nyitott intervallumokkal):
+  - két foglaltsági ablak átfed ugyanannál az ügynöknél;
+  - egy foglaltsági ablak átfed egy nem operatív rész blokkjával;
+  - egy foglaltsági ablak nem esik teljes egészében az ügynök operatív részeibe.
 
 ### Lépésterv
 
-1. Prisma: Shift modell, migráció, seed kiegészítés (műszakok a demo ügynököknek)
-2. Műszakbeosztás oldal (lista, felvitel, szerkesztés, törlés, validáció)
-3. Szerveroldali adatréteg: taskonkénti foglaltsági ablakok és ütközésvizsgálat, unit tesztekkel
-4. Sávos nézet olvasásra (sávok, dobozok, kiosztatlan sáv, most-vonal)
-5. Drag and drop kiosztás, ütközés-figyelmeztetéssel
-6. README és STATUS.md frissítése
+1. Jogosultsági rendszer, adatréteg: a jogosultságok listája a kódban (magyar megnevezéssel), szerepkörök és csapatok az adatbázisban, felhasználónként több szerepkör és egyéni jogosultságok, hatókörrel. A jogosultsági függvények, a proxy és minden szerverművelet jogosultságra ellenőriz, nem szerepkörnévre. Migráció: a meglévő felhasználók a mostani szerepkörüknek megfelelő alapértelmezett szerepkört kapják, a demo ügynökök egy demo csapatba kerülnek a műszakvezető vezetésével, a viselkedés nem változik. Tesztekkel
+2. Jogosultsági rendszer, admin felület: szerepkör × jogosultság táblázat pipákkal és hatókörrel, új szerepkör létrehozása, felhasználónként szerepkörök és egyéni jogosultságok, csapatok kezelése, valamint a felhasználó oldalán a tényleges jogosultságai, mindegyiknél a forrásával
+3. Prisma: PLANNER szerepkör, SegmentType, Publication, Shift, ShiftSegment, migráció; seed (1 tervező, Műszak és TRN típus, publikált és valós beosztás a demo ügynököknek a futtatás napjára, köztük egy utazási idős TRN rész blokkal, és egy nap, ahol a valós eltér a publikálttól)
+4. Jogosultságok a tervezőhöz és a beosztáshoz, tesztekkel
+5. Résztípusok kezelése (tervező)
+6. Beosztás táblázat és a tervezet szerkesztése
+7. Publikálás időszakra, a valós réteg létrehozása, a publikált zárolása
+8. A valós réteg szerkesztése, az eltérések kiemelése
+9. Szerveroldali adatréteg: foglaltsági ablakok, blokkok, ütközésvizsgálat, unit tesztekkel
+10. Sávos nézet olvasásra
+11. Drag and drop kiosztás, ütközés-figyelmeztetéssel
+12. Ügynök nézet: a saját blokkjai megjelennek
+13. README és STATUS.md frissítése
 
 ## További eldöntött szabályok
 
@@ -220,6 +264,21 @@ Ezeket a kérdéseket a megrendelő 2026. szeptember 22-én jóváhagyta; a kód
 - Járat-infografika: a feldolgozott üzenetekből összegzett nézet (total pax, compartment-terheltség, speciális utasok és információk), a forrásüzenet idejével.
 - Személyre szabható elrendezés: az ügynök drag and droppal állítja be, mit lát és hogyan, felhasználónként mentve. Csak azután, hogy a fix elrendezés bevált.
 - A lezárt taskok utólagos javításának jogosultsága
+- **Tervezői nézet, automatikus kiosztással** (külön mérföldkő, a sorrendje később dől el):
+  - Névtelen pozíciókkal dolgozik: a program az előre ismert járatokból pozíciókat számol (időtartam és szükséges képesítések), a tervező ezekhez neveket rendel, és ebből lesz a beosztás tervezete. A megjelenítés a sávos nézetre épül, sávonként egy pozícióval.
+  - Feltételei: jogosítások (a Képzések és jogosítások nyilvántartásból, lásd lent) és előre ismert járatrend (járatadat-import).
+  - Beállítható tervezési paraméterek: pihenőidő két task között, megengedett átfedés két task között, a műszak minimális és maximális hossza, munkaközi szünet, megengedett létszámtöbblet a minimumhoz képest. Ezek a tervezés szabályai, függetlenek az operatív ütközés-figyelmeztetésektől.
+  - A cél sorrendje: 1. egyenletes terhelés a pozíciók között, 2. minél kevesebb ember, 3. minél kevesebb munkaóra, 4. minél kevesebb üresjárat a műszakon belül. Az egyenletes terhelés a megengedett létszámon belül értendő, hogy a program ne vegyen fel több embert csak a kiegyenlítés kedvéért.
+  - Algoritmus, külső AI nélkül. Az eredmény a tervező által kézzel módosítható.
+- **Képzések és jogosítások** (külön mérföldkő, a sorrendje később dől el):
+  - Jogosítás: név, kód, alapértelmezett érvényességi idő. Képzés: név, az általa adott jogosítás (opcionális), van-e dolgozat, és ha igen, milyen eredménnyel sikeres.
+  - Képzési rekord: ügynök, képzés, teljesítés dátuma, a dolgozat eredménye, sikeres-e, az érvényesség vége (a dátumból számolva, felülírható), csatolt fájlok.
+  - Az ügynök jogosításai a rekordokból származnak: mindig a legutolsó sikeres rekord érvényessége számít, külön kézi lista nincs.
+  - Új alapértelmezett szerepkör: Oktatási koordinátor, a képzési jogosultságokkal; ő rögzít és szerkeszt. Az ügynök a saját adatait látja, a csapatvezető a csapata tagjaiét (hatókör, lásd Szerepkörök). A csapatok már a 2. mérföldkőben létrejönnek.
+  - A feladatok jogosításokat követelhetnek meg (pl. légitársaságonként vagy sablononként). Ha a kiosztott ügynöknek nincs érvényes jogosítása, a rendszer figyelmeztet, de nem tiltja.
+  - Lista a hamarosan lejáró jogosításokról a koordinátornak és a csapatvezetőnek.
+  - Fájlfeltöltés saját tárhelyre (Docker-kötet), méret- és típuskorláttal. A képzési adatok és a fájlok munkavállalói személyes adatok; a megőrzési idejüket tisztázni kell.
+- Ügynöki beosztásnézet: az ügynök lássa a saját publikált és valós beosztását.
 - Létszámigény: számítás (egy adott időpontban az átfedő foglaltsági ablakok száma, 15 perces sávokra bontva; a sávon belüli számolás módja még nyitott) és külön nézet (idősávos táblázat vagy grafikon). A sávos idősoros nézeten nem jelenik meg: a tervezés más logika szerint működik.
 - Járatinfó: a sablonban definiált egyedi mezők taskonként (pl. utaslétszám, különleges igények)
 - Szolgáltatások rögzítése taskonként, időpontokkal

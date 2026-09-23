@@ -3,7 +3,7 @@ import { listShiftsForDay } from "@/lib/data/shifts";
 import { listAgentOptions } from "@/lib/data/users";
 import { messages } from "@/lib/messages";
 import { fmt } from "@/lib/messages/format";
-import { canManageShifts } from "@/lib/permissions";
+import { canViewRoster } from "@/lib/permissions";
 import { dateParam } from "@/lib/search-params";
 import { requireCapability } from "@/lib/session";
 import { formatTimeOnDay, toLocalDate, toLocalDateTimeInput } from "@/lib/time";
@@ -14,7 +14,7 @@ import { NewShiftForm, ShiftRowForm } from "./shift-forms";
 const t = messages.shiftForm;
 
 export default async function ShiftsPage(props: PageProps<"/shifts">) {
-  await requireCapability(canManageShifts);
+  await requireCapability(canViewRoster);
   const { date: dateValue } = await props.searchParams;
   const date = dateParam(dateValue);
   const shifts = await listShiftsForDay(date);

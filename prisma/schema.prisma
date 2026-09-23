@@ -9,10 +9,11 @@ datasource db {
 
 // All DateTime values are stored in UTC and shown in Europe/Budapest time.
 
-enum Role {
-  ADMIN
-  SHIFT_LEAD
-  AGENT
+/// Scope of a permission: own, the teams the user leads, or everyone.
+enum PermissionScope {
+  SELF
+  TEAM
+  ALL
 }
 
 enum MilestoneAnchor {
@@ -46,16 +47,76 @@ model User {
   name         String
   username     String   @unique
   passwordHash String
-  role         Role
   active       Boolean  @default(true)
+  teamId       String?
+  team         Team?    @relation("TeamMembers", fields: [teamId], references: [id])
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
+  roles              UserRole[]
+  permissions        UserPermission[]
+  ledTeams           Team[]            @relation("TeamLeader")
   arrivalTasks       Task[]            @relation("ArrivalAgent")
   departureTasks     Task[]            @relation("DepartureAgent")
   recordedMilestones MilestoneRecord[] @relation("RecordedBy")
   updatedMilestones  MilestoneRecord[] @relation("UpdatedBy")
   shifts             Shift[]
+}
+
+/// A role is a name plus the permissions ticked for it (CLAUDE.md, "Jogosultsági rendszer").
+model Role {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  /// The Admin role cannot be edited or deleted.
+  builtIn   Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  permissions RolePermission[]
+  users       UserRole[]
+}
+
+model RolePermission {
+  id         String          @id @default(cuid())
+  roleId     String
+  role       Role            @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  /// Key from the permission catalogue in the code.
+  permission String
+  scope      PermissionScope @default(ALL)
+
+  @@unique([roleId, permission])
+}
+
+model UserRole {
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  roleId String
+  role   Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+}
+
+/// Extra permission given to one user on top of their roles. There is no individual revoke.
+model UserPermission {
+  id         String          @id @default(cuid())
+  userId     String
+  user       User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  permission String
+  scope      PermissionScope @default(ALL)
+
+  @@unique([userId, permission])
+}
+
+/// A team has one leader; the "team" scope covers the members of the teams a user leads.
+model Team {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  leaderId  String
+  leader    User     @relation("TeamLeader", fields: [leaderId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members User[] @relation("TeamMembers")
 }
 
 /// One agent's shift; start and end are free, and it may cross midnight.

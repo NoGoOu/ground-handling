@@ -1,14 +1,17 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { messages } from "@/lib/messages";
-import { canAdminister } from "@/lib/permissions";
+import { canManageUsers } from "@/lib/permissions";
 import { requireCapability } from "@/lib/session";
 
 const t = messages.userForm;
 
 export default async function UsersPage() {
-  await requireCapability(canAdminister);
-  const users = await prisma.user.findMany({ orderBy: [{ active: "desc" }, { name: "asc" }] });
+  await requireCapability(canManageUsers);
+  const users = await prisma.user.findMany({
+    include: { roles: { include: { role: { select: { name: true } } } }, team: { select: { name: true } } },
+    orderBy: [{ active: "desc" }, { name: "asc" }],
+  });
 
   return (
     <div className="flex flex-col gap-4">
@@ -27,7 +30,8 @@ export default async function UsersPage() {
             <tr>
               <th className="px-3 py-2">{t.columns.name}</th>
               <th className="px-3 py-2">{t.columns.username}</th>
-              <th className="px-3 py-2">{t.columns.role}</th>
+              <th className="px-3 py-2">{t.columns.roles}</th>
+              <th className="px-3 py-2">{t.columns.team}</th>
               <th className="px-3 py-2">{t.columns.status}</th>
               <th className="px-3 py-2">
                 <span className="sr-only">{messages.admin.edit}</span>
@@ -39,7 +43,10 @@ export default async function UsersPage() {
               <tr key={user.id} className={user.active ? "" : "text-neutral-400"}>
                 <td className="px-3 py-2 font-medium">{user.name}</td>
                 <td className="px-3 py-2">{user.username}</td>
-                <td className="px-3 py-2">{messages.roles[user.role]}</td>
+                <td className="px-3 py-2">
+                  {user.roles.map((entry) => entry.role.name).join(", ") || <span className="text-neutral-400">–</span>}
+                </td>
+                <td className="px-3 py-2">{user.team?.name ?? <span className="text-neutral-400">–</span>}</td>
                 <td className="px-3 py-2">{user.active ? messages.admin.active : messages.admin.inactive}</td>
                 <td className="px-3 py-2 text-right">
                   <Link href={`/admin/users/${user.id}`} className="text-sky-700 hover:underline">

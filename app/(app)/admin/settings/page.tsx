@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { messages } from "@/lib/messages";
-import { canAdminister } from "@/lib/permissions";
+import { canManageSettings } from "@/lib/permissions";
 import { requireCapability } from "@/lib/session";
 import { getSettings } from "@/lib/settings";
 import { updateSettings } from "./actions";
@@ -9,7 +9,7 @@ import { SettingsForm } from "./settings-form";
 const t = messages.settingsForm;
 
 export default async function SettingsPage() {
-  await requireCapability(canAdminister);
+  await requireCapability(canManageSettings);
   const { deviationThresholds } = await getSettings();
 
   return (

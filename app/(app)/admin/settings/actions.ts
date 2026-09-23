@@ -3,7 +3,7 @@
 import { refresh } from "next/cache";
 import { prisma } from "@/lib/db";
 import { messages } from "@/lib/messages";
-import { canAdminister } from "@/lib/permissions";
+import { canManageSettings } from "@/lib/permissions";
 import { getCurrentUser } from "@/lib/session";
 import { SETTINGS_ID } from "@/lib/settings";
 import { fieldErrors, formValues, type FormState } from "@/lib/validation/form";
@@ -16,7 +16,7 @@ export async function updateSettings(
   formData: FormData,
 ): Promise<SettingsFormState> {
   const actor = await getCurrentUser();
-  if (!actor || !canAdminister(actor)) return { message: messages.errors.forbidden };
+  if (!actor || !canManageSettings(actor)) return { message: messages.errors.forbidden };
 
   const values = formValues(formData, SETTINGS_FIELDS);
   const parsed = settingsSchema.safeParse(values);

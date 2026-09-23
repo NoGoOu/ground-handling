@@ -2,7 +2,7 @@ import { DateNav } from "@/components/date-nav";
 import { boardRange, hourTicks } from "@/lib/board";
 import { getBoardForDay } from "@/lib/data/board";
 import { messages } from "@/lib/messages";
-import { canAssignAgents, canManageShifts } from "@/lib/permissions";
+import { canAssignTasks, canViewBoard } from "@/lib/permissions";
 import { dateParam } from "@/lib/search-params";
 import { requireCapability } from "@/lib/session";
 import { localDayRange, toLocalDate } from "@/lib/time";
@@ -12,7 +12,7 @@ import { BoardView } from "./board-view";
 const t = messages.board;
 
 export default async function BoardPage(props: PageProps<"/board">) {
-  const user = await requireCapability(canManageShifts);
+  const user = await requireCapability(canViewBoard);
   const { date: dateValue } = await props.searchParams;
   const date = dateParam(dateValue);
   const board = await getBoardForDay(date);
@@ -36,7 +36,7 @@ export default async function BoardPage(props: PageProps<"/board">) {
           range={range}
           ticks={hourTicks(window)}
           day={date}
-          canAssign={canAssignAgents(user)}
+          canAssign={canAssignTasks(user)}
           action={assignBox.bind(null, date)}
         />
       )}

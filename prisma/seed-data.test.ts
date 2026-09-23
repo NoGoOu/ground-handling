@@ -12,10 +12,11 @@ function shapeOf(flight: (typeof flights)[number]) {
 
 describe("seed data", () => {
   it("has one admin, one shift lead and two agents", () => {
-    const roles = SEED_USERS.map((u) => u.role);
-    expect(roles.filter((r) => r === "ADMIN")).toHaveLength(1);
-    expect(roles.filter((r) => r === "SHIFT_LEAD")).toHaveLength(1);
-    expect(roles.filter((r) => r === "AGENT")).toHaveLength(2);
+    const roles = SEED_USERS.flatMap((u) => u.roles);
+    expect(roles.filter((r) => r === "Admin")).toHaveLength(1);
+    expect(roles.filter((r) => r === "Műszakvezető")).toHaveLength(1);
+    expect(roles.filter((r) => r === "Ügynök")).toHaveLength(2);
+    expect(SEED_USERS.filter((u) => u.agent)).toHaveLength(2);
   });
 
   it("has four flights including a quick and a long turnaround", () => {

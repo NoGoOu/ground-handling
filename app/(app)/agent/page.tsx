@@ -5,7 +5,7 @@ import { TimeStack } from "@/components/time-stack";
 import { listTaskViewsForDay, taskAssignment, type TaskView } from "@/lib/data/tasks";
 import { messages } from "@/lib/messages";
 import { fmt } from "@/lib/messages/format";
-import { assignedParts, canUseAgentView, canViewTask } from "@/lib/permissions";
+import { assignedParts, canViewOwnTasks, canViewTask } from "@/lib/permissions";
 import { dateParam } from "@/lib/search-params";
 import { requireCapability, type CurrentUser } from "@/lib/session";
 import { formatTimeOnDay, toLocalDate } from "@/lib/time";
@@ -64,7 +64,7 @@ function TaskCard({ task, user, day }: { task: TaskView; user: CurrentUser; day:
 }
 
 export default async function AgentPage(props: PageProps<"/agent">) {
-  const user = await requireCapability(canUseAgentView);
+  const user = await requireCapability(canViewOwnTasks);
   const { date: dateValue } = await props.searchParams;
   const date = dateParam(dateValue);
   const tasks = (

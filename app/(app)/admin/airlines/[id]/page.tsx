@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { messages } from "@/lib/messages";
-import { canAdminister } from "@/lib/permissions";
+import { canManageAirlines } from "@/lib/permissions";
 import { requireCapability } from "@/lib/session";
 import { createTemplate } from "../../templates/actions";
 import { TemplateCreateForm } from "../../templates/template-forms";
@@ -12,7 +12,7 @@ import { AirlineForm } from "../airline-form";
 const t = messages.airlineForm;
 
 export default async function AirlinePage(props: PageProps<"/admin/airlines/[id]">) {
-  await requireCapability(canAdminister);
+  await requireCapability(canManageAirlines);
   const { id } = await props.params;
   const airline = await prisma.airline.findUnique({
     where: { id },

@@ -6,11 +6,14 @@ import { localToUtc, parseLocalDate } from "@/lib/time";
 export const DEMO_PASSWORD = "demo1234";
 
 export const SEED_USERS = [
-  { username: "admin", name: "Admin Adél", role: "ADMIN" },
-  { username: "vezeto", name: "Vezető Viktor", role: "SHIFT_LEAD" },
-  { username: "ugynok1", name: "Kiss Péter", role: "AGENT" },
-  { username: "ugynok2", name: "Nagy Eszter", role: "AGENT" },
+  { username: "admin", name: "Admin Adél", roles: ["Admin"], agent: false },
+  { username: "vezeto", name: "Vezető Viktor", roles: ["Műszakvezető"], agent: false },
+  { username: "ugynok1", name: "Kiss Péter", roles: ["Ügynök"], agent: true },
+  { username: "ugynok2", name: "Nagy Eszter", roles: ["Ügynök"], agent: true },
 ] as const;
+
+/** Every agent belongs to a team; the shift lead leads the demo team. */
+export const SEED_TEAM = { name: "Demo csapat", leader: "vezeto" } as const;
 
 export type SeedUsername = (typeof SEED_USERS)[number]["username"];
 
