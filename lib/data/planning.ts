@@ -1,5 +1,8 @@
 import { listTaskViewsForDay, type TaskView } from "@/lib/data/tasks";
+import { prisma } from "@/lib/db";
 import { windowsOfDay, type PlanWindow } from "@/lib/planning/input";
+import { DEFAULT_PLANNING_SETTINGS, pickSettings, type PlanningSettings } from "@/lib/planning/settings";
+import { SETTINGS_ID } from "@/lib/settings";
 import { addDays } from "@/lib/time";
 
 // Data side of the planner view (4. mérföldkő). The calculations are pure
@@ -29,4 +32,21 @@ export async function listPlanningTasks(start: string, end: string): Promise<Tas
 export function windowsByDay(tasks: readonly TaskView[], days: readonly string[]): Map<string, PlanWindow[]> {
   const planning = tasks.map((task) => ({ id: task.id, windows: task.timeline.shape.windows }));
   return new Map(days.map((day) => [day, windowsOfDay(planning, day)]));
+}
+
+/** The global planning settings, and the segment type the draft shifts get. */
+export async function getPlanningSettings(): Promise<{ settings: PlanningSettings; segmentTypeId: string | null }> {
+  const row = await prisma.planningSetting.findUnique({ where: { id: SETTINGS_ID } });
+  return row
+    ? { settings: pickSettings(row), segmentTypeId: row.segmentTypeId }
+    : { settings: DEFAULT_PLANNING_SETTINGS, segmentTypeId: null };
+}
+
+/** Segment types a saved shift may get: active and operative. */
+export async function listShiftSegmentTypes() {
+  return prisma.segmentType.findMany({
+    where: { active: true, operative: true },
+    select: { id: true, name: true },
+    orderBy: { name: "asc" },
+  });
 }
