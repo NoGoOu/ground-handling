@@ -4,6 +4,7 @@
 
 ## Mi készült el
 
+- 4. mérföldkő, 6. lépés: tervezői felület (`/planning`, menü: „Tervezés”). Új terv időszakra (legfeljebb 31 nap), a program naponként számol; napváltó a terv napjaival; mutatók; sávos nézet pozíciónként (a műszak kiterjedése, a jelölt szünet, a megsértett szabályok); áthúzás másik vagy új pozícióba, szabálysértésnél figyelmeztetéssel, kézi jelöléssel; a nap vagy a teljes terv újraszámolása megerősítéssel; „Elavult” jelzés, ha a nap ablakai a számolás óta változtak. A Műszakvezető olvashatja a tervet. A tervezetbe mentett műszak a terv napjához kapcsolódik (`Shift.planDayId`), így az újraszámolás után is a nap következő mentése cseréli.
 - 4. mérföldkő, 5. lépés: a tervezési beállítások felülete (`/planning/settings`, „Tervezés” jogosultsággal): műszakhossz, a mentett műszak résztípusa (aktív, operatív), szünet, pihenőidő vagy átfedés (egyszerre csak az egyik), létszámtöbblet; űrlap-ellenőrzés tesztekkel.
 - 4. mérföldkő, 4. lépés: kiegyenlítés és döntetlen-feloldás (`lib/planning/balance.ts`). Az 1. lépés eredményéből indul, a minimum + létszámtöbblet pozíción belül; egy ablak áthelyezése vagy két ablak cseréje, ha javít, és minden korlát teljesül. A javulás sorrendje: a terhelések különbsége, a munkaidő, az üresjárat, végül a terhelések négyzetösszege (ez csak az elakadás ellen kell). A kipróbált létszámok közül a jobbik nyer, a pozíciók az első ablakuk szerint számozódnak. Mutatók: pozíciószám, pozíciónként foglaltság, műszakhossz, üresjárat, összes munkaidő, a terhelés minimuma, maximuma, különbsége. Tesztek: determinisztikus eredmény, a létszámtöbblet és a korlátok betartása, korlátok nélkül a legnagyobb átfedés. Egy 70 ablakos nap ~0,1 s.
 - 4. mérföldkő, 3. lépés: az algoritmus 1. lépése (`lib/planning/assign.ts`, `position.ts`): időrendben minden ablak egy olyan meglévő pozícióba kerül, ahol a korlátok teljesülnek (ha több ilyen van, abba, ahol a legkisebb a rés, azon belül a kisebb sorszámúba), különben új pozíció nyílik. A pozíció szabályai: műszak az első ablaktól az utolsóig, a minimumig kitolva; maximális hossz; pihenőidő, illetve megengedett átfedés (a legkésőbbi véghez mérve); szünet a küszöb fölött, a műszak közepéhez legközelebbi elég hosszú rés. Tesztek: korlátok nélkül 300 véletlen napon a pozíciószám a legnagyobb egyidejű átfedés; pihenő, átfedés, maximális hossz, szünet; determinisztikus eredmény.
@@ -15,10 +16,10 @@
 
 ## Állapot
 
-- Utolsó commit: `b5585ce` – feat: balance the plan positions and measure them (az 5. lépés commitja ezt követi)
-- Tesztek: `npm test` → 345 teszt, mind zöld
-- Lint és build: `npm run lint` hibátlan, `npx tsc --noEmit` tiszta
-- Próba az adatbázison: a seed után a mintafájlhoz a profil felajánlódik, 50 új járat, hiba nélkül. Az FR4092 következő járata nélküli változat 64 járatot ad (14 csak érkező FR4092 és 14 csak induló FR4091); az eredeti fájl ezeket 14 fordulóvá vonja össze (50 járat, 50 task), az újabb import 50 változatlan.
+- Utolsó commit: `e6455a7` – feat: edit the planning settings (a 6. lépés commitja ezt követi)
+- Tesztek: `npm test` → 350 teszt, mind zöld
+- Lint és build: `npm run lint` hibátlan, `npx tsc --noEmit` tiszta, `npm run build` sikeres
+- Próba az adatbázison: a mintafájl importja után a 2024. 09. 10–16. hét terve 0,3 s alatt elkészül, naponként a pozíciószám a legnagyobb egyidejű átfedés; áthelyezés új pozícióba kézi jelöléssel, újraszámolás után a jelölés eltűnik; egy ETA-késés után a nap elavult, visszavonva újra friss. A felületet a böngészőben nem néztem meg (bejelentkezés kell hozzá).
 
 ## Eltérések a CLAUDE.md-től
 
@@ -30,4 +31,4 @@
 
 ## Következő lépés
 
-- 4. mérföldkő, 6. lépés: tervezői felület (időszak, számolás, napváltó, sávos nézet pozíciókkal, mutatók, kézi áthúzás, újraszámolás, elavultság).
+- 4. mérföldkő, 7. lépés: nevek hozzárendelése és mentés a tervezetbe (csak nem publikált napokra).

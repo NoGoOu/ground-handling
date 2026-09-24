@@ -8,6 +8,7 @@ import {
   canOpenAdmin,
   canViewBoard,
   canViewOwnTasks,
+  canViewPlans,
   canViewRoster,
 } from "@/lib/permissions";
 import type { CurrentUser } from "@/lib/session";
@@ -18,6 +19,7 @@ function linksFor(user: CurrentUser) {
   if (canViewBoard(user)) links.push({ href: "/board", label: messages.nav.board });
   if (canViewRoster(user)) links.push({ href: "/shifts", label: messages.nav.shifts });
   if (canImportSchedule(user)) links.push({ href: "/import", label: messages.nav.import });
+  if (canViewPlans(user)) links.push({ href: "/planning", label: messages.nav.planning });
   // "My tasks" is the agents' view; agents are the users who belong to a team.
   if (user.teamId && canViewOwnTasks(user)) links.push({ href: "/agent", label: messages.nav.myTasks });
   if (canOpenAdmin(user)) links.push({ href: "/admin", label: messages.nav.admin });

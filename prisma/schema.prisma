@@ -178,9 +178,11 @@ model Shift {
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
 
-  segments     ShiftSegment[]
-  /// Set when "Mentés a tervezetbe" made this draft shift for a plan position.
-  planPosition PlanPosition?
+  segments  ShiftSegment[]
+  /// Set when "Mentés a tervezetbe" made this draft shift from a plan day; the
+  /// next save of that day replaces it while it is still a draft.
+  planDayId String?
+  planDay   PlanDay?       @relation(fields: [planDayId], references: [id], onDelete: SetNull)
 
   @@index([userId, layer])
 }
@@ -508,22 +510,21 @@ model PlanDay {
 
   positions PlanPosition[]
   items     PlanItem[]
+  /// Draft shifts saved from this day.
+  shifts    Shift[]
 
   @@unique([planId, date])
 }
 
 /// A nameless position ("1. pozíció"): a future shift.
 model PlanPosition {
-  id      String  @id @default(cuid())
-  dayId   String
-  day     PlanDay @relation(fields: [dayId], references: [id], onDelete: Cascade)
-  number  Int
+  id     String  @id @default(cuid())
+  dayId  String
+  day    PlanDay @relation(fields: [dayId], references: [id], onDelete: Cascade)
+  number Int
   /// The agent the planner names for the position.
-  userId  String?
-  user    User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
-  /// The draft shift saved from this position; replaced by the next save.
-  shiftId String? @unique
-  shift   Shift?  @relation(fields: [shiftId], references: [id], onDelete: SetNull)
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   items PlanItem[]
 
