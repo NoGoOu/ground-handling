@@ -33,6 +33,16 @@ Nyílt forráskódú webalkalmazás repülőtéri földi kiszolgálás (ground h
 - **Próbafuttatás**: semmit nem ír. Csak a BUD-ot érintő sorokat veszi, fordulókat képez (az érkezés a következő járat első, utána induló példányával párosul), a többi csak érkező, illetve csak induló járat lesz. Összesíti az új, változott, változatlan, hibás és hiányzó járatokat, soronként indoklással.
 - **Mentés**: csak a menetrendi mezőket írja. A járat azonosítója a légitársaság, a járatszám, az üzemnap és az állomás, így újraimportálásnál nincs duplikáció; az ETA/ETD, ATA/ATD, a késés, a törlés és a kiosztás érintetlen marad. Kézzel felvett járatot járatszám és nap szerint megtalál és frissít. Az importok naplózva vannak.
 - **Hiányzó járatok**: ha egy korábban ugyanazzal a profillal importált járat nincs az új fájlban, „Az utolsó importból hiányzik” jelölést kap a napi listán, a task és a járat oldalán. Nem törlődik: a tervező az import oldalon törli a jelölést, vagy a műszakvezető töröltre állítja a járatot.
+- **Összevonás**: ha az új fájl két korábbi egyoldalú járatból (csak érkező és csak induló) fordulót képez, a kettő összevonódik, és a kikerülő járat törlődik, ha az importból jött, és nincs rajta üzemi adat. Különben „párosítás változott”, a tervező dönt.
+
+**4. mérföldkő – tervezői nézet, automatikus kiosztással**
+
+- **Számolás** (`Tervezés` menü, „Tervezés” jogosultsággal: Admin és Tervező): a tervező egy legfeljebb 31 napos időszakot választ, a program naponként névtelen pozíciókat számol a járatok foglaltsági ablakaiból (gyors fordulónál egy, hosszúnál két ablak, a törölt rész kimarad; egy nap feladatai az azon a napon kezdődő ablakok). Jogosítások nélkül, külső AI nélkül.
+- **Algoritmus** (`lib/planning/`, determinisztikus): 1. időrendben minden ablak egy olyan meglévő pozícióba kerül, ahol a szabályok teljesülnek, új pozíció csak akkor nyílik, ha ilyen nincs (korlátok nélkül ez a legnagyobb egyidejű átfedés); 2. kiegyenlítés áthelyezéssel és cserével a minimum + megengedett létszámtöbblet pozíción belül; 3. döntetlennél a kevesebb munkaidő, majd a kevesebb üresjárat.
+- **Szabályok** (`Tervezés → Tervezési beállítások`): minimális és maximális műszakhossz, szünet a küszöb fölött (a jelölt szünet a műszak közepéhez legközelebbi elég hosszú rés), pihenőidő vagy megengedett átfedés két task között, létszámtöbblet, a mentett műszak résztípusa. A terv napja lemásolja őket.
+- **Áttekintés**: napváltó, mutatók (pozíciószám, munkaidő, üresjárat, a terhelés minimuma, maximuma, különbsége, pozíciónként foglaltság és műszakhossz), sávos nézet pozíciónként a műszakkal és a szünettel. A taskok áthúzhatók másik vagy új pozícióba; ha ez megsért egy szabályt, a rendszer figyelmeztet, de engedi. Az újraszámolás (a nap vagy a teljes terv) megerősítést kér, mert felülírja a kézi módosításokat és a neveket. Ha a nap járatai a számolás óta változtak (import, késés, törlés), a terv „Elavult” jelzést kap.
+- **Nevek és tervezet**: pozíciónként egy ügynök, majd „Mentés a tervezetbe”: pozíciónként egy műszak a beosztás tervezetében, egyetlen operatív résszel. Publikált napra nem ír; ha egy műszak átfedne az ügynök egy meglévő tervezet-műszakjával, semmi nem íródik. Az újramentés a terv korábbi, még tervezetben lévő műszakjait cseréli.
+- **Kiosztás átvétele** (task-kiosztási jogosultsággal, alapból Műszakvezető): a terv szerinti ügynök a nap taskjainak csak a még kiosztatlan részeire kerül; a már kiosztottakat kihagyja és listázza, gyors fordulónál mindkét rész ugyanahhoz az ügynökhöz kerül. A szokásos ütközés-figyelmeztetések jelennek meg.
 
 ## Indítás Docker Compose-zal
 
@@ -69,6 +79,13 @@ A seed felveszi a Ryanairt (`FR`, a demo sablon másolatával mint alapértelmez
 1. A `Járatrend-import` oldalon (`admin` vagy `tervezo`) töltsd fel a fájlt. A rendszer felajánlja a „Ryanair NetLine” profilt, és betölti a párosítást (munkalap: `Template_Auto_Export(netline)`, fejlécsor: 1., UTC idők).
 2. Próbafuttatás: 50 új járat (27 forduló, 1 csak érkező, 22 csak induló), 2 kiszűrt, nem BUD-os sor. Utána mentés.
 3. A járatok a napi listán a 2024. 09. 10-i naptól látszanak.
+
+### A tervezői nézet kipróbálása
+
+1. Végezd el az importpróbát (fent), hogy legyenek járatok a 2024. szeptember 10-i héten.
+2. `tervezo`-ként a `Tervezés` menüben készíts tervet 2024-09-10 és 2024-09-16 között. A 09. 10-i napon két pozíció látszik a mutatókkal; egy task áthúzható másik vagy új pozícióba.
+3. Adj neveket a pozícióknak, majd „Mentés a tervezetbe”. A `Műszakok` oldalon a 2024. 09. 10-i héten a tervezetben megjelennek a műszakok.
+4. `vezeto`-ként a terv oldalán „A nap kiosztásának átvétele” a még kiosztatlan részekre teszi a neveket; a sávos nézet (2024. 09. 10.) mutatja az eredményt.
 
 ### Hasznos parancsok
 
@@ -119,6 +136,7 @@ Ha a Docker nem elérhető, a Prisma saját helyi Postgrese is megfelel fejleszt
 | `lib/turnaround.ts` | Időszámítási és foglaltsági szabályok, tiszta függvények tesztekkel |
 | `lib/board.ts` | A sávos nézet modellje: dobozok, sávok, blokkok, a háromféle ütközés |
 | `lib/roster.ts` | Beosztás-segédfüggvények: publikált napok, a publikált és a valós réteg eltérései |
+| `lib/planning/` | Tervezés: bemenet (napi ablakok), a pozíció szabályai, minimális pozíciószám, kiegyenlítés és mutatók, a terv nézete, mentés a tervezetbe, kiosztás átvétele; tiszta függvények tesztekkel |
 | `lib/import/` | Járatrend-import: fájlbeolvasás, átalakítások, oszlop-párosítás, fordulók képzése, összevetés a meglévő járatokkal; tiszta függvények, tesztek a mintafájllal |
 | `lib/permissions/` | A jogosultságok katalógusa és a jogosultsági szabályok (a proxy, az oldalak és minden szerverművelet ezt használja) |
 | `lib/time.ts` | Átváltás UTC és Europe/Budapest között |
