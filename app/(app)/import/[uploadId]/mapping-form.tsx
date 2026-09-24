@@ -17,10 +17,13 @@ import type { TimeZone } from "@/lib/import/transform";
 import { messages } from "@/lib/messages";
 import { fmt } from "@/lib/messages/format";
 import { formatDateTime } from "@/lib/time";
+import type { DryRunState } from "../actions";
+import { DryRunResult } from "./dry-run-result";
 
 const t = messages.import;
 
 type Action = (state: ActionResult | null, formData: FormData) => Promise<ActionResult>;
+type DryRunAction = (state: DryRunState, formData: FormData) => Promise<DryRunState>;
 
 const FIELD_GROUPS: TargetField[][] = [
   ["airline", "flightNumber", "suffix", "origin", "destination"],
@@ -40,20 +43,26 @@ export function MappingForm({
   previewRows,
   initial,
   station,
+  profileId,
   profileName,
   saveProfileAction,
+  dryRunAction,
 }: {
   headers: string[];
   previewRows: Cell[][];
   initial: ImportMapping;
   station: string;
+  /** The loaded profile; the missing check needs one. */
+  profileId: string | null;
   profileName: string;
   saveProfileAction: Action;
+  dryRunAction: DryRunAction;
 }) {
   const [columns, setColumns] = useState(initial.columns);
   const [timeZone, setTimeZone] = useState<TimeZone>(initial.timeZone);
   const [range, setRange] = useState({ start: "", end: "" });
   const [saved, saveFormAction, saving] = useActionState(saveProfileAction, null);
+  const [dryRun, dryRunFormAction, running] = useActionState(dryRunAction, {});
 
   const mapping: ImportMapping = { sheet: initial.sheet, headerRow: initial.headerRow, columns, timeZone };
   const problems = mappingProblems(mapping, headers);
@@ -217,6 +226,22 @@ export function MappingForm({
           </div>
         </section>
       )}
+
+      <form action={dryRunFormAction} className="flex flex-wrap items-center gap-3">
+        <input type="hidden" name="mapping" value={JSON.stringify(mapping)} />
+        <input type="hidden" name="start" value={range.start} />
+        <input type="hidden" name="end" value={range.end} />
+        <input type="hidden" name="profileId" value={profileId ?? ""} />
+        <button type="submit" disabled={running || problems.length > 0} className="btn btn-primary">
+          {running ? t.dryRun.running : t.dryRun.submit}
+        </button>
+        {dryRun.error && (
+          <span role="alert" className="text-sm font-medium text-red-700">
+            {dryRun.error}
+          </span>
+        )}
+      </form>
+      {dryRun.view && <DryRunResult view={dryRun.view} station={station} />}
 
       <form action={saveFormAction} className="flex flex-col gap-2 rounded-xl border border-dashed border-neutral-300 bg-white p-4">
         <h2 className="font-semibold">{t.profileSave}</h2>

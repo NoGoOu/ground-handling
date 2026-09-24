@@ -10,7 +10,7 @@ import { messages } from "@/lib/messages";
 import { fmt } from "@/lib/messages/format";
 import { canImportSchedule } from "@/lib/permissions";
 import { requireCapability } from "@/lib/session";
-import { saveImportProfile } from "../actions";
+import { dryRunImport, saveImportProfile } from "../actions";
 import { MappingForm } from "./mapping-form";
 
 const t = messages.import;
@@ -211,8 +211,10 @@ export default async function ImportUploadPage(props: PageProps<"/import/[upload
             previewRows={shown}
             initial={initial}
             station={HOME_STATION}
+            profileId={profile && profileFits ? profile.id : null}
             profileName={profile?.name ?? ""}
             saveProfileAction={saveImportProfile.bind(null, upload.id)}
+            dryRunAction={dryRunImport.bind(null, upload.id)}
           />
         </>
       )}

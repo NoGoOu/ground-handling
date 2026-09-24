@@ -1,5 +1,6 @@
 import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db";
+import type { AirlineInfo, ExistingFlight } from "@/lib/import/diff";
 import type { ImportMapping } from "@/lib/import/mapping";
 import type { StoredProfile } from "@/lib/import/profiles";
 import { readFile, tableFrom } from "@/lib/import/read";
@@ -55,4 +56,67 @@ export async function loadUploadTable(uploadId: string, userId: string, sheetNam
   const sheet = parsed.sheets.find((s) => s.name === sheetName);
   if (!sheet) return null;
   return { upload, table: tableFrom(sheet.rows, headerRow - 1) };
+}
+
+const dateText = (date: Date | null) => (date ? date.toISOString().slice(0, 10) : null);
+
+/**
+ * The flights an import may touch: those with an STA or STD in the window.
+ * "Operational" is what keeps a flight's pairing fixed (approved rule of the
+ * 3. mérföldkő): records, estimates, actuals, cancellations or agents.
+ */
+export async function loadExistingFlights(window: { start: Date; end: Date }): Promise<ExistingFlight[]> {
+  const within = { gte: window.start, lt: window.end };
+  const flights = await prisma.flight.findMany({
+    where: { OR: [{ sta: within }, { std: within }] },
+    select: {
+      id: true,
+      airline: { select: { iataCode: true } },
+      inboundFlightNumber: true,
+      outboundFlightNumber: true,
+      arrivalFlightDate: true,
+      departureFlightDate: true,
+      origin: true,
+      destination: true,
+      sta: true,
+      std: true,
+      eta: true,
+      etd: true,
+      ata: true,
+      atd: true,
+      arrivalCancelled: true,
+      departureCancelled: true,
+      aircraftType: true,
+      aircraftConfig: true,
+      importProfileId: true,
+      task: { select: { arrivalAgentId: true, departureAgentId: true, _count: { select: { records: true } } } },
+    },
+  });
+  return flights.map((flight) => ({
+    id: flight.id,
+    airline: flight.airline.iataCode,
+    inboundFlightNumber: flight.inboundFlightNumber,
+    outboundFlightNumber: flight.outboundFlightNumber,
+    arrivalFlightDate: dateText(flight.arrivalFlightDate),
+    departureFlightDate: dateText(flight.departureFlightDate),
+    origin: flight.origin,
+    destination: flight.destination,
+    sta: flight.sta,
+    std: flight.std,
+    aircraftType: flight.aircraftType,
+    aircraftConfig: flight.aircraftConfig,
+    importProfileId: flight.importProfileId,
+    operational:
+      !!(flight.eta || flight.etd || flight.ata || flight.atd) ||
+      flight.arrivalCancelled ||
+      flight.departureCancelled ||
+      !!flight.task?.arrivalAgentId ||
+      !!flight.task?.departureAgentId ||
+      (flight.task?._count.records ?? 0) > 0,
+  }));
+}
+
+export async function loadAirlines(): Promise<AirlineInfo[]> {
+  const airlines = await prisma.airline.findMany({ select: { id: true, iataCode: true, defaultTemplateId: true } });
+  return airlines.map((a) => ({ id: a.id, code: a.iataCode, defaultTemplateId: a.defaultTemplateId }));
 }

@@ -2,15 +2,21 @@
 
 import { redirect } from "next/navigation";
 import { ActionError, actionUser, runAction, type ActionResult } from "@/lib/action";
-import { loadUploadTable, saveProfile, saveUpload } from "@/lib/data/imports";
-import { headerFingerprint } from "@/lib/import/fingerprint";
+import { loadAirlines, loadExistingFlights, loadUploadTable, saveProfile, saveUpload } from "@/lib/data/imports";
+import { prisma } from "@/lib/db";
 import { describeProblem } from "@/lib/import/describe";
+import { diffImport, planPeriod } from "@/lib/import/diff";
+import { dryRunView, type DryRunView } from "@/lib/import/dry-run-view";
+import { headerFingerprint } from "@/lib/import/fingerprint";
 import { mappingProblems } from "@/lib/import/mapping";
+import { planImport } from "@/lib/import/pairing";
 import { detectFormat, MAX_UPLOAD_BYTES, readFile, ReadError } from "@/lib/import/read";
 import { messages } from "@/lib/messages";
 import { fmt } from "@/lib/messages/format";
 import { canImportSchedule } from "@/lib/permissions";
-import { parseMappingJson, profileNameSchema } from "@/lib/validation/import";
+import { getCurrentUser, type CurrentUser } from "@/lib/session";
+import { addDays, localDayRange } from "@/lib/time";
+import { parseMappingJson, profileNameSchema, rangeSchema } from "@/lib/validation/import";
 
 const e = messages.import.errors;
 
@@ -67,4 +73,63 @@ export async function saveImportProfile(
     });
     redirect(`/import/${uploadId}?${query}`);
   });
+}
+
+/** Dates beyond any schedule, for an open end of the range. */
+const OPEN_START = "1900-01-01";
+const OPEN_END = "2999-12-31";
+
+/**
+ * Everything a dry run and a save need, from the form: the mapping, the date
+ * range, the profile, the file's table, the plan and its difference to the
+ * database. Reads only.
+ */
+async function prepareImport(actor: CurrentUser, uploadId: string, formData: FormData) {
+  const mapping = parseMappingJson(formData.get("mapping"));
+  if (!mapping) return { error: e.mapping };
+  const range = rangeSchema.safeParse({ start: formData.get("start") ?? "", end: formData.get("end") ?? "" });
+  if (!range.success) return { error: e.range };
+  const requestedProfile = String(formData.get("profileId") ?? "");
+  const profile = requestedProfile
+    ? await prisma.importProfile.findUnique({ where: { id: requestedProfile }, select: { id: true } })
+    : null;
+
+  const loaded = await loadUploadTable(uploadId, actor.id, mapping.sheet, mapping.headerRow);
+  if (!loaded) return { error: e.gone };
+  const problems = mappingProblems(mapping, loaded.table.headers);
+  if (problems.length > 0) return { error: fmt(e.mappingProblems, { problems: problems.map(describeProblem).join(" ") }) };
+
+  const { start, end } = range.data;
+  const importRange = start || end ? { start: start ?? OPEN_START, end: end ?? OPEN_END } : undefined;
+  const plan = planImport(loaded.table, mapping, importRange);
+
+  // The days the file covers, inside the range: the missing check looks no further.
+  const covered = planPeriod(plan, null);
+  const period = covered && {
+    start: start && start > covered.start ? start : covered.start,
+    end: end && end < covered.end ? end : covered.end,
+  };
+  const existing = period
+    ? await loadExistingFlights({
+        start: localDayRange(addDays(period.start, -2)).start,
+        end: localDayRange(addDays(period.end, 2)).end,
+      })
+    : [];
+  const diff = diffImport({ plan, existing, airlines: await loadAirlines(), profileId: profile?.id ?? null, period });
+  return { mapping, upload: loaded.upload, plan, diff, existing, period, profileId: profile?.id ?? null };
+}
+
+export interface DryRunState {
+  error?: string;
+  view?: DryRunView;
+}
+
+/** Próbafuttatás: what an import would do, and nothing written. */
+export async function dryRunImport(uploadId: string, _previous: DryRunState, formData: FormData): Promise<DryRunState> {
+  const actor = await getCurrentUser();
+  if (!actor || !canImportSchedule(actor)) return { error: messages.errors.forbidden };
+  const prepared = await prepareImport(actor, uploadId, formData);
+  if ("error" in prepared) return { error: prepared.error };
+  const { plan, diff, existing, period, profileId } = prepared;
+  return { view: dryRunView({ plan, diff, existing, period, profileId }) };
 }
