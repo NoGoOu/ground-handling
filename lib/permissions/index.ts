@@ -208,6 +208,10 @@ export const canEditDraftRoster = (actor: Actor) => can(actor, "ROSTER_DRAFT");
 export const canPublishRoster = (actor: Actor) => can(actor, "ROSTER_PUBLISH");
 export const canEditActualRoster = (actor: Actor) => can(actor, "ROSTER_ACTUAL_EDIT");
 export const canManageSegmentTypes = (actor: Actor) => can(actor, "SEGMENT_TYPE_MANAGE");
+/** Planner view: calculating, settings, names and saving into the draft (4. mérföldkő). */
+export const canPlan = (actor: Actor) => can(actor, "PLANNING");
+/** The plan is read by whoever plans or takes its assignment over onto the tasks. */
+export const canViewPlans = (actor: Actor) => can(actor, "PLANNING") || can(actor, "TASK_ASSIGN");
 export const canManageUsers = (actor: Actor) => can(actor, "USER_MANAGE");
 export const canManageRoles = (actor: Actor) => can(actor, "ROLE_MANAGE");
 export const canManageTeams = (actor: Actor) => can(actor, "TEAM_MANAGE");
@@ -224,6 +228,8 @@ const ROUTE_PERMISSIONS: [prefix: string, permissions: Permission[]][] = [
   ["/admin", ["USER_MANAGE", "ROLE_MANAGE", "TEAM_MANAGE", "AIRLINE_MANAGE", "SETTINGS_MANAGE"]],
   ["/flights", ["FLIGHT_MANAGE"]],
   ["/import", ["SCHEDULE_IMPORT"]],
+  ["/planning/settings", ["PLANNING"]],
+  ["/planning", ["PLANNING", "TASK_ASSIGN"]],
   ["/shifts/types", ["SEGMENT_TYPE_MANAGE"]],
   ["/shifts", ["ROSTER_VIEW", "ROSTER_DRAFT"]],
   ["/board", ["BOARD_VIEW"]],

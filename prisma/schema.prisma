@@ -70,6 +70,8 @@ model User {
   importProfiles     ImportProfile[]
   importRuns         ImportRun[]
   importUploads      ImportUpload[]
+  plansCreated       Plan[]            @relation("PlansCreated")
+  planPositions      PlanPosition[]
 }
 
 /// A role is a name plus the permissions ticked for it (CLAUDE.md, "Jogosultsági rendszer").
@@ -145,7 +147,8 @@ model SegmentType {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  segments ShiftSegment[]
+  segments         ShiftSegment[]
+  planningSettings PlanningSetting[]
 }
 
 /// One published period; the days it covers cannot be published again.
@@ -175,7 +178,9 @@ model Shift {
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
 
-  segments ShiftSegment[]
+  segments     ShiftSegment[]
+  /// Set when "Mentés a tervezetbe" made this draft shift for a plan position.
+  planPosition PlanPosition?
 
   @@index([userId, layer])
 }
@@ -337,7 +342,8 @@ model Task {
   createdAt        DateTime   @default(now())
   updatedAt        DateTime   @updatedAt
 
-  records MilestoneRecord[]
+  records   MilestoneRecord[]
+  planItems PlanItem[]
 }
 
 model MilestoneRecord {
@@ -444,4 +450,101 @@ model ImportUpload {
   createdAt   DateTime @default(now())
 
   @@index([createdAt])
+}
+
+// 4. mérföldkő: tervezői nézet, automatikus kiosztással.
+
+/// The rules of the automatic plan (CLAUDE.md, "Tervezési beállítások").
+/// One row; a plan day keeps its own copy from its calculation.
+model PlanningSetting {
+  id                String       @id @default("global")
+  minShiftMinutes   Int          @default(240)
+  maxShiftMinutes   Int          @default(720)
+  breakMinutes      Int          @default(20)
+  /// A shift longer than this needs a break.
+  breakAfterMinutes Int          @default(360)
+  /// Rest between two tasks; only one of rest and overlap may be above zero.
+  restMinutes       Int          @default(0)
+  /// Allowed overlap of two tasks.
+  overlapMinutes    Int          @default(0)
+  /// Positions allowed above the minimum, for an even load.
+  extraPositions    Int          @default(0)
+  /// Type of the single segment "Mentés a tervezetbe" writes (Műszak by default).
+  segmentTypeId     String?
+  segmentType       SegmentType? @relation(fields: [segmentTypeId], references: [id], onDelete: SetNull)
+  updatedAt         DateTime     @updatedAt
+}
+
+/// The part of a task an occupancy window covers: WHOLE on a quick turnaround.
+enum WindowPart {
+  WHOLE
+  ARRIVAL_PART
+  DEPARTURE_PART
+}
+
+/// A plan for a period (Budapest days); it is calculated day by day.
+model Plan {
+  id          String   @id @default(cuid())
+  startDate   DateTime @db.Date
+  endDate     DateTime @db.Date
+  createdById String
+  createdBy   User     @relation("PlansCreated", fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  days PlanDay[]
+}
+
+/// One day of a plan. Its items are the day's windows as calculated: when
+/// the windows of the tasks change, the day is stale.
+model PlanDay {
+  id           String   @id @default(cuid())
+  planId       String
+  plan         Plan     @relation(fields: [planId], references: [id], onDelete: Cascade)
+  date         DateTime @db.Date
+  /// The planning settings at the calculation.
+  settings     Json
+  calculatedAt DateTime
+
+  positions PlanPosition[]
+  items     PlanItem[]
+
+  @@unique([planId, date])
+}
+
+/// A nameless position ("1. pozíció"): a future shift.
+model PlanPosition {
+  id      String  @id @default(cuid())
+  dayId   String
+  day     PlanDay @relation(fields: [dayId], references: [id], onDelete: Cascade)
+  number  Int
+  /// The agent the planner names for the position.
+  userId  String?
+  user    User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  /// The draft shift saved from this position; replaced by the next save.
+  shiftId String? @unique
+  shift   Shift?  @relation(fields: [shiftId], references: [id], onDelete: SetNull)
+
+  items PlanItem[]
+
+  @@unique([dayId, number])
+}
+
+/// An occupancy window in a position, with its times at the calculation.
+model PlanItem {
+  id         String       @id @default(cuid())
+  dayId      String
+  day        PlanDay      @relation(fields: [dayId], references: [id], onDelete: Cascade)
+  positionId String
+  position   PlanPosition @relation(fields: [positionId], references: [id], onDelete: Cascade)
+  taskId     String
+  task       Task         @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  part       WindowPart
+  start      DateTime
+  end        DateTime
+  /// Moved by hand; a recalculation overwrites it.
+  manual     Boolean      @default(false)
+
+  @@unique([dayId, taskId, part])
+  @@index([positionId])
 }

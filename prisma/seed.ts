@@ -2,6 +2,7 @@ import "dotenv/config";
 import bcrypt from "bcryptjs";
 import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db";
+import { DEFAULT_PLANNING_SETTINGS } from "@/lib/planning/settings";
 import { NETLINE_FINGERPRINT, NETLINE_MAPPING, NETLINE_PROFILE_NAME } from "@/lib/import/netline";
 import { DEFAULT_ROLES } from "@/lib/permissions";
 import { SETTINGS_ID } from "@/lib/settings";
@@ -41,6 +42,7 @@ async function main() {
     // Global settings: the defaults from the schema (decision 7).
     await tx.setting.upsert({ where: { id: SETTINGS_ID }, create: { id: SETTINGS_ID }, update: {} });
 
+    await tx.plan.deleteMany();
     await tx.shift.deleteMany();
     await tx.publication.deleteMany();
     await tx.segmentType.deleteMany();
@@ -129,6 +131,10 @@ async function main() {
       const created = await tx.segmentType.create({ data: type });
       segmentTypeIds.set(created.code, created.id);
     }
+
+    // Planning settings (4. mérföldkő): the defaults, saving into the Műszak type.
+    const planning = { ...DEFAULT_PLANNING_SETTINGS, segmentTypeId: segmentTypeIds.get("SHIFT") ?? null };
+    await tx.planningSetting.upsert({ where: { id: SETTINGS_ID }, create: { id: SETTINGS_ID, ...planning }, update: planning });
 
     const publication = await tx.publication.create({
       data: {

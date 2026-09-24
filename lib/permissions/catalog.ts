@@ -35,6 +35,7 @@ export const PERMISSIONS = {
   ROSTER_PUBLISH: { label: "Beosztás publikálása", scoped: false, group: "Beosztás" },
   ROSTER_ACTUAL_EDIT: { label: "Valós beosztás szerkesztése", scoped: false, group: "Beosztás" },
   SEGMENT_TYPE_MANAGE: { label: "Műszakrész-típusok kezelése", scoped: false, group: "Beosztás" },
+  PLANNING: { label: "Tervezés", scoped: false, group: "Beosztás" },
   USER_MANAGE: { label: "Felhasználók kezelése", scoped: false, group: "Adminisztráció" },
   ROLE_MANAGE: { label: "Szerepkörök kezelése", scoped: false, group: "Adminisztráció" },
   TEAM_MANAGE: { label: "Csapatok kezelése", scoped: false, group: "Adminisztráció" },
@@ -86,6 +87,7 @@ export const DEFAULT_ROLES: { name: string; builtIn: boolean; permissions: Parti
       ROSTER_ACTUAL_EDIT: "ALL",
       SEGMENT_TYPE_MANAGE: "ALL",
       SCHEDULE_IMPORT: "ALL",
+      PLANNING: "ALL",
     },
   },
   {

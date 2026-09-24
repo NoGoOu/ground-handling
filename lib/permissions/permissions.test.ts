@@ -8,7 +8,9 @@ import {
   canChangeTaskStatus,
   canRecordMilestone,
   canEditLayer,
+  canPlan,
   canViewLayer,
+  canViewPlans,
   canViewLayerOf,
   canViewRosterOf,
   canViewTask,
@@ -245,6 +247,20 @@ describe("routes", () => {
     expect(canAccessPath(admin, "/import")).toBe(true);
     expect(canAccessPath(lead, "/import")).toBe(false);
     expect(canAccessPath(anna, "/import")).toBe(false);
+  });
+
+  it("gives planning to the planner and the admin; the shift lead reads the plan to take its assignment over", () => {
+    expect(canPlan(planner)).toBe(true);
+    expect(canPlan(admin)).toBe(true);
+    expect(canPlan(lead)).toBe(false);
+    expect(canPlan(anna)).toBe(false);
+    expect(canAccessPath(planner, "/planning")).toBe(true);
+    expect(canAccessPath(lead, "/planning")).toBe(true);
+    expect(canAccessPath(lead, "/planning/settings")).toBe(false);
+    expect(canAccessPath(planner, "/planning/settings")).toBe(true);
+    expect(canAccessPath(anna, "/planning")).toBe(false);
+    expect(canViewPlans(lead)).toBe(true);
+    expect(canViewPlans(anna)).toBe(false);
   });
 
   it("keeps the segment types with the planner", () => {
