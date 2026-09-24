@@ -26,6 +26,14 @@ Nyílt forráskódú webalkalmazás repülőtéri földi kiszolgálás (ground h
 - **Csak érkező és csak induló járat**: a járat érkezési és indulási része külön-külön elhagyható (legalább az egyik kell). Csak érkező járatnál a gép itt marad, csak indulónál már itt van; ilyenkor csak a meglévő rész mérföldkövei, ügynöke és foglaltsági ablaka létezik, forduló típus nincs. Már rögzített vagy a rendszerből kapott idővel rendelkező rész nem hagyható el.
 - **Késés és törlés**: a járat szerkesztő oldalán külön „Késés rögzítése” művelet ad új ETA-t és/vagy ETD-t, a forrás megjegyzésével; a járat ugyanaz marad, mindig a legutóbbi érték számít, és mellette látszik a forrása, rögzítője és ideje (az ETA/ETD csak így módosítható). Ha a hatályos érkezés vagy indulás későbbi a menetrendinél, a járat mindenhol „Késik” címkét kap az eredeti menetrendi nappal és idővel. Az érkezési és az indulási rész külön töröltre állítható és visszaállítható: a törölt rész áthúzva látszik, kimarad a foglaltságból, a sávos nézetből és az ütközésből, a kiosztás megmarad. Minden késés, törlés és visszaállítás a járat naplójába kerül.
 
+**3. mérföldkő – járatrend-import**
+
+- **Fájlfeltöltés** (`Járatrend-import` menü, „Járatrend importálása” jogosultsággal: Admin és Tervező): CSV, JSON, XLSX vagy XLS, legfeljebb 25 MB. A munkalap és a fejlécsor kiválasztható, a munkalap első sorai látszanak.
+- **Oszlop-párosítás**: mezőnként a fájl egy oszlopa (a rendszer a fejlécekből javasol), UTC vagy budapesti idő, a dátum jöhet időszakból napmintával, dátumoszlopból vagy az időcellából. Élő előnézet mutatja, mi lesz az első sorokból. A párosítás profilként menthető; azonos fejlécű fájlnál a rendszer felajánlja.
+- **Próbafuttatás**: semmit nem ír. Csak a BUD-ot érintő sorokat veszi, fordulókat képez (az érkezés a következő járat első, utána induló példányával párosul), a többi csak érkező, illetve csak induló járat lesz. Összesíti az új, változott, változatlan, hibás és hiányzó járatokat, soronként indoklással.
+- **Mentés**: csak a menetrendi mezőket írja. A járat azonosítója a légitársaság, a járatszám, az üzemnap és az állomás, így újraimportálásnál nincs duplikáció; az ETA/ETD, ATA/ATD, a késés, a törlés és a kiosztás érintetlen marad. Kézzel felvett járatot járatszám és nap szerint megtalál és frissít. Az importok naplózva vannak.
+- **Hiányzó járatok**: ha egy korábban ugyanazzal a profillal importált járat nincs az új fájlban, „Az utolsó importból hiányzik” jelölést kap a napi listán, a task és a járat oldalán. Nem törlődik: a tervező az import oldalon törli a jelölést, vagy a műszakvezető töröltre állítja a járatot.
+
 ## Indítás Docker Compose-zal
 
 Követelmény: [Docker Desktop](https://www.docker.com/products/docker-desktop/) (Windows / macOS) vagy Docker Engine Compose-zal (Linux).
@@ -51,6 +59,15 @@ A demo beosztás a betöltés napjára és a következő napra publikált és va
 | `tervezo` | Tervező Tamás | Tervező |
 | `ugynok1` | Kiss Péter | Ügynök |
 | `ugynok2` | Nagy Eszter | Ügynök |
+
+### A járatrend-import kipróbálása
+
+A mintafájl: [`tests/fixtures/schedule/ryanair-netline-bud-sample.xlsx`](tests/fixtures/schedule/ryanair-netline-bud-sample.xlsx) (Ryanair NetLine-export, 2024. szeptember – 2025. január; a sorok várt eredménye: [`docs/schedule-import.md`](docs/schedule-import.md)).
+
+1. Adminként (`admin`) az `Admin → Légitársaságok és sablonok` oldalon vedd fel a Ryanairt `FR` IATA-kóddal, hozz létre hozzá egy sablont, és állítsd be alapértelmezettnek (az importált járatok ezt kapják).
+2. A `Járatrend-import` oldalon (admin vagy `tervezo`) töltsd fel a fájlt. A munkalap a `Template_Auto_Export(netline)`, a fejlécsor az 1.; a javasolt párosítás minden mezőhöz megtalálja az oszlopot, az idő UTC.
+3. Próbafuttatás: 50 új járat (27 forduló, 1 csak érkező, 22 csak induló), 2 kiszűrt, nem BUD-os sor. Utána mentés.
+4. A járatok a napi listán a 2024. 09. 10-i naptól látszanak.
 
 ### Hasznos parancsok
 
@@ -101,6 +118,7 @@ Ha a Docker nem elérhető, a Prisma saját helyi Postgrese is megfelel fejleszt
 | `lib/turnaround.ts` | Időszámítási és foglaltsági szabályok, tiszta függvények tesztekkel |
 | `lib/board.ts` | A sávos nézet modellje: dobozok, sávok, blokkok, a háromféle ütközés |
 | `lib/roster.ts` | Beosztás-segédfüggvények: publikált napok, a publikált és a valós réteg eltérései |
+| `lib/import/` | Járatrend-import: fájlbeolvasás, átalakítások, oszlop-párosítás, fordulók képzése, összevetés a meglévő járatokkal; tiszta függvények, tesztek a mintafájllal |
 | `lib/permissions/` | A jogosultságok katalógusa és a jogosultsági szabályok (a proxy, az oldalak és minden szerverművelet ezt használja) |
 | `lib/time.ts` | Átváltás UTC és Europe/Budapest között |
 | `lib/messages/hu.ts` | A felület összes magyar szövege |
