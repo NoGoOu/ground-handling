@@ -42,7 +42,7 @@ function TaskBox({
     stand: box.stand,
     from: formatTimeOnDay(box.start, day),
     to: formatTimeOnDay(box.end, day),
-  })}${conflicted ? ` · ${conflictTitle(box.conflicts)}` : ""}`;
+  })}${box.late ? ` · ${box.late}` : ""}${conflicted ? ` · ${conflictTitle(box.conflicts)}` : ""}`;
 
   return (
     <Link
@@ -60,7 +60,10 @@ function TaskBox({
           : "border-sky-300 bg-sky-100 text-sky-900 hover:bg-sky-200"
       }`}
     >
-      <span className="truncate font-semibold">{box.flightLabel}</span>
+      <span className="truncate font-semibold">
+        {box.late && <span className="mr-1 text-orange-700">⏱</span>}
+        {box.flightLabel}
+      </span>
       <span className="truncate text-[11px] text-neutral-600">
         {box.stand} · {formatTimeOnDay(box.start, day)}
       </span>

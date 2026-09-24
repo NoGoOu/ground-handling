@@ -11,10 +11,12 @@ import { canAssignTask, canAssignTasks, canAssignToAgent, canManageFlights } fro
 import { getCurrentUser } from "@/lib/session";
 import { toLocalDate } from "@/lib/time";
 import type { Part } from "@/lib/turnaround";
+import { DELAY_FIELDS, delayPartErrors, delaySchema, type DelayFormInput } from "@/lib/validation/delay";
 import { FLIGHT_FIELDS, flightSchema, type FlightFormInput } from "@/lib/validation/flight";
 import { fieldErrors, formValues, type FormState } from "@/lib/validation/form";
 
 export type FlightFormState = FormState<FlightFormInput>;
+export type DelayFormState = FormState<DelayFormInput>;
 
 const e = messages.flightForm.errors;
 
@@ -34,6 +36,28 @@ async function parse(formData: FormData) {
   if (!template) return { values, state: { errors: { templateId: e.template }, values } };
   return { values, data: { ...parsed.data, airlineId: template.airlineId } };
 }
+
+/** What a dropped part takes with it: its estimate and its cancellation. */
+const DROPPED_ARRIVAL = {
+  eta: null,
+  etaSource: null,
+  etaNote: null,
+  etaRecordedById: null,
+  etaRecordedAt: null,
+  arrivalCancelled: false,
+  arrivalCancelledById: null,
+  arrivalCancelledAt: null,
+};
+const DROPPED_DEPARTURE = {
+  etd: null,
+  etdSource: null,
+  etdNote: null,
+  etdRecordedById: null,
+  etdRecordedAt: null,
+  departureCancelled: false,
+  departureCancelledById: null,
+  departureCancelledAt: null,
+};
 
 /** The daily list to return to: the arrival day, or the departure day of a departure-only flight. */
 function listDay(flight: { sta: Date | null; std: Date | null }): string {
@@ -93,7 +117,14 @@ export async function updateFlight(
   }
 
   const flight = await prisma.$transaction(async (tx) => {
-    const updated = await tx.flight.update({ where: { id: flightId }, data: result.data });
+    const updated = await tx.flight.update({
+      where: { id: flightId },
+      data: {
+        ...result.data,
+        ...(dropsArrival ? DROPPED_ARRIVAL : {}),
+        ...(dropsDeparture ? DROPPED_DEPARTURE : {}),
+      },
+    });
     // A dropped part takes its agent with it (a one-sided task has one agent).
     if (existing.task && (dropsArrival || dropsDeparture)) {
       await tx.task.update({
@@ -148,6 +179,88 @@ export async function assignAgents(
     }
 
     await prisma.task.update({ where: { id: taskId }, data: { arrivalAgentId, departureAgentId } });
+    refresh();
+  });
+}
+
+/**
+ * "Késés rögzítése": a new estimated arrival and/or departure on the same
+ * flight, with its source. The latest value always counts; the log keeps them all.
+ */
+export async function recordDelay(
+  flightId: string,
+  _previous: DelayFormState,
+  formData: FormData,
+): Promise<DelayFormState> {
+  const actor = await getCurrentUser();
+  if (!actor || !canManageFlights(actor)) return { message: messages.errors.forbidden };
+  const flight = await prisma.flight.findUnique({
+    where: { id: flightId },
+    select: { sta: true, std: true, arrivalCancelled: true, departureCancelled: true },
+  });
+  if (!flight) return { message: messages.errors.notFound };
+
+  const values = formValues(formData, DELAY_FIELDS);
+  const parsed = delaySchema.safeParse(values);
+  if (!parsed.success) return { errors: fieldErrors(parsed.error), values };
+  const partErrors = delayPartErrors(parsed.data, flight);
+  if (Object.keys(partErrors).length > 0) return { errors: partErrors, values };
+
+  const { eta, etd } = parsed.data;
+  const note = parsed.data.note || null;
+  const now = new Date();
+  await prisma.$transaction([
+    prisma.flight.update({
+      where: { id: flightId },
+      data: {
+        ...(eta ? { eta, etaSource: "MANUAL", etaNote: note, etaRecordedById: actor.id, etaRecordedAt: now } : {}),
+        ...(etd ? { etd, etdSource: "MANUAL", etdNote: note, etdRecordedById: actor.id, etdRecordedAt: now } : {}),
+      },
+    }),
+    prisma.flightEvent.create({
+      data: { flightId, kind: "DELAY", eta, etd, source: "MANUAL", note, createdById: actor.id, createdAt: now },
+    }),
+  ]);
+  refresh();
+  return { notice: messages.delay.saved };
+}
+
+function isPart(value: unknown): value is Part {
+  return value === "ARRIVAL_PART" || value === "DEPARTURE_PART";
+}
+
+/**
+ * Cancels or restores one part of a flight ("Késés és törlés"). The flight is
+ * never deleted, the assignment stays, and both directions are logged.
+ */
+export async function setPartCancelled(flightId: string, part: Part, cancelled: boolean): Promise<ActionResult> {
+  return runAction(async () => {
+    const actor = await actionUser(canManageFlights);
+    if (!isPart(part) || typeof cancelled !== "boolean") throw new ActionError(messages.errors.invalidInput);
+    const flight = await prisma.flight.findUnique({
+      where: { id: flightId },
+      select: { sta: true, std: true, arrivalCancelled: true, departureCancelled: true },
+    });
+    if (!flight) throw new ActionError(messages.errors.notFound);
+
+    const arrival = part === "ARRIVAL_PART";
+    if (!(arrival ? flight.sta : flight.std)) throw new ActionError(messages.assignment.missingPart);
+    if ((arrival ? flight.arrivalCancelled : flight.departureCancelled) === cancelled) return;
+
+    const now = new Date();
+    const by = cancelled ? actor.id : null;
+    const at = cancelled ? now : null;
+    await prisma.$transaction([
+      prisma.flight.update({
+        where: { id: flightId },
+        data: arrival
+          ? { arrivalCancelled: cancelled, arrivalCancelledById: by, arrivalCancelledAt: at }
+          : { departureCancelled: cancelled, departureCancelledById: by, departureCancelledAt: at },
+      }),
+      prisma.flightEvent.create({
+        data: { flightId, kind: cancelled ? "CANCEL" : "RESTORE", part, createdById: actor.id, createdAt: now },
+      }),
+    ]);
     refresh();
   });
 }

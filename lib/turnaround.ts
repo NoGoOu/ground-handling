@@ -41,6 +41,9 @@ export interface FlightTimes {
   ata?: Date | null;
   /** From the external system. */
   atd?: Date | null;
+  /** "Késés és törlés": a cancelled part stays on the lists but is not worked. */
+  arrivalCancelled?: boolean;
+  departureCancelled?: boolean;
 }
 
 /**
@@ -59,6 +62,23 @@ export function flightKind(flight: Pick<FlightTimes, "sta" | "std">): FlightKind
 export function hasPart(kind: FlightKind, part: Part): boolean {
   if (kind === "TURNAROUND") return true;
   return part === "ARRIVAL_PART" ? kind === "ARRIVAL_ONLY" : kind === "DEPARTURE_ONLY";
+}
+
+/**
+ * The parts still worked after cancellations; the flight then behaves by rule 11
+ * as what is left. Null when every part is cancelled.
+ */
+export function activeKind(flight: FlightTimes): FlightKind | null {
+  const arrival = !!flight.sta && !flight.arrivalCancelled;
+  const departure = !!flight.std && !flight.departureCancelled;
+  if (arrival && departure) return "TURNAROUND";
+  if (arrival) return "ARRIVAL_ONLY";
+  if (departure) return "DEPARTURE_ONLY";
+  return null;
+}
+
+export function isPartCancelled(flight: FlightTimes, part: Part): boolean {
+  return part === "ARRIVAL_PART" ? !!flight.arrivalCancelled : !!flight.departureCancelled;
 }
 
 /** Rule 11: a one-sided flight has only the milestones of its own part. */
@@ -225,6 +245,8 @@ export interface TimelineRow {
   deviationLevel: DeviationLevel | null;
   /** Earlier milestones whose actual time is later than this row's. */
   orderConflictIds: string[];
+  /** The row's part is cancelled: shown, but never flagged as missing. */
+  cancelled: boolean;
 }
 
 export type TurnaroundType = "QUICK" | "LONG";
@@ -329,6 +351,15 @@ export function oneSidedShape(
   };
 }
 
+/** A flight with every part cancelled occupies nobody. */
+const NO_SHAPE: TurnaroundShape = {
+  type: null,
+  breakMinutes: null,
+  arrivalWindowEnd: null,
+  departureWindowStart: null,
+  windows: [],
+};
+
 export function windowsOverlap(a: TimeWindow, b: TimeWindow): boolean {
   return a.start.getTime() < b.end.getTime() && b.start.getTime() < a.end.getTime();
 }
@@ -343,7 +374,10 @@ export function effectiveDepartureAgentId(
 }
 
 export interface Timeline {
+  /** The parts the flight has. */
   kind: FlightKind;
+  /** The parts still worked after cancellations; null when all are cancelled. */
+  activeKind: FlightKind | null;
   /** Null on a departure-only flight. */
   arrivalAnchor: Date | null;
   /** Null on an arrival-only flight. */
@@ -372,11 +406,13 @@ export function computeTimeline({
   thresholds = DEVIATION_THRESHOLDS,
 }: TimelineInput): Timeline {
   const kind = flightKind(flight);
+  const active = activeKind(flight);
   // Rule 11: the milestones of a missing part do not exist for this flight.
   milestones = milestonesFor(kind, milestones);
   const { ata, atd } = effectiveActuals(flight, milestones, recorded);
   const arrival = arrivalAnchor(flight, ata);
-  const departure = departureAnchor(flight, arrival, params);
+  // A cancelled arrival leaves a departure-only flight: no minimum turnaround.
+  const departure = departureAnchor(flight, flight.arrivalCancelled ? null : arrival, params);
   const planned = plannedTimes(milestones, arrival, departure);
 
   const actuals = new Map<string, Date>();
@@ -404,23 +440,27 @@ export function computeTimeline({
       deviationMinutes: deviation,
       deviationLevel: deviation === null ? null : deviationLevel(deviation, thresholds),
       orderConflictIds: conflicts.filter((c) => c.laterId === def.id).map((c) => c.earlierId),
+      cancelled: isPartCancelled(flight, def.part),
     };
   });
 
-  const anchor = (arrival ?? departure)!;
-  const lastArrival = lastArrivalPlanned(milestones, planned, anchor);
+  // Occupancy and turnaround type come from the parts still worked.
+  const lastArrival = lastArrivalPlanned(milestones, planned, (arrival ?? departure)!);
   const shape =
-    kind === "TURNAROUND"
-      ? turnaroundShape(params, arrival!, departure!, lastArrival)
-      : oneSidedShape(params, kind, anchor, lastArrival);
+    active === null
+      ? NO_SHAPE
+      : active === "TURNAROUND"
+        ? turnaroundShape(params, arrival!, departure!, lastArrival)
+        : oneSidedShape(params, active, (active === "ARRIVAL_ONLY" ? arrival : departure)!, lastArrival);
 
   return {
     kind,
+    activeKind: active,
     arrivalAnchor: arrival,
     departureAnchor: departure,
     effectiveAta: ata,
     effectiveAtd: atd,
-    delayMinutes: delayMinutes(flight.std, atd),
+    delayMinutes: flight.departureCancelled ? null : delayMinutes(flight.std, atd),
     shape,
     rows,
   };
@@ -431,9 +471,10 @@ export function computeTimeline({
  * planned time has passed or the task is completed (decision 5 in CLAUDE.md).
  */
 export function isRequiredMissing(
-  row: Pick<TimelineRow, "milestone" | "actual" | "planned">,
+  row: Pick<TimelineRow, "milestone" | "actual" | "planned"> & { cancelled?: boolean },
   { now, completed }: { now: Date; completed: boolean },
 ): boolean {
-  if (!row.milestone.required || row.actual) return false;
+  // A cancelled part's milestones are never flagged ("Késés és törlés").
+  if (!row.milestone.required || row.actual || row.cancelled) return false;
   return completed || now.getTime() >= row.planned.getTime();
 }

@@ -24,6 +24,7 @@ function task(overrides: Partial<BoardTask> = {}): BoardTask {
     flightLabel: "ZZ1101 / ZZ1102",
     stand: "31",
     status: "PLANNED",
+    late: null,
     type: "QUICK",
     arrivalAgentId: "anna",
     departureAgentId: "anna",

@@ -39,6 +39,8 @@ export interface SeedFlight {
   departureAgent: SeedUsername | null;
   /** Agent records by milestone code. */
   records: { code: string; time: Date; by: SeedUsername }[];
+  /** Source note of the ETA/ETD, recorded with "Késés rögzítése" by the shift lead. */
+  estimateNote?: string;
 }
 
 /** "HH:MM" on the given Budapest day → UTC instant. */
@@ -92,6 +94,7 @@ export function buildSeedFlights(localDate: string): SeedFlight[] {
       stand: "33",
       sta: at("10:00"),
       eta: at("10:10"),
+      estimateNote: "email a légitársaságtól",
       std: at("12:30"),
       etd: null,
       ata: null,
@@ -126,6 +129,7 @@ export function buildSeedFlights(localDate: string): SeedFlight[] {
       eta: null,
       std: at("17:00"),
       etd: at("17:10"),
+      estimateNote: "telefon a légitársaságtól",
       ata: null,
       atd: null,
       status: "PLANNED",

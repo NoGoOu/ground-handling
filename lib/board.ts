@@ -17,6 +17,8 @@ export interface BoardTask {
   flightLabel: string;
   stand: string;
   status: TaskStatus;
+  /** "Késik" with the original scheduled time, already formatted; null when on time. */
+  late: string | null;
   /** Null on a one-sided flight: its single box is the part it has. */
   type: TurnaroundType | null;
   arrivalAgentId: string | null;
@@ -79,6 +81,7 @@ export interface BoardBox extends TimeWindow {
   flightLabel: string;
   stand: string;
   status: TaskStatus;
+  late: string | null;
   agentId: string | null;
   conflicts: ConflictKind[];
 }
@@ -109,6 +112,7 @@ export function taskBoxes(task: BoardTask): BoardBox[] {
     flightLabel: task.flightLabel,
     stand: task.stand,
     status: task.status,
+    late: task.late,
     agentId: window.part === "DEPARTURE_PART" ? task.departureAgentId : task.arrivalAgentId,
     conflicts: [],
   }));

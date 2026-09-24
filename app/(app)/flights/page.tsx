@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { DelayBadge, StatusBadge, TypeBadge } from "@/components/badges";
+import { CancelBadges, DelayBadge, LateBadge, StatusBadge, TypeBadge } from "@/components/badges";
 import { DateNav } from "@/components/date-nav";
 import { TimeStack } from "@/components/time-stack";
 import { listTaskViewsForDay, type TaskView } from "@/lib/data/tasks";
@@ -75,13 +75,22 @@ export default async function FlightsPage(props: PageProps<"/flights">) {
               {tasks.map((task) => (
                 <tr key={task.id} className="align-top">
                   <td className="px-3 py-2">
-                    <Link href={`/tasks/${task.id}`} className="font-semibold text-sky-700 hover:underline">
+                    <Link
+                      href={`/tasks/${task.id}`}
+                      className={`font-semibold text-sky-700 hover:underline ${
+                        task.timeline.activeKind === null ? "line-through" : ""
+                      }`}
+                    >
                       {flightLabel(task.flight)}
                     </Link>
                     <div className="text-xs text-neutral-500">{task.flight.airline.name}</div>
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      <LateBadge late={task.late} />
+                      <CancelBadges arrival={task.flight.arrivalCancelled} departure={task.flight.departureCancelled} />
+                    </div>
                   </td>
                   <td className="px-3 py-2 font-medium">{task.flight.stand}</td>
-                  <td className="px-3 py-2">
+                  <td className={`px-3 py-2 ${task.flight.arrivalCancelled ? "line-through opacity-60" : ""}`}>
                     <TimeStack
                       day={date}
                       entries={[
@@ -91,7 +100,7 @@ export default async function FlightsPage(props: PageProps<"/flights">) {
                       ]}
                     />
                   </td>
-                  <td className="px-3 py-2">
+                  <td className={`px-3 py-2 ${task.flight.departureCancelled ? "line-through opacity-60" : ""}`}>
                     <TimeStack
                       day={date}
                       entries={[
@@ -105,7 +114,7 @@ export default async function FlightsPage(props: PageProps<"/flights">) {
                     </div>
                   </td>
                   <td className="px-3 py-2">
-                    <TypeBadge type={task.timeline.shape.type} kind={task.timeline.kind} />
+                    <TypeBadge type={task.timeline.shape.type} kind={task.timeline.activeKind ?? task.timeline.kind} />
                   </td>
                   <td className="px-3 py-2">
                     <StatusBadge status={task.status} />

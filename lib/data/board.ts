@@ -3,6 +3,9 @@ import { listShiftsForDay } from "@/lib/data/shifts";
 import { listTaskViewsForDay, type TaskView } from "@/lib/data/tasks";
 import { listAgentOptions } from "@/lib/data/users";
 import { flightLabel } from "@/lib/flight";
+import { messages } from "@/lib/messages";
+import { fmt } from "@/lib/messages/format";
+import { formatDayShort, formatTime, toLocalDate } from "@/lib/time";
 
 function toBoardTask(task: TaskView): BoardTask {
   return {
@@ -10,6 +13,11 @@ function toBoardTask(task: TaskView): BoardTask {
     flightLabel: flightLabel(task.flight),
     stand: task.flight.stand,
     status: task.status,
+    late: task.late.scheduled
+      ? fmt(messages.late.scheduled, {
+          time: `${formatDayShort(toLocalDate(task.late.scheduled))} ${formatTime(task.late.scheduled)}`,
+        })
+      : null,
     type: task.timeline.shape.type,
     arrivalAgentId: task.arrivalAgent?.id ?? null,
     departureAgentId: task.effectiveDepartureAgent?.id ?? null,

@@ -1,6 +1,7 @@
 import type { Prisma } from "@/generated/prisma/client";
-import type { TaskStatus } from "@/generated/prisma/enums";
+import type { EstimateSource, TaskStatus } from "@/generated/prisma/enums";
 import { prisma } from "@/lib/db";
+import { lateness, type Lateness } from "@/lib/flight";
 import { candidateWindow, dayAnchors, forDay } from "@/lib/flight-day";
 import { parseTemplateSnapshot } from "@/lib/snapshot";
 import { getSettings } from "@/lib/settings";
@@ -19,7 +20,16 @@ import {
 const personSelect = { select: { id: true, name: true } } as const;
 
 const taskInclude = {
-  flight: { include: { airline: true, template: { include: { milestones: true } } } },
+  flight: {
+    include: {
+      airline: true,
+      template: { include: { milestones: true } },
+      etaRecordedBy: personSelect,
+      etdRecordedBy: personSelect,
+      arrivalCancelledBy: personSelect,
+      departureCancelledBy: personSelect,
+    },
+  },
   arrivalAgent: personSelect,
   departureAgent: personSelect,
   records: { include: { recordedBy: personSelect, updatedBy: personSelect } },
@@ -40,6 +50,19 @@ export interface RecordInfo {
   updatedAt: Date | null;
 }
 
+/** Where the current ETA or ETD came from ("Késés és törlés"). */
+export interface EstimateInfo {
+  source: EstimateSource | null;
+  note: string | null;
+  by: PersonRef | null;
+  at: Date | null;
+}
+
+export interface Cancellation {
+  by: PersonRef | null;
+  at: Date | null;
+}
+
 export interface TaskView {
   id: string;
   status: TaskStatus;
@@ -58,7 +81,16 @@ export interface TaskView {
     atd: Date | null;
     airline: { name: string; iataCode: string };
     templateName: string;
+    etaInfo: EstimateInfo | null;
+    etdInfo: EstimateInfo | null;
+    /** Null while the part is worked. */
+    arrivalCancellation: Cancellation | null;
+    departureCancellation: Cancellation | null;
+    arrivalCancelled: boolean;
+    departureCancelled: boolean;
   };
+  /** "Késik": the effective arrival or departure is later than scheduled. */
+  late: Lateness;
   arrivalAgent: PersonRef | null;
   /** As assigned; on a quick turnaround the arrival agent does this part instead. */
   departureAgent: PersonRef | null;
@@ -127,7 +159,22 @@ function toTaskView(task: TaskWithRelations, thresholds: DeviationThresholds): T
       atd: flight.atd,
       airline: { name: flight.airline.name, iataCode: flight.airline.iataCode },
       templateName: flight.template.name,
+      etaInfo: flight.eta
+        ? { source: flight.etaSource, note: flight.etaNote, by: flight.etaRecordedBy, at: flight.etaRecordedAt }
+        : null,
+      etdInfo: flight.etd
+        ? { source: flight.etdSource, note: flight.etdNote, by: flight.etdRecordedBy, at: flight.etdRecordedAt }
+        : null,
+      arrivalCancellation: flight.arrivalCancelled
+        ? { by: flight.arrivalCancelledBy, at: flight.arrivalCancelledAt }
+        : null,
+      departureCancellation: flight.departureCancelled
+        ? { by: flight.departureCancelledBy, at: flight.departureCancelledAt }
+        : null,
+      arrivalCancelled: flight.arrivalCancelled,
+      departureCancelled: flight.departureCancelled,
     },
+    late: lateness(flight, timeline),
     arrivalAgent: task.arrivalAgent,
     departureAgent: task.departureAgent,
     effectiveDepartureAgent:

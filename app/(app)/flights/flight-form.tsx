@@ -70,9 +70,6 @@ export function FlightForm({
           <FormField label={t.sta} error={error("sta")}>
             <input type="datetime-local" name="sta" defaultValue={value("sta")} className="input" />
           </FormField>
-          <FormField label={t.eta} hint={messages.form.optional} error={error("eta")}>
-            <input type="datetime-local" name="eta" defaultValue={value("eta")} className="input" />
-          </FormField>
         </fieldset>
         <fieldset className="flex flex-col gap-4 rounded-lg border border-neutral-200 p-4">
           <legend className="px-1 font-semibold">{t.departurePart}</legend>
@@ -81,9 +78,6 @@ export function FlightForm({
           </FormField>
           <FormField label={t.std} error={error("std")}>
             <input type="datetime-local" name="std" defaultValue={value("std")} className="input" />
-          </FormField>
-          <FormField label={t.etd} hint={messages.form.optional} error={error("etd")}>
-            <input type="datetime-local" name="etd" defaultValue={value("etd")} className="input" />
           </FormField>
         </fieldset>
       </div>

@@ -1,6 +1,8 @@
 import type { TaskStatus } from "@/generated/prisma/enums";
 import { messages } from "@/lib/messages";
 import { fmt } from "@/lib/messages/format";
+import type { Lateness } from "@/lib/flight";
+import { formatDayShort, formatTime, toLocalDate } from "@/lib/time";
 import type { DeviationLevel, FlightKind, TurnaroundType } from "@/lib/turnaround";
 
 const base = "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap";
@@ -40,4 +42,29 @@ export function DeviationBadge({ minutes, level }: { minutes: number; level: Dev
 export function DelayBadge({ minutes }: { minutes: number | null }) {
   if (!minutes) return null;
   return <span className={`${base} bg-red-100 text-red-800`}>{fmt(messages.times.delay, { minutes })}</span>;
+}
+
+/** "Késik", with the original scheduled day and time ("Késés és törlés"). */
+export function LateBadge({ late }: { late: Lateness }) {
+  if (!late.late || !late.scheduled) return null;
+  const scheduled = `${formatDayShort(toLocalDate(late.scheduled))} ${formatTime(late.scheduled)}`;
+  return (
+    <span className={`${base} bg-orange-100 text-orange-800`}>{fmt(messages.late.scheduled, { time: scheduled })}</span>
+  );
+}
+
+/** "Törölt járat" when both parts are cancelled, otherwise one badge per cancelled part. */
+export function CancelBadges({ arrival, departure }: { arrival: boolean; departure: boolean }) {
+  const style = `${base} bg-neutral-800 text-white`;
+  if (arrival && departure) return <span className={style}>{messages.cancel.flightCancelled}</span>;
+  return (
+    <>
+      {arrival && (
+        <span className={style}>{fmt(messages.cancel.partCancelled, { part: messages.part.ARRIVAL_PART })}</span>
+      )}
+      {departure && (
+        <span className={style}>{fmt(messages.cancel.partCancelled, { part: messages.part.DEPARTURE_PART })}</span>
+      )}
+    </>
+  );
 }

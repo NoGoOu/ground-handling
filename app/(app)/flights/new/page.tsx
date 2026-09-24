@@ -22,9 +22,7 @@ export default async function NewFlightPage() {
           outboundFlightNumber: "",
           stand: "",
           sta: "",
-          eta: "",
           std: "",
-          etd: "",
         }}
       />
     </div>

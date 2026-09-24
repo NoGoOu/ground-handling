@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { Fragment } from "react";
-import { DelayBadge, StatusBadge, TypeBadge } from "@/components/badges";
+import { CancelBadges, DelayBadge, LateBadge, StatusBadge, TypeBadge } from "@/components/badges";
 import { DateNav } from "@/components/date-nav";
 import { TimeStack } from "@/components/time-stack";
 import type { BoardBlock } from "@/lib/board";
 import { listAgentBlocks } from "@/lib/data/shifts";
 import { listTaskViewsForDay, taskAssignment, type TaskView } from "@/lib/data/tasks";
 import { flightLabel } from "@/lib/flight";
+import { dayAnchors } from "@/lib/flight-day";
 import { messages } from "@/lib/messages";
 import { fmt } from "@/lib/messages/format";
 import { assignedParts, canViewOwnTasks, canViewTask } from "@/lib/permissions";
@@ -31,7 +32,9 @@ function TaskCard({ task, user, day }: { task: TaskView; user: CurrentUser; day:
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-xl font-bold">{flightLabel(task.flight)}</span>
           <StatusBadge status={task.status} />
-          <TypeBadge type={task.timeline.shape.type} kind={task.timeline.kind} />
+          <TypeBadge type={task.timeline.shape.type} kind={task.timeline.activeKind ?? task.timeline.kind} />
+          <LateBadge late={task.late} />
+          <CancelBadges arrival={task.flight.arrivalCancelled} departure={task.flight.departureCancelled} />
           <DelayBadge minutes={task.timeline.delayMinutes} />
         </div>
         <div className="text-neutral-700">
@@ -40,24 +43,28 @@ function TaskCard({ task, user, day }: { task: TaskView; user: CurrentUser; day:
         </div>
         <div className="grid grid-cols-2 gap-3 text-base">
           {hasPart(task.timeline.kind, "ARRIVAL_PART") && (
-            <TimeStack
-              day={day}
-              entries={[
-                { label: tt.sta, time: task.flight.sta },
-                { label: tt.eta, time: task.flight.eta },
-                { label: tt.ata, time: task.timeline.effectiveAta, emphasis: true },
-              ]}
-            />
+            <div className={task.flight.arrivalCancelled ? "line-through opacity-60" : ""}>
+              <TimeStack
+                day={day}
+                entries={[
+                  { label: tt.sta, time: task.flight.sta },
+                  { label: tt.eta, time: task.flight.eta },
+                  { label: tt.ata, time: task.timeline.effectiveAta, emphasis: true },
+                ]}
+              />
+            </div>
           )}
           {hasPart(task.timeline.kind, "DEPARTURE_PART") && (
-            <TimeStack
-              day={day}
-              entries={[
-                { label: tt.std, time: task.flight.std },
-                { label: tt.etd, time: task.flight.etd },
-                { label: tt.atd, time: task.timeline.effectiveAtd, emphasis: true },
-              ]}
-            />
+            <div className={task.flight.departureCancelled ? "line-through opacity-60" : ""}>
+              <TimeStack
+                day={day}
+                entries={[
+                  { label: tt.std, time: task.flight.std },
+                  { label: tt.etd, time: task.flight.etd },
+                  { label: tt.atd, time: task.timeline.effectiveAtd, emphasis: true },
+                ]}
+              />
+            </div>
           )}
         </div>
         <div className="rounded-lg bg-sky-50 px-3 py-2 font-medium text-sky-900">
@@ -103,7 +110,7 @@ export default async function AgentPage(props: PageProps<"/agent">) {
   const items = [
     ...tasks.map((task) => ({
       key: task.id,
-      at: task.timeline.shape.windows[0].start,
+      at: task.timeline.shape.windows[0]?.start ?? dayAnchors(task.timeline).order,
       node: <TaskCard task={task} user={user} day={date} />,
     })),
     ...blocks.map((block) => ({ key: block.id, at: block.start, node: <BlockCard block={block} day={date} /> })),

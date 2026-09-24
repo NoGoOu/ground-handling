@@ -11,7 +11,7 @@ import { fmt } from "@/lib/messages/format";
 import { canChangeTaskStatus, canRecordMilestone } from "@/lib/permissions";
 import { templateSnapshotJson } from "@/lib/snapshot";
 import { parseLocalDateTime } from "@/lib/time";
-import { hasPart, truncateToMinute } from "@/lib/turnaround";
+import { hasPart, isPartCancelled, truncateToMinute } from "@/lib/turnaround";
 
 // Bound arguments (task, milestone, status) come from the client, so each one is
 // checked here against the database and the permission rules.
@@ -43,6 +43,8 @@ async function saveMilestoneTime(taskId: string, milestoneId: string, time: Date
   if (!milestone) throw new ActionError(messages.errors.notFound);
   // Rule 11: the milestones of a missing part do not exist for this flight.
   if (!hasPart(task.timeline.kind, milestone.part)) throw new ActionError(messages.assignment.missingPart);
+  // A cancelled part is not worked, so there is nothing to record on it.
+  if (isPartCancelled(task.flight, milestone.part)) throw new ActionError(messages.delay.errors.cancelled);
 
   const existing = await prisma.milestoneRecord.findUnique({
     where: { taskId_milestoneDefinitionId: { taskId, milestoneDefinitionId: milestoneId } },

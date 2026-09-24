@@ -140,10 +140,39 @@ async function main() {
     }
 
     for (const flight of buildSeedFlights(localDate)) {
-      const { status, arrivalAgent, departureAgent, records, ...flightData } = flight;
+      const { status, arrivalAgent, departureAgent, records, estimateNote, ...flightData } = flight;
+      // Estimates come from "Késés rögzítése": source, note, who and when, and a log entry.
+      const lead = userId("vezeto")!;
+      const now = new Date();
+      const estimate = (value: Date | null) =>
+        value ? { source: "MANUAL" as const, note: estimateNote ?? null, by: lead, at: now } : null;
+      const eta = estimate(flightData.eta);
+      const etd = estimate(flightData.etd);
       await tx.flight.create({
         data: {
           ...flightData,
+          etaSource: eta?.source,
+          etaNote: eta?.note,
+          etaRecordedById: eta?.by,
+          etaRecordedAt: eta?.at,
+          etdSource: etd?.source,
+          etdNote: etd?.note,
+          etdRecordedById: etd?.by,
+          etdRecordedAt: etd?.at,
+          events:
+            eta || etd
+              ? {
+                  create: {
+                    kind: "DELAY",
+                    eta: flightData.eta,
+                    etd: flightData.etd,
+                    source: "MANUAL",
+                    note: estimateNote ?? null,
+                    createdById: lead,
+                    createdAt: now,
+                  },
+                }
+              : undefined,
           airlineId: airline.id,
           templateId: template.id,
           task: {
