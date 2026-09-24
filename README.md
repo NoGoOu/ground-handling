@@ -12,11 +12,17 @@ Nyílt forráskódú webalkalmazás repülőtéri földi kiszolgálás (ground h
 - **Ügynök nézet**: a saját taskok telefonra optimalizálva.
 - **Admin**: felhasználók, légitársaságok, sablonok és mérföldkövek szerkesztése, valamint a globális beállítások (az eltérés színküszöbei, alapérték 0 és 5 perc).
 
-**2. mérföldkő – műszakbeosztás és sávos nézet**
+**2. mérföldkő – jogosultságok, beosztás és sávos nézet**
 
-- **Műszakbeosztás** (műszakvezető és admin): ügynökönként szabadon megadott kezdés és vég, opcionális megjegyzéssel. A műszak átnyúlhat éjfélen, és ugyanannak az ügynöknek nem lehet két átfedő műszakja.
-- **Sávos nézet**: ügynökönként egy sáv a műszak kiemelésével, a taskok a foglaltsági ablakaik szerinti dobozokkal (hosszú fordulónál kettő, gyorsnál egy), felül a „Kiosztatlan” sáv, és mozgó vonal a mostani időnél.
-- **Kiosztás húzással**: a doboz ráhúzása egy sávra hozzárendeli az adott részt, a „Kiosztatlan” sávra húzva törli. Ütközéskor – ha két foglaltsági ablak átfed, vagy a task kilóg a műszakból – a rendszer figyelmeztet, de menti, és a dobozt piros szegéllyel jelöli.
+- **Konfigurálható jogosultságok** (admin): szerepkör × jogosultság táblázat pipákkal és hatókörrel (saját / csapat / összes), új szerepkör létrehozása, csapatok vezetővel. Egy felhasználónak több szerepköre és egyéni jogosultsága is lehet; az adatlapján a tényleges jogosultságai látszanak, mindegyiknél a forrásával. Az alapértelmezett szerepkörök: Admin (beépített, zárolt), Tervező, Műszakvezető, Ügynök.
+- **Beosztás három rétegben** (`Műszakok` menü): név × nap heti táblázat, cellánként a publikált és a valós műszakkal; ahol a kettő eltér, a cella kiemelt. A cellára kattintva a műszak részei rétegenként látszanak és szerkeszthetők.
+  - *Tervezet*: csak a tervező és az admin látja és szerkeszti.
+  - *Publikált*: a tervező egy szabadon választott időszakot publikál; a tervezetek ekkor publikálttá és zárolttá válnak, egy nap csak egyszer publikálható.
+  - *Valós*: publikáláskor a publikált másolataként jön létre; a tervező és a műszakvezető módosítja.
+- **Műszakrészek és résztípusok**: egy műszak több részből áll (kezdet, vég, típus, helyszín, leírás). A résztípusokat a tervező kezeli, és mindegyiknél jelöli, hogy operatív-e. Egy nem operatív rész (pl. oktatás) blokként jelenhet meg a kiosztásban, oda- és visszautazási idővel kiszélesítve.
+- **Sávos nézet**: ügynökönként egy sáv a valós beosztás operatív részeinek kiemelésével és a blokkok mintázott dobozaival; a taskok a foglaltsági ablakaik szerinti dobozok (hosszú fordulónál kettő, gyorsnál egy), felül a „Kiosztatlan” sáv, és mozgó vonal a mostani időnél.
+- **Kiosztás húzással**: a doboz ráhúzása egy sávra hozzárendeli az adott részt, a „Kiosztatlan” sávra húzva törli. Ütközéskor a rendszer figyelmeztet, de menti, és a dobozt piros szegéllyel jelöli. Ütközés: két foglaltsági ablak átfed ugyanannál az ügynöknél; egy ablak átfed egy blokkal; egy ablak nem esik teljesen az ügynök operatív részeibe.
+- **Ügynök nézet**: a taskok között időrendben a saját blokkok is megjelennek (típus, idő, utazással számolt idő, helyszín, leírás).
 
 ## Indítás Docker Compose-zal
 
@@ -34,10 +40,13 @@ Az első indításkor a konténer létrehozza az adatbázis-táblákat, és bet�
 
 Mindegyik jelszava: `demo1234`
 
+A demo beosztás a betöltés napjára és a következő napra publikált és valós réteget tartalmaz: Nagy Eszter reggelén egy oktatás blokk van 20–20 perc utazási idővel, a második napon pedig a valós műszakja eltér a publikálttól.
+
 | Felhasználónév | Név | Szerepkör |
 |---|---|---|
 | `admin` | Admin Adél | Admin |
-| `vezeto` | Vezető Viktor | Műszakvezető |
+| `vezeto` | Vezető Viktor | Műszakvezető (a demo csapat vezetője) |
+| `tervezo` | Tervező Tamás | Tervező |
 | `ugynok1` | Kiss Péter | Ügynök |
 | `ugynok2` | Nagy Eszter | Ügynök |
 
@@ -88,14 +97,15 @@ Ha a Docker nem elérhető, a Prisma saját helyi Postgrese is megfelel fejleszt
 | Hely | Tartalom |
 |---|---|
 | `lib/turnaround.ts` | Időszámítási és foglaltsági szabályok, tiszta függvények tesztekkel |
-| `lib/board.ts` | A sávos nézet modellje: dobozok, sávok, ütközésvizsgálat |
-| `lib/permissions.ts` | Jogosultsági szabályok (a proxy, az oldalak és minden szerverművelet ezt használja) |
+| `lib/board.ts` | A sávos nézet modellje: dobozok, sávok, blokkok, a háromféle ütközés |
+| `lib/roster.ts` | Beosztás-segédfüggvények: publikált napok, a publikált és a valós réteg eltérései |
+| `lib/permissions/` | A jogosultságok katalógusa és a jogosultsági szabályok (a proxy, az oldalak és minden szerverművelet ezt használja) |
 | `lib/time.ts` | Átváltás UTC és Europe/Budapest között |
 | `lib/messages/hu.ts` | A felület összes magyar szövege |
 | `lib/validation/` | Űrlapok ellenőrzése (zod) |
 | `app/` | Oldalak és szerverműveletek (Next.js App Router) |
 | `prisma/` | Adatbázisséma, migrációk, demo adatok |
-| `proxy.ts` | Útvonalszintű belépés- és szerepkör-ellenőrzés |
+| `proxy.ts` | Útvonalszintű belépés- és jogosultság-ellenőrzés |
 
 Minden időpontot UTC-ben tárolunk, a felületen Europe/Budapest idő szerint jelenik meg.
 
