@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { headerFingerprint } from "@/lib/import/fingerprint";
 import { NETLINE_MAPPING, NETLINE_SAMPLE, netlineTable } from "@/lib/import/netline.fixture";
+import { NETLINE_FINGERPRINT, NETLINE_HEADERS, NETLINE_PROFILE_NAME } from "@/lib/import/netline";
 import { matchProfile, type StoredProfile } from "@/lib/import/profiles";
 import { readFile } from "@/lib/import/read";
 
@@ -24,5 +25,18 @@ describe("offering a profile", () => {
     const otherRow = { ...netline, id: "p4", mapping: { ...NETLINE_MAPPING, headerRow: 2 } };
     expect(matchProfile(file, [otherHeader, otherSheet, otherRow])).toBeNull();
     expect(matchProfile(file, [otherHeader, netline])).toBe(netline);
+  });
+});
+
+describe("the profile of the seed", () => {
+  it("is made for the header of the sample, so it is offered for it", () => {
+    expect(netlineTable().headers).toEqual([...NETLINE_HEADERS]);
+    const seeded: StoredProfile = {
+      id: "seed",
+      name: NETLINE_PROFILE_NAME,
+      headerFingerprint: NETLINE_FINGERPRINT,
+      mapping: NETLINE_MAPPING,
+    };
+    expect(matchProfile(file, [seeded])).toBe(seeded);
   });
 });

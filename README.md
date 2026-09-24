@@ -24,7 +24,7 @@ Nyílt forráskódú webalkalmazás repülőtéri földi kiszolgálás (ground h
 - **Kiosztás húzással**: a doboz ráhúzása egy sávra hozzárendeli az adott részt, a „Kiosztatlan” sávra húzva törli. Ütközéskor a rendszer figyelmeztet, de menti, és a dobozt piros szegéllyel jelöli. Ütközés: két foglaltsági ablak átfed ugyanannál az ügynöknél; egy ablak átfed egy blokkal; egy ablak nem esik teljesen az ügynök operatív részeibe.
 - **Ügynök nézet**: a taskok között időrendben a saját blokkok is megjelennek (típus, idő, utazással számolt idő, helyszín, leírás).
 - **Csak érkező és csak induló járat**: a járat érkezési és indulási része külön-külön elhagyható (legalább az egyik kell). Csak érkező járatnál a gép itt marad, csak indulónál már itt van; ilyenkor csak a meglévő rész mérföldkövei, ügynöke és foglaltsági ablaka létezik, forduló típus nincs. Már rögzített vagy a rendszerből kapott idővel rendelkező rész nem hagyható el.
-- **Késés és törlés**: a járat szerkesztő oldalán külön „Késés rögzítése” művelet ad új ETA-t és/vagy ETD-t, a forrás megjegyzésével; a járat ugyanaz marad, mindig a legutóbbi érték számít, és mellette látszik a forrása, rögzítője és ideje (az ETA/ETD csak így módosítható). Ha a hatályos érkezés vagy indulás későbbi a menetrendinél, a járat mindenhol „Késik” címkét kap az eredeti menetrendi nappal és idővel. Az érkezési és az indulási rész külön töröltre állítható és visszaállítható: a törölt rész áthúzva látszik, kimarad a foglaltságból, a sávos nézetből és az ütközésből, a kiosztás megmarad. Minden késés, törlés és visszaállítás a járat naplójába kerül.
+- **Késés és törlés**: a járat szerkesztő oldalán külön „Késés rögzítése” művelet ad új ETA-t és/vagy ETD-t, a forrás megjegyzésével; a járat ugyanaz marad, mindig a legutóbbi érték számít, és mellette látszik a forrása, rögzítője és ideje (az ETA/ETD csak így módosítható). Ha a hatályos érkezés vagy indulás több mint a sárga eltérés-küszöbbel későbbi a menetrendinél, a járat mindenhol „Késik” címkét kap az eredeti menetrendi nappal és idővel. Az érkezési és az indulási rész külön töröltre állítható és visszaállítható: a törölt rész áthúzva látszik, kimarad a foglaltságból, a sávos nézetből és az ütközésből, a kiosztás megmarad. Minden késés, törlés és visszaállítás a járat naplójába kerül.
 
 **3. mérföldkő – járatrend-import**
 
@@ -64,10 +64,11 @@ A demo beosztás a betöltés napjára és a következő napra publikált és va
 
 A mintafájl: [`tests/fixtures/schedule/ryanair-netline-bud-sample.xlsx`](tests/fixtures/schedule/ryanair-netline-bud-sample.xlsx) (Ryanair NetLine-export, 2024. szeptember – 2025. január; a sorok várt eredménye: [`docs/schedule-import.md`](docs/schedule-import.md)).
 
-1. Adminként (`admin`) az `Admin → Légitársaságok és sablonok` oldalon vedd fel a Ryanairt `FR` IATA-kóddal, hozz létre hozzá egy sablont, és állítsd be alapértelmezettnek (az importált járatok ezt kapják).
-2. A `Járatrend-import` oldalon (admin vagy `tervezo`) töltsd fel a fájlt. A munkalap a `Template_Auto_Export(netline)`, a fejlécsor az 1.; a javasolt párosítás minden mezőhöz megtalálja az oszlopot, az idő UTC.
-3. Próbafuttatás: 50 új járat (27 forduló, 1 csak érkező, 22 csak induló), 2 kiszűrt, nem BUD-os sor. Utána mentés.
-4. A járatok a napi listán a 2024. 09. 10-i naptól látszanak.
+A seed felveszi a Ryanairt (`FR`, a demo sablon másolatával mint alapértelmezett sablonnal) és a „Ryanair NetLine” párosítási profilt, így a próbához nem kell semmit beállítani.
+
+1. A `Járatrend-import` oldalon (`admin` vagy `tervezo`) töltsd fel a fájlt. A rendszer felajánlja a „Ryanair NetLine” profilt, és betölti a párosítást (munkalap: `Template_Auto_Export(netline)`, fejlécsor: 1., UTC idők).
+2. Próbafuttatás: 50 új járat (27 forduló, 1 csak érkező, 22 csak induló), 2 kiszűrt, nem BUD-os sor. Utána mentés.
+3. A járatok a napi listán a 2024. 09. 10-i naptól látszanak.
 
 ### Hasznos parancsok
 

@@ -1,6 +1,8 @@
 import "dotenv/config";
 import bcrypt from "bcryptjs";
+import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db";
+import { NETLINE_FINGERPRINT, NETLINE_MAPPING, NETLINE_PROFILE_NAME } from "@/lib/import/netline";
 import { DEFAULT_ROLES } from "@/lib/permissions";
 import { SETTINGS_ID } from "@/lib/settings";
 import { templateSnapshotJson } from "@/lib/snapshot";
@@ -9,6 +11,7 @@ import {
   buildSeedFlights,
   DEMO_PASSWORD,
   SEED_AIRLINE,
+  SEED_IMPORT_AIRLINE,
   SEED_MILESTONES,
   SEED_TEMPLATE,
   SEED_TEAM,
@@ -103,6 +106,22 @@ async function main() {
     });
     const milestoneId = new Map(template.milestones.map((m) => [m.code, m.id]));
     await tx.airline.update({ where: { id: airline.id }, data: { defaultTemplateId: template.id } });
+
+    // The schedule import sample works right away: Ryanair with a copy of the
+    // demo template as its default, and the NetLine profile (README).
+    const importAirline = await tx.airline.create({ data: SEED_IMPORT_AIRLINE });
+    const importTemplate = await tx.turnaroundTemplate.create({
+      data: { ...SEED_TEMPLATE, airlineId: importAirline.id, milestones: { create: SEED_MILESTONES } },
+    });
+    await tx.airline.update({ where: { id: importAirline.id }, data: { defaultTemplateId: importTemplate.id } });
+    await tx.importProfile.create({
+      data: {
+        name: NETLINE_PROFILE_NAME,
+        headerFingerprint: NETLINE_FINGERPRINT,
+        mapping: NETLINE_MAPPING as unknown as Prisma.InputJsonValue,
+        createdById: userId("admin")!,
+      },
+    });
 
     // Roster: segment types, one published period and the actual layer.
     const segmentTypeIds = new Map<string, string>();

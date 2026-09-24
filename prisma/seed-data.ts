@@ -20,6 +20,8 @@ export type SeedUsername = (typeof SEED_USERS)[number]["username"];
 
 export const SEED_AIRLINE = { name: "Demo Fapados", iataCode: "ZZ" };
 export const SEED_TEMPLATE = { name: "Alap", ...DEMO_TEMPLATE_PARAMS };
+/** The airline of the schedule import sample (README), with a copy of the demo template. */
+export const SEED_IMPORT_AIRLINE = { name: "Ryanair", iataCode: "FR" };
 export const SEED_MILESTONES = DEMO_MILESTONES;
 
 export interface SeedFlight {
