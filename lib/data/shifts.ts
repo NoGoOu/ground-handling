@@ -1,4 +1,5 @@
 import type { Prisma, RosterLayer } from "@/generated/prisma/client";
+import { blockOf, type BoardBlock } from "@/lib/board";
 import { prisma } from "@/lib/db";
 import { addDays, localDayRange, toLocalDate } from "@/lib/time";
 
@@ -142,4 +143,43 @@ export async function getCellShifts(userId: string, localDate: string): Promise<
     include: shiftInclude,
   });
   return shifts.map(toRosterShift).filter((shift) => shift.start && shift.start >= start && shift.start < end);
+}
+
+/**
+ * The agent's own blocks that touch the given Budapest day, travel time
+ * included (CLAUDE.md, "Nem operatív részek blokkja").
+ */
+export async function listAgentBlocks(userId: string, localDate: string): Promise<BoardBlock[]> {
+  const { start, end } = localDayRange(localDate);
+  // Travel time is capped far below this margin, so the window cannot be missed.
+  const margin = 12 * 60 * 60_000;
+  const segments = await prisma.shiftSegment.findMany({
+    where: {
+      shift: { userId, layer: "ACTUAL" },
+      createBlock: true,
+      segmentType: { operative: false },
+      start: { lt: new Date(end.getTime() + margin) },
+      end: { gt: new Date(start.getTime() - margin) },
+    },
+    include: { segmentType: true },
+    orderBy: { start: "asc" },
+  });
+
+  return segments
+    .map((segment) =>
+      blockOf({
+        id: segment.id,
+        userId,
+        start: segment.start,
+        end: segment.end,
+        typeName: segment.segmentType.name,
+        operative: segment.segmentType.operative,
+        createBlock: segment.createBlock,
+        travelBeforeMinutes: segment.travelBeforeMinutes,
+        travelAfterMinutes: segment.travelAfterMinutes,
+        location: segment.location,
+        description: segment.description,
+      }),
+    )
+    .filter((block) => block.start < end && block.end > start);
 }

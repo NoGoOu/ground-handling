@@ -228,10 +228,11 @@ export const hu = {
     missingOnComplete: "Lezárva. Hiányzó kötelező mérföldkövek: {names}",
   },
   agent: {
-    empty: "Erre a napra nincs hozzád rendelt task.",
+    empty: "Erre a napra nincs hozzád rendelt task vagy blokk.",
     myParts: "Feladatod: {parts}",
     next: "Következő: {name}, {time}",
     allRecorded: "A részed minden mérföldköve rögzítve.",
+    blockTravel: "Utazással: {from} – {to}",
   },
   admin: {
     users: "Felhasználók",
