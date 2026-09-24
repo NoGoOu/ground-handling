@@ -541,7 +541,7 @@ export const hu = {
       title: "Utolsó importok",
       empty: "Még nem volt import.",
       columns: { at: "Időpont", by: "Ki", file: "Fájl", profile: "Profil", period: "Időszak", summary: "Összesítés" },
-      summary: "{new} új, {changed} változott, {repaired} átpárosítva, {unchanged} változatlan, {conflicts} nem írható, {errors} hibás, {missing} hiányzó",
+      summary: "{new} új, {changed} változott, {repaired} átpárosítva, {merged} összevonva, {unchanged} változatlan, {conflicts} nem írható, {errors} hibás, {missing} hiányzó",
       noProfile: "– profil nélkül –",
     },
     missing: {
@@ -565,6 +565,7 @@ export const hu = {
         new: "Új",
         changed: "Változott",
         repaired: "Átpárosítva",
+        merged: "Összevonva",
         unchanged: "Változatlan",
         conflicts: "Párosítás változott",
         errors: "Hibás",
@@ -585,13 +586,15 @@ export const hu = {
       rowColumns: { row: "Sor", problem: "Hiba" },
       missingParts: { ARRIVAL_PART: "érkezés", DEPARTURE_PART: "indulás" },
       reasons: {
-        operational: "üzemi adat van rajta (rögzítés, ETA/ETD, ATA/ATD, törlés vagy kiosztás)",
-        merge: "két külön járatot kellene egy fordulóvá összevonni",
+        operational: "üzemi adat van rajta (rögzítés, ETA/ETD, ATA/ATD, törlés, kiosztás vagy naplóbejegyzés)",
+        merge:
+          "két külön járatot kellene egy fordulóvá összevonni, de egyik sem törölhető (kézzel készült, vagy üzemi adat van rajta), vagy nem mindkettő egyoldalú",
         lostLeg: "a régi pár a fájlból hiányzik, a párosítás nem írható át",
         unknownAirline: "nincs ilyen légitársaság: {code}",
         noTemplate: "a(z) {code} légitársaságnak nincs alapértelmezett sablonja",
       },
       repair: "átpárosítva",
+      merge: "összevonva, a(z) {flight} járat törlődik",
       change: "{field}: {from} → {to}",
       changeFields: {
         sta: "STA",

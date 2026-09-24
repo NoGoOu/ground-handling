@@ -12,7 +12,7 @@ import type { ImportedTurnaround, ImportPlan, PairingWarning } from "./pairing";
 
 const t = messages.import.dryRun;
 
-export type SummaryKey = "new" | "changed" | "repaired" | "unchanged" | "conflicts" | "errors" | "unpaired" | "missing";
+export type SummaryKey = "new" | "changed" | "repaired" | "merged" | "unchanged" | "conflicts" | "errors" | "unpaired" | "missing";
 export type GroupKind = "error" | "conflict" | "changed" | "new" | "missing" | "warning" | "unchanged";
 
 export interface DryRunGroup {
@@ -58,10 +58,18 @@ function turnaroundRow(turnaround: ImportedTurnaround, note: string): string[] {
   ];
 }
 
-function entryNote(entry: DiffEntry): string {
+function entryNote(entry: DiffEntry, existingById: ReadonlyMap<string, ExistingFlight>): string {
   switch (entry.kind) {
-    case "changed":
-      return [entry.repair ? t.repair : null, ...entry.changes.map(changeText)].filter(Boolean).join("; ");
+    case "changed": {
+      const removed = entry.merges ? existingById.get(entry.merges) : undefined;
+      return [
+        entry.repair ? t.repair : null,
+        removed ? fmt(t.merge, { flight: flightLabel(removed) }) : null,
+        ...entry.changes.map(changeText),
+      ]
+        .filter(Boolean)
+        .join("; ");
+    }
     case "conflict":
       return t.reasons[entry.reason];
     case "error":
@@ -111,10 +119,14 @@ export function dryRunView({
   const groups = [
     group("error", TURNAROUND_COLUMNS, [
       ...plan.rowErrors.map((error) => [fmt("{row}. sor", { row: error.row }), "–", "–", "–", describeRowError(error)]),
-      ...flightErrors.map((entry) => turnaroundRow(entry.turnaround, entryNote(entry))),
+      ...flightErrors.map((entry) => turnaroundRow(entry.turnaround, entryNote(entry, existingById))),
     ]),
-    group("conflict", TURNAROUND_COLUMNS, byKind("conflict").map((e) => turnaroundRow(e.turnaround, entryNote(e)))),
-    group("changed", TURNAROUND_COLUMNS, changed.map((e) => turnaroundRow(e.turnaround, entryNote(e)))),
+    group(
+      "conflict",
+      TURNAROUND_COLUMNS,
+      byKind("conflict").map((e) => turnaroundRow(e.turnaround, entryNote(e, existingById))),
+    ),
+    group("changed", TURNAROUND_COLUMNS, changed.map((e) => turnaroundRow(e.turnaround, entryNote(e, existingById)))),
     group("new", TURNAROUND_COLUMNS, byKind("new").map((e) => turnaroundRow(e.turnaround, ""))),
     group(
       "missing",
@@ -137,8 +149,9 @@ export function dryRunView({
   return {
     summary: {
       new: byKind("new").length,
-      changed: changed.filter((e) => e.kind === "changed" && !e.repair).length,
+      changed: changed.filter((e) => e.kind === "changed" && !e.repair && !e.merges).length,
       repaired: changed.filter((e) => e.kind === "changed" && e.repair).length,
+      merged: changed.filter((e) => e.kind === "changed" && e.merges).length,
       unchanged: byKind("unchanged").length,
       conflicts: byKind("conflict").length,
       errors: plan.rowErrors.length + flightErrors.length,

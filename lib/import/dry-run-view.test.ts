@@ -17,6 +17,7 @@ describe("dry run of the sample", () => {
       new: 50,
       changed: 0,
       repaired: 0,
+      merged: 0,
       unchanged: 0,
       conflicts: 0,
       errors: 0,
@@ -59,6 +60,7 @@ describe("dry run with a flight missing from the file", () => {
     aircraftType: null,
     aircraftConfig: null,
     importProfileId: "p",
+    source: "IMPORT",
     operational: false,
   };
   const diff = diffImport({ plan, existing: [gone], airlines, profileId: "p", period });
@@ -68,5 +70,51 @@ describe("dry run with a flight missing from the file", () => {
     expect(view.summary.missing).toBe(1);
     const missing = view.groups.find((g) => g.kind === "missing")!;
     expect(missing.rows).toEqual([["FR9999", "2024. 09. 10. 11:50 · PMI", "–", "Csak érkező", "érkezés"]]);
+  });
+});
+
+describe("dry run with two one-sided flights the file pairs", () => {
+  const full = plan.turnarounds.find((t) => t.kind === "TURNAROUND")!;
+  const base = {
+    airline: "FR",
+    aircraftType: null,
+    aircraftConfig: null,
+    importProfileId: "p",
+    source: "IMPORT" as const,
+    operational: false,
+  };
+  const arrivalFlight: ExistingFlight = {
+    ...base,
+    id: "a",
+    inboundFlightNumber: full.arrival!.flightNumber,
+    outboundFlightNumber: null,
+    arrivalFlightDate: full.arrival!.flightDate,
+    departureFlightDate: null,
+    origin: full.arrival!.origin,
+    destination: null,
+    sta: full.arrival!.sta,
+    std: null,
+  };
+  const departureFlight: ExistingFlight = {
+    ...base,
+    id: "d",
+    inboundFlightNumber: null,
+    outboundFlightNumber: full.departure!.flightNumber,
+    arrivalFlightDate: null,
+    departureFlightDate: full.departure!.flightDate,
+    origin: null,
+    destination: full.departure!.destination,
+    sta: null,
+    std: full.departure!.std,
+  };
+  const existing = [arrivalFlight, departureFlight];
+  const diff = diffImport({ plan, existing, airlines, profileId: "p", period });
+  const view = dryRunView({ plan, diff, existing, period, profileId: "p" });
+
+  it("counts the merge and names the flight that goes", () => {
+    expect(view.summary.merged).toBe(1);
+    expect(view.summary.changed).toBe(0);
+    const changed = view.groups.find((g) => g.kind === "changed")!;
+    expect(changed.rows[0][4].startsWith(`összevonva, a(z) ${full.departure!.flightNumber} járat törlődik`)).toBe(true);
   });
 });

@@ -8,6 +8,7 @@ const SUMMARY_STYLE: Record<SummaryKey, string> = {
   new: "bg-emerald-50 text-emerald-900",
   changed: "bg-sky-50 text-sky-900",
   repaired: "bg-sky-50 text-sky-900",
+  merged: "bg-sky-50 text-sky-900",
   unchanged: "bg-neutral-50 text-neutral-800",
   conflicts: "bg-amber-50 text-amber-900",
   errors: "bg-red-50 text-red-900",

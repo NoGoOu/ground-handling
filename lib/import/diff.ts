@@ -8,6 +8,10 @@ import type { ImportedTurnaround, ImportPlan } from "./pairing";
 // exactly what this decides. A leg is identified by airline + flight number +
 // operating date + station; a flight typed in by hand, which has no operating
 // date, by its flight number and the Budapest day of its STA or STD.
+//
+// Merging (CLAUDE.md, 3. mérföldkő): when the file pairs two earlier one-sided
+// flights into a turnaround, one of them takes both legs and the other is
+// deleted, but only a flight the import created and nobody has worked on.
 
 export interface ExistingFlight {
   id: string;
@@ -25,7 +29,12 @@ export interface ExistingFlight {
   aircraftType: string | null;
   aircraftConfig: string | null;
   importProfileId: string | null;
-  /** Records, estimates, actuals, cancellations or agents: the pairing may not change. */
+  /** Created by hand or by an import; only an imported flight may be merged away. */
+  source: "MANUAL" | "IMPORT";
+  /**
+   * Records, estimates, actuals, cancellations, agents or entries in the
+   * flight's log: the pairing may not change and the flight is never deleted.
+   */
   operational: boolean;
 }
 
@@ -55,6 +64,8 @@ export type DiffEntry =
       repair: boolean;
       /** On a re-pairing, the part the flight keeps; the other one is replaced. */
       kept?: Part;
+      /** On a merge, the one-sided flight that gives its leg to this one and is deleted. */
+      merges?: string;
     }
   | { kind: "conflict"; turnaround: ImportedTurnaround; flightIds: string[]; reason: ConflictReason }
   | { kind: "error"; turnaround: ImportedTurnaround; reason: "unknownAirline" | "noTemplate" };
@@ -156,6 +167,8 @@ export function diffImport({
   const airlineByCode = new Map(airlines.map((airline) => [airline.code, airline]));
 
   const claimed = new Set<string>();
+  /** Flights a merge deletes: neither missing nor found again. */
+  const merged = new Set<string>();
   const entries: DiffEntry[] = [];
 
   // Exact pairings first, so a re-pairing never takes a flight that stays as it is.
@@ -201,9 +214,26 @@ export function diffImport({
         ? [existingDepartureKey(carrier), turnaround.departure && legDepartureKey(turnaround.departure)]
         : [existingArrivalKey(carrier), turnaround.arrival && legArrivalKey(turnaround.arrival)];
     const dropped = otherLeg && otherLeg !== wantedLeg ? otherLeg : null;
+    if (byArrival && byDeparture && byArrival !== byDeparture) {
+      const merge = mergeOf(byArrival, byDeparture, claimed);
+      if (!merge) {
+        entries.push({ kind: "conflict", turnaround, flightIds, reason: "merge" });
+        continue;
+      }
+      claimed.add(merge.kept.id).add(merge.removed.id);
+      merged.add(merge.removed.id);
+      entries.push({
+        kind: "changed",
+        turnaround,
+        flightId: merge.kept.id,
+        changes: scheduleChanges(merge.kept, turnaround),
+        repair: false,
+        merges: merge.removed.id,
+      });
+      continue;
+    }
     let reason: ConflictReason | null = null;
-    if (byArrival && byDeparture && byArrival !== byDeparture) reason = "merge";
-    else if (carrier.operational || claimed.has(carrier.id)) reason = "operational";
+    if (carrier.operational || claimed.has(carrier.id)) reason = "operational";
     else if (dropped && !plannedKeys.has(dropped)) reason = "lostLeg";
 
     if (reason) {
@@ -229,7 +259,7 @@ export function diffImport({
     !!date && !!period && toLocalDate(date) >= period.start && toLocalDate(date) <= period.end;
   if (profileId && period) {
     for (const flight of existing) {
-      if (flight.importProfileId !== profileId) continue;
+      if (flight.importProfileId !== profileId || merged.has(flight.id)) continue;
       const parts: Part[] = [];
       const arrival = existingArrivalKey(flight);
       const departure = existingDepartureKey(flight);
@@ -244,6 +274,24 @@ export function diffImport({
   const position = new Map(plan.turnarounds.map((t, index) => [t, index]));
   entries.sort((a, b) => position.get(a.turnaround)! - position.get(b.turnaround)!);
   return { entries, missing, present };
+}
+
+/**
+ * Which of two one-sided flights stays when the file pairs them: the other
+ * one must be imported and untouched. When both could go, the arrival stays.
+ * Null when the merge is not allowed.
+ */
+export function mergeOf(
+  arrivalFlight: ExistingFlight,
+  departureFlight: ExistingFlight,
+  claimed: ReadonlySet<string> = new Set(),
+): { kept: ExistingFlight; removed: ExistingFlight } | null {
+  const oneSided = !arrivalFlight.outboundFlightNumber && !departureFlight.inboundFlightNumber;
+  if (!oneSided || claimed.has(arrivalFlight.id) || claimed.has(departureFlight.id)) return null;
+  const removable = (flight: ExistingFlight) => flight.source === "IMPORT" && !flight.operational;
+  if (removable(departureFlight)) return { kept: arrivalFlight, removed: departureFlight };
+  if (removable(arrivalFlight)) return { kept: departureFlight, removed: arrivalFlight };
+  return null;
 }
 
 /** The Budapest days the plan covers: the range when given, else its first and last day. */

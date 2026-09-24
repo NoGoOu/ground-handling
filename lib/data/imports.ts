@@ -64,7 +64,8 @@ const dateText = (date: Date | null) => (date ? date.toISOString().slice(0, 10) 
 /**
  * The flights an import may touch: those with an STA or STD in the window.
  * "Operational" is what keeps a flight's pairing fixed (approved rule of the
- * 3. mérföldkő): records, estimates, actuals, cancellations or agents.
+ * 3. mérföldkő): records, estimates, actuals, cancellations, agents, or any
+ * entry in the flight's log (a cancellation that was restored, for instance).
  */
 export async function loadExistingFlights(window: { start: Date; end: Date }): Promise<ExistingFlight[]> {
   const within = { gte: window.start, lt: window.end };
@@ -90,6 +91,8 @@ export async function loadExistingFlights(window: { start: Date; end: Date }): P
       aircraftType: true,
       aircraftConfig: true,
       importProfileId: true,
+      source: true,
+      _count: { select: { events: true } },
       task: { select: { arrivalAgentId: true, departureAgentId: true, _count: { select: { records: true } } } },
     },
   });
@@ -107,7 +110,9 @@ export async function loadExistingFlights(window: { start: Date; end: Date }): P
     aircraftType: flight.aircraftType,
     aircraftConfig: flight.aircraftConfig,
     importProfileId: flight.importProfileId,
+    source: flight.source,
     operational:
+      flight._count.events > 0 ||
       !!(flight.eta || flight.etd || flight.ata || flight.atd) ||
       flight.arrivalCancelled ||
       flight.departureCancelled ||
@@ -148,6 +153,7 @@ export interface ImportSummary {
   new: number;
   changed: number;
   repaired: number;
+  merged: number;
   unchanged: number;
   conflicts: number;
   errors: number;
@@ -198,6 +204,10 @@ export async function applyImport({
         },
         select: { id: true },
       });
+
+      // 0. A merge deletes the one-sided flight that gives its leg away (its task goes with it).
+      const mergedAway = diff.entries.flatMap((e) => (e.kind === "changed" && e.merges ? [e.merges] : []));
+      if (mergedAway.length > 0) await tx.flight.deleteMany({ where: { id: { in: mergedAway } } });
 
       // 1. A re-paired flight gives up the leg it loses, so another flight may take it.
       for (const entry of diff.entries) {

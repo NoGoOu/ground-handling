@@ -26,6 +26,7 @@ function saved(t: ImportedTurnaround, id: string, overrides: Partial<ExistingFli
     aircraftType: t.departure?.aircraftType ?? t.arrival?.aircraftType ?? null,
     aircraftConfig: t.departure?.aircraftConfig ?? t.arrival?.aircraftConfig ?? null,
     importProfileId: PROFILE,
+    source: "IMPORT",
     operational: false,
     ...overrides,
   };
@@ -156,17 +157,75 @@ describe("a pairing that changed", () => {
     const diff = diffImport({ plan: onlyAD, existing: [saved(before, "f")], airlines: [FR], profileId: null, period: null });
     expect(diff.entries[0]).toMatchObject({ kind: "conflict", reason: "lostLeg" });
   });
+});
 
-  it("does not merge two one-sided flights, as one of them would have to disappear", () => {
-    const arrivalOnly: ImportedTurnaround = { kind: "ARRIVAL_ONLY", airline: "FR", arrival: arrivalA, departure: null };
-    const departureOnly: ImportedTurnaround = { kind: "DEPARTURE_ONLY", airline: "FR", arrival: null, departure: departureD };
+describe("two one-sided flights the file pairs into a turnaround", () => {
+  const leg = (overrides: Partial<Leg>): Leg => ({
+    row: 1,
+    airline: "FR",
+    flightNumber: "FR1",
+    origin: "ALC",
+    destination: "BUD",
+    flightDate: "2024-09-10",
+    std: new Date("2024-09-10T04:00:00Z"),
+    sta: new Date("2024-09-10T07:00:00Z"),
+    aircraftType: null,
+    aircraftConfig: null,
+    next: null,
+    ...overrides,
+  });
+  const arrivalA = leg({ next: "FR2" });
+  const departureD = leg({ flightNumber: "FR2", origin: "BUD", destination: "STN", std: new Date("2024-09-10T08:00:00Z") });
+  const arrivalOnly: ImportedTurnaround = { kind: "ARRIVAL_ONLY", airline: "FR", arrival: arrivalA, departure: null };
+  const departureOnly: ImportedTurnaround = { kind: "DEPARTURE_ONLY", airline: "FR", arrival: null, departure: departureD };
+  const now = pairLegs([arrivalA, departureD]);
+  const run = (existing: ExistingFlight[]) =>
+    diffImport({ plan: now, existing, airlines: [FR], profileId: PROFILE, period: planPeriod(now, null) });
+
+  it("merges them: the arrival flight takes the departure, the departure flight goes", () => {
+    const diff = run([saved(arrivalOnly, "a"), saved(departureOnly, "d")]);
+    expect(diff.entries).toHaveLength(1);
+    expect(diff.entries[0]).toMatchObject({ kind: "changed", flightId: "a", merges: "d", repair: false });
+    const entry = diff.entries[0];
+    expect(entry.kind === "changed" && entry.changes.map((c) => c.field)).toEqual(["std", "destination"]);
+    // The deleted flight is neither missing nor found again; the kept one is found.
+    expect(diff.missing).toEqual([]);
+    expect(diff.present).toEqual(["a"]);
+  });
+
+  it("keeps the flight somebody has worked on and deletes the other", () => {
+    const diff = run([saved(arrivalOnly, "a", { operational: true }), saved(departureOnly, "d")]);
+    expect(diff.entries[0]).toMatchObject({ kind: "changed", flightId: "a", merges: "d" });
+    const busyDeparture = run([saved(arrivalOnly, "a"), saved(departureOnly, "d", { operational: true })]);
+    expect(busyDeparture.entries[0]).toMatchObject({ kind: "changed", flightId: "d", merges: "a" });
+  });
+
+  it("never deletes a flight typed in by hand", () => {
+    const diff = run([saved(arrivalOnly, "a"), saved(departureOnly, "d", { source: "MANUAL" })]);
+    expect(diff.entries[0]).toMatchObject({ kind: "changed", flightId: "d", merges: "a" });
+  });
+
+  it("leaves the decision to the planner when neither may go", () => {
+    for (const existing of [
+      [saved(arrivalOnly, "a", { operational: true }), saved(departureOnly, "d", { operational: true })],
+      [saved(arrivalOnly, "a", { source: "MANUAL" }), saved(departureOnly, "d", { operational: true })],
+      [saved(arrivalOnly, "a", { source: "MANUAL" }), saved(departureOnly, "d", { source: "MANUAL" })],
+    ]) {
+      expect(run(existing).entries[0]).toMatchObject({ kind: "conflict", reason: "merge", flightIds: ["a", "d"] });
+    }
+  });
+
+  it("does not merge a flight that has another leg", () => {
+    const departureX = leg({ flightNumber: "FR3", origin: "BUD", destination: "DUB", std: new Date("2024-09-10T09:00:00Z") });
+    const turnaround: ImportedTurnaround = { kind: "TURNAROUND", airline: "FR", arrival: arrivalA, departure: departureX };
+    const plan = pairLegs([arrivalA, departureD, departureX]);
     const diff = diffImport({
-      plan: pairLegs([arrivalA, departureD]),
-      existing: [saved(arrivalOnly, "a"), saved(departureOnly, "d")],
+      plan,
+      existing: [saved(turnaround, "t"), saved(departureOnly, "d")],
       airlines: [FR],
       profileId: null,
       period: null,
     });
-    expect(diff.entries[0]).toMatchObject({ kind: "conflict", reason: "merge", flightIds: ["a", "d"] });
+    expect(diff.entries.find((e) => e.turnaround.arrival === arrivalA)).toMatchObject({ kind: "conflict", reason: "merge" });
   });
 });

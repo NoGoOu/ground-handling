@@ -22,5 +22,6 @@ export function describeRowError(error: RowError): string {
 
 /** "12 új, 3 változott, …" of a saved import. */
 export function importSummaryText(summary: Record<string, number>): string {
-  return fmt(t.runs.summary, summary);
+  // Runs saved before merging existed have no count for it.
+  return fmt(t.runs.summary, { merged: 0, ...summary });
 }
