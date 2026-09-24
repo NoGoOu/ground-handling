@@ -6,36 +6,43 @@ import { addMinutes, MAX_TEMPLATE_MINUTES, type Timeline, type TimeWindow } from
 // band view.
 
 export interface DayAnchors {
-  /** Rule 1: effective ATA, else ETA, else STA. */
-  arrival: Date;
-  /** The effective ATD, else the departure anchor (rule 2). */
-  departure: Date;
+  /** Rule 1: effective ATA, else ETA, else STA. None on a departure-only flight. */
+  arrival: Date | null;
+  /** The effective ATD, else the departure anchor (rule 2). None on an arrival-only flight. */
+  departure: Date | null;
+  /** The list order: the arrival anchor, or the departure anchor when there is no arrival. */
+  order: Date;
 }
 
 export function dayAnchors(timeline: Pick<Timeline, "arrivalAnchor" | "departureAnchor" | "effectiveAtd">): DayAnchors {
-  return { arrival: timeline.arrivalAnchor, departure: timeline.effectiveAtd ?? timeline.departureAnchor };
+  return {
+    arrival: timeline.arrivalAnchor,
+    departure: timeline.effectiveAtd ?? timeline.departureAnchor,
+    order: (timeline.arrivalAnchor ?? timeline.departureAnchor)!,
+  };
 }
 
 /** Half-open, like every window in the app: midnight belongs to the next day. */
-function within(instant: Date, day: TimeWindow): boolean {
-  return day.start.getTime() <= instant.getTime() && instant.getTime() < day.end.getTime();
+function within(instant: Date | null, day: TimeWindow): boolean {
+  return !!instant && day.start.getTime() <= instant.getTime() && instant.getTime() < day.end.getTime();
 }
 
 /**
  * A turnaround shows on the day its arrival anchor or its effective departure
  * falls on, so one that runs over midnight shows on both days, and one that is
- * days late shows on its actual day only.
+ * days late shows on its actual day only. A one-sided flight has only one of
+ * the two times (rule 11).
  */
 export function showsOnDay(anchors: DayAnchors, day: TimeWindow): boolean {
   return within(anchors.arrival, day) || within(anchors.departure, day);
 }
 
-/** The items that show on the day, ordered by the arrival anchor. */
+/** The items that show on the day, in list order (arrival anchor, else departure anchor). */
 export function forDay<T>(items: readonly T[], anchorsOf: (item: T) => DayAnchors, day: TimeWindow): T[] {
   return items
     .map((item) => ({ item, anchors: anchorsOf(item) }))
     .filter(({ anchors }) => showsOnDay(anchors, day))
-    .sort((a, b) => a.anchors.arrival.getTime() - b.anchors.arrival.getTime())
+    .sort((a, b) => a.anchors.order.getTime() - b.anchors.order.getTime())
     .map(({ item }) => item);
 }
 

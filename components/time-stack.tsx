@@ -8,6 +8,7 @@ export function TimeStack({
   day: string;
   entries: { label: string; time: Date | null; emphasis?: boolean }[];
 }) {
+  if (entries.every((e) => !e.time)) return <span className="text-neutral-400">–</span>;
   return (
     <div className="flex flex-col gap-0.5 tabular-nums">
       {entries

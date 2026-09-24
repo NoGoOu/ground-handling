@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
+import { flightLabel } from "@/lib/flight";
 import { listTemplateOptions } from "@/lib/data/templates";
 import { messages } from "@/lib/messages";
 import { fmt } from "@/lib/messages/format";
@@ -25,7 +26,7 @@ export default async function EditFlightPage(props: PageProps<"/flights/[id]/edi
   return (
     <div className="flex flex-col gap-4">
       <h1 className="text-2xl font-bold">
-        {t.editTitle}: {flight.inboundFlightNumber} / {flight.outboundFlightNumber}
+        {t.editTitle}: {flightLabel(flight)}
       </h1>
       {(flight.ata || flight.atd) && (
         <p className="text-sm text-neutral-600">
@@ -41,8 +42,8 @@ export default async function EditFlightPage(props: PageProps<"/flights/[id]/edi
         submitLabel={messages.form.save}
         initial={{
           templateId: flight.templateId,
-          inboundFlightNumber: flight.inboundFlightNumber,
-          outboundFlightNumber: flight.outboundFlightNumber,
+          inboundFlightNumber: flight.inboundFlightNumber ?? "",
+          outboundFlightNumber: flight.outboundFlightNumber ?? "",
           stand: flight.stand,
           sta: input(flight.sta),
           eta: input(flight.eta),

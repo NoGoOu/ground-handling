@@ -243,11 +243,14 @@ model Flight {
   airline              Airline            @relation(fields: [airlineId], references: [id])
   templateId           String
   template             TurnaroundTemplate @relation(fields: [templateId], references: [id])
-  inboundFlightNumber  String
-  outboundFlightNumber String
-  sta                  DateTime
+  /// The arrival part (flight number, STA, ETA, ATA) and the departure part
+  /// (flight number, STD, ETD, ATD) are each optional, but one must exist
+  /// (rule 11). Check constraints in the migration keep each part whole.
+  inboundFlightNumber  String?
+  outboundFlightNumber String?
+  sta                  DateTime?
   eta                  DateTime?
-  std                  DateTime
+  std                  DateTime?
   etd                  DateTime?
   stand                String
   /// From the external system.

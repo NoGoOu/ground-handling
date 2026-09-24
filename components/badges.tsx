@@ -1,7 +1,7 @@
 import type { TaskStatus } from "@/generated/prisma/enums";
 import { messages } from "@/lib/messages";
 import { fmt } from "@/lib/messages/format";
-import type { DeviationLevel, TurnaroundType } from "@/lib/turnaround";
+import type { DeviationLevel, FlightKind, TurnaroundType } from "@/lib/turnaround";
 
 const base = "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap";
 
@@ -15,7 +15,9 @@ export function StatusBadge({ status }: { status: TaskStatus }) {
   return <span className={`${base} ${statusStyle[status]}`}>{messages.status[status]}</span>;
 }
 
-export function TypeBadge({ type }: { type: TurnaroundType }) {
+/** Quick or long turnaround; a one-sided flight (rule 11) shows its kind instead. */
+export function TypeBadge({ type, kind }: { type: TurnaroundType | null; kind: FlightKind }) {
+  if (!type) return <span className={`${base} bg-teal-100 text-teal-800`}>{messages.flightKind[kind]}</span>;
   const style = type === "QUICK" ? "bg-amber-100 text-amber-800" : "bg-indigo-100 text-indigo-800";
   return <span className={`${base} ${style}`}>{messages.turnaroundType[type]}</span>;
 }

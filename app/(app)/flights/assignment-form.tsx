@@ -3,7 +3,7 @@
 import { useActionState, useRef } from "react";
 import type { ActionResult } from "@/lib/action";
 import { messages } from "@/lib/messages";
-import type { TurnaroundType } from "@/lib/turnaround";
+import type { FlightKind, TurnaroundType } from "@/lib/turnaround";
 
 const t = messages.assignment;
 
@@ -45,12 +45,14 @@ function AgentSelect({
 export function AssignmentForm({
   action,
   type,
+  kind,
   agents,
   arrivalAgentId,
   departureAgentId,
 }: {
   action: (state: ActionResult | null, formData: FormData) => Promise<ActionResult>;
-  type: TurnaroundType;
+  type: TurnaroundType | null;
+  kind: FlightKind;
   agents: AgentOption[];
   arrivalAgentId: string | null;
   departureAgentId: string | null;
@@ -64,11 +66,21 @@ export function AssignmentForm({
       ref={formRef}
       action={formAction}
       // Re-mount with the saved values after the page refreshes.
-      key={`${type}:${arrivalAgentId}:${departureAgentId}`}
+      key={`${kind}:${type}:${arrivalAgentId}:${departureAgentId}`}
       aria-busy={pending}
       className={`flex min-w-56 flex-col gap-1 ${pending ? "opacity-60" : ""}`}
     >
-      {type === "QUICK" ? (
+      {kind === "ARRIVAL_ONLY" ? (
+        <AgentSelect name="arrivalAgentId" label={t.arrival} value={arrivalAgentId} agents={agents} onChange={submit} />
+      ) : kind === "DEPARTURE_ONLY" ? (
+        <AgentSelect
+          name="departureAgentId"
+          label={t.departure}
+          value={departureAgentId}
+          agents={agents}
+          onChange={submit}
+        />
+      ) : type === "QUICK" ? (
         <>
           <AgentSelect name="arrivalAgentId" label={t.agent} value={arrivalAgentId} agents={agents} onChange={submit} />
           <span className="text-xs text-neutral-500">{t.quickHint}</span>

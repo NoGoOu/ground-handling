@@ -4,6 +4,7 @@ import { DateNav } from "@/components/date-nav";
 import { TimeStack } from "@/components/time-stack";
 import { listTaskViewsForDay, type TaskView } from "@/lib/data/tasks";
 import { listAgentOptions } from "@/lib/data/users";
+import { flightLabel } from "@/lib/flight";
 import { messages } from "@/lib/messages";
 import { fmt } from "@/lib/messages/format";
 import { canManageFlights } from "@/lib/permissions";
@@ -21,6 +22,7 @@ function AgentsCell({ task, agents }: { task: TaskView; agents: AgentOption[] })
     <AssignmentForm
       action={assignAgents.bind(null, task.id)}
       type={task.timeline.shape.type}
+      kind={task.timeline.kind}
       agents={agents}
       arrivalAgentId={task.arrivalAgent?.id ?? null}
       departureAgentId={task.departureAgent?.id ?? null}
@@ -74,7 +76,7 @@ export default async function FlightsPage(props: PageProps<"/flights">) {
                 <tr key={task.id} className="align-top">
                   <td className="px-3 py-2">
                     <Link href={`/tasks/${task.id}`} className="font-semibold text-sky-700 hover:underline">
-                      {task.flight.inboundFlightNumber} / {task.flight.outboundFlightNumber}
+                      {flightLabel(task.flight)}
                     </Link>
                     <div className="text-xs text-neutral-500">{task.flight.airline.name}</div>
                   </td>
@@ -103,7 +105,7 @@ export default async function FlightsPage(props: PageProps<"/flights">) {
                     </div>
                   </td>
                   <td className="px-3 py-2">
-                    <TypeBadge type={task.timeline.shape.type} />
+                    <TypeBadge type={task.timeline.shape.type} kind={task.timeline.kind} />
                   </td>
                   <td className="px-3 py-2">
                     <StatusBadge status={task.status} />

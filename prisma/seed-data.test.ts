@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeTimeline, windowsOverlap, type MilestoneDef } from "@/lib/turnaround";
+import { computeTimeline, flightKind, windowsOverlap, type MilestoneDef } from "@/lib/turnaround";
 import { buildSeedFlights, SEED_MILESTONES, SEED_TEMPLATE, SEED_USERS } from "./seed-data";
 import { SEED_SHIFTS, segmentTimes, type SeedShift } from "./seed-roster";
 
@@ -21,11 +21,22 @@ describe("seed data", () => {
     expect(SEED_USERS.filter((u) => u.agent)).toHaveLength(2);
   });
 
-  it("has four flights including a quick and a long turnaround", () => {
-    expect(flights).toHaveLength(4);
+  it("has six flights: a quick and a long turnaround, an arrival-only and a departure-only flight", () => {
+    expect(flights).toHaveLength(6);
     const types = flights.map((f) => shapeOf(f).type);
     expect(types).toContain("QUICK");
     expect(types).toContain("LONG");
+    const kinds = flights.map((f) => flightKind(f));
+    expect(kinds).toContain("ARRIVAL_ONLY");
+    expect(kinds).toContain("DEPARTURE_ONLY");
+  });
+
+  it("gives a one-sided flight only the agent of its own part", () => {
+    for (const flight of flights) {
+      const kind = flightKind(flight);
+      if (kind === "ARRIVAL_ONLY") expect(flight.departureAgent).toBeNull();
+      if (kind === "DEPARTURE_ONLY") expect(flight.arrivalAgent).toBeNull();
+    }
   });
 
   it("has two flights whose occupancy windows overlap", () => {
@@ -48,7 +59,7 @@ describe("seed data", () => {
   });
 
   it("places the flights on the requested Budapest day", () => {
-    expect(flights[0].sta.toISOString()).toBe("2026-09-22T05:30:00.000Z");
+    expect(flights[0].sta?.toISOString()).toBe("2026-09-22T05:30:00.000Z");
   });
 });
 
@@ -106,8 +117,8 @@ describe("seed roster", () => {
       const recorded = new Map(flight.records.map((r) => [r.code, r.time]));
       const { shape } = computeTimeline({ flight, params: SEED_TEMPLATE, milestones, recorded });
       for (const window of shape.windows) {
-        const agent =
-          window.part === "DEPARTURE_PART" && shape.type === "LONG" ? flight.departureAgent : flight.arrivalAgent;
+        // A quick turnaround's single window is the arrival agent's (rule 8).
+        const agent = window.part === "DEPARTURE_PART" ? flight.departureAgent : flight.arrivalAgent;
         if (!agent) continue;
         const covering = actual.find(
           (segment) =>

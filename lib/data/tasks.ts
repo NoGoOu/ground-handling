@@ -45,12 +45,14 @@ export interface TaskView {
   status: TaskStatus;
   flight: {
     id: string;
-    inboundFlightNumber: string;
-    outboundFlightNumber: string;
+    /** The arrival part; null on a departure-only flight (rule 11). */
+    inboundFlightNumber: string | null;
+    /** The departure part; null on an arrival-only flight (rule 11). */
+    outboundFlightNumber: string | null;
     stand: string;
-    sta: Date;
+    sta: Date | null;
     eta: Date | null;
-    std: Date;
+    std: Date | null;
     etd: Date | null;
     ata: Date | null;
     atd: Date | null;

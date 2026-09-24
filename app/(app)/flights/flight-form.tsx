@@ -53,32 +53,39 @@ export function FlightForm({
         </select>
       </FormField>
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <FormField label={t.inbound} error={error("inboundFlightNumber")}>
-          <input name="inboundFlightNumber" defaultValue={value("inboundFlightNumber")} className="input" required />
-        </FormField>
-        <FormField label={t.outbound} error={error("outboundFlightNumber")}>
-          <input name="outboundFlightNumber" defaultValue={value("outboundFlightNumber")} className="input" required />
-        </FormField>
-        <FormField label={t.stand} error={error("stand")}>
-          <input name="stand" defaultValue={value("stand")} className="input" required />
-        </FormField>
-      </div>
+      <FormField label={t.stand} error={error("stand")}>
+        <input name="stand" defaultValue={value("stand")} className="input max-w-40" required />
+      </FormField>
 
-      <p className="text-sm text-neutral-600">{t.timeHint}</p>
+      <p className="text-sm text-neutral-600">
+        {t.timeHint} {t.partsHint}
+      </p>
+      {/* Rule 11: either part may be left empty, but not both. */}
       <div className="grid gap-4 sm:grid-cols-2">
-        <FormField label={t.sta} error={error("sta")}>
-          <input type="datetime-local" name="sta" defaultValue={value("sta")} className="input" required />
-        </FormField>
-        <FormField label={t.eta} hint={messages.form.optional} error={error("eta")}>
-          <input type="datetime-local" name="eta" defaultValue={value("eta")} className="input" />
-        </FormField>
-        <FormField label={t.std} error={error("std")}>
-          <input type="datetime-local" name="std" defaultValue={value("std")} className="input" required />
-        </FormField>
-        <FormField label={t.etd} hint={messages.form.optional} error={error("etd")}>
-          <input type="datetime-local" name="etd" defaultValue={value("etd")} className="input" />
-        </FormField>
+        <fieldset className="flex flex-col gap-4 rounded-lg border border-neutral-200 p-4">
+          <legend className="px-1 font-semibold">{t.arrivalPart}</legend>
+          <FormField label={t.inbound} error={error("inboundFlightNumber")}>
+            <input name="inboundFlightNumber" defaultValue={value("inboundFlightNumber")} className="input" />
+          </FormField>
+          <FormField label={t.sta} error={error("sta")}>
+            <input type="datetime-local" name="sta" defaultValue={value("sta")} className="input" />
+          </FormField>
+          <FormField label={t.eta} hint={messages.form.optional} error={error("eta")}>
+            <input type="datetime-local" name="eta" defaultValue={value("eta")} className="input" />
+          </FormField>
+        </fieldset>
+        <fieldset className="flex flex-col gap-4 rounded-lg border border-neutral-200 p-4">
+          <legend className="px-1 font-semibold">{t.departurePart}</legend>
+          <FormField label={t.outbound} error={error("outboundFlightNumber")}>
+            <input name="outboundFlightNumber" defaultValue={value("outboundFlightNumber")} className="input" />
+          </FormField>
+          <FormField label={t.std} error={error("std")}>
+            <input type="datetime-local" name="std" defaultValue={value("std")} className="input" />
+          </FormField>
+          <FormField label={t.etd} hint={messages.form.optional} error={error("etd")}>
+            <input type="datetime-local" name="etd" defaultValue={value("etd")} className="input" />
+          </FormField>
+        </fieldset>
       </div>
 
       <div className="flex gap-2">

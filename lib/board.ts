@@ -17,7 +17,8 @@ export interface BoardTask {
   flightLabel: string;
   stand: string;
   status: TaskStatus;
-  type: TurnaroundType;
+  /** Null on a one-sided flight: its single box is the part it has. */
+  type: TurnaroundType | null;
   arrivalAgentId: string | null;
   /** As assigned; on a quick turnaround the arrival agent covers both parts. */
   departureAgentId: string | null;
@@ -172,7 +173,7 @@ export interface Assignment {
  */
 export function assignmentUpdate(
   part: Part | "WHOLE",
-  type: TurnaroundType,
+  type: TurnaroundType | null,
   agentId: string | null,
   current: Assignment,
 ): Assignment {

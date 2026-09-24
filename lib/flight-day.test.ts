@@ -69,25 +69,58 @@ describe("which day a turnaround shows on", () => {
     expect(showsOnDay(anchors, day("2026-09-25"))).toBe(true);
   });
 
+  it("shows an arrival-only flight on its arrival day only", () => {
+    const anchors = anchorsOf({ sta: at("2026-09-24T23:30"), std: null });
+    expect(anchors.departure).toBeNull();
+    expect(showsOnDay(anchors, day("2026-09-24"))).toBe(true);
+    expect(showsOnDay(anchors, day("2026-09-25"))).toBe(false);
+  });
+
+  it("shows a departure-only flight on its effective departure day", () => {
+    const anchors = anchorsOf({ sta: null, std: at("2026-09-24T23:50"), etd: at("2026-09-25T01:10") });
+    expect(anchors.arrival).toBeNull();
+    expect(showsOnDay(anchors, day("2026-09-24"))).toBe(false);
+    expect(showsOnDay(anchors, day("2026-09-25"))).toBe(true);
+  });
+
   it("puts midnight on the next day (half-open days)", () => {
     const midnight = day("2026-09-25").start;
-    const anchors = { arrival: midnight, departure: midnight };
+    const anchors = { arrival: midnight, departure: midnight, order: midnight };
     expect(showsOnDay(anchors, day("2026-09-24"))).toBe(false);
     expect(showsOnDay(anchors, day("2026-09-25"))).toBe(true);
   });
 });
 
 describe("the list of a day", () => {
+  const turnaround = (id: string, arrival: string, departure: string) => ({
+    id,
+    anchors: { arrival: at(arrival), departure: at(departure), order: at(arrival) },
+  });
+
   it("keeps what shows on the day, ordered by the arrival anchor", () => {
     const items = [
-      { id: "late", anchors: { arrival: at("2026-09-24T18:00"), departure: at("2026-09-24T18:40") } },
-      { id: "other-day", anchors: { arrival: at("2026-09-23T09:00"), departure: at("2026-09-23T09:40") } },
-      { id: "early", anchors: { arrival: at("2026-09-24T06:00"), departure: at("2026-09-24T06:40") } },
+      turnaround("late", "2026-09-24T18:00", "2026-09-24T18:40"),
+      turnaround("other-day", "2026-09-23T09:00", "2026-09-23T09:40"),
+      turnaround("early", "2026-09-24T06:00", "2026-09-24T06:40"),
       // Arrived yesterday, leaves today: it shows today, sorted by its arrival.
-      { id: "overnight", anchors: { arrival: at("2026-09-23T23:00"), departure: at("2026-09-24T07:00") } },
+      turnaround("overnight", "2026-09-23T23:00", "2026-09-24T07:00"),
     ];
     const ids = forDay(items, (item) => item.anchors, day("2026-09-24")).map((item) => item.id);
     expect(ids).toEqual(["overnight", "early", "late"]);
+  });
+
+  it("orders a departure-only flight by its departure anchor among the arrivals", () => {
+    const departureOnly = {
+      id: "departure-only",
+      anchors: anchorsOf({ sta: null, std: at("2026-09-24T09:00") }),
+    };
+    const items = [
+      turnaround("early", "2026-09-24T06:00", "2026-09-24T06:40"),
+      turnaround("late", "2026-09-24T18:00", "2026-09-24T18:40"),
+      departureOnly,
+    ];
+    const ids = forDay(items, (item) => item.anchors, day("2026-09-24")).map((item) => item.id);
+    expect(ids).toEqual(["early", "departure-only", "late"]);
   });
 });
 

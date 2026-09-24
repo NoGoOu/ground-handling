@@ -6,12 +6,14 @@ import { TimeStack } from "@/components/time-stack";
 import type { BoardBlock } from "@/lib/board";
 import { listAgentBlocks } from "@/lib/data/shifts";
 import { listTaskViewsForDay, taskAssignment, type TaskView } from "@/lib/data/tasks";
+import { flightLabel } from "@/lib/flight";
 import { messages } from "@/lib/messages";
 import { fmt } from "@/lib/messages/format";
 import { assignedParts, canViewOwnTasks, canViewTask } from "@/lib/permissions";
 import { dateParam } from "@/lib/search-params";
 import { requireCapability, type CurrentUser } from "@/lib/session";
 import { formatTimeOnDay, toLocalDate } from "@/lib/time";
+import { hasPart } from "@/lib/turnaround";
 
 const t = messages.agent;
 const tt = messages.times;
@@ -27,11 +29,9 @@ function TaskCard({ task, user, day }: { task: TaskView; user: CurrentUser; day:
         className="flex flex-col gap-3 rounded-xl border border-neutral-200 bg-white p-4 shadow-sm active:bg-neutral-50"
       >
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xl font-bold">
-            {task.flight.inboundFlightNumber} / {task.flight.outboundFlightNumber}
-          </span>
+          <span className="text-xl font-bold">{flightLabel(task.flight)}</span>
           <StatusBadge status={task.status} />
-          <TypeBadge type={task.timeline.shape.type} />
+          <TypeBadge type={task.timeline.shape.type} kind={task.timeline.kind} />
           <DelayBadge minutes={task.timeline.delayMinutes} />
         </div>
         <div className="text-neutral-700">
@@ -39,22 +39,26 @@ function TaskCard({ task, user, day }: { task: TaskView; user: CurrentUser; day:
           {fmt(t.myParts, { parts: parts.map((p) => messages.part[p]).join(", ") })}
         </div>
         <div className="grid grid-cols-2 gap-3 text-base">
-          <TimeStack
-            day={day}
-            entries={[
-              { label: tt.sta, time: task.flight.sta },
-              { label: tt.eta, time: task.flight.eta },
-              { label: tt.ata, time: task.timeline.effectiveAta, emphasis: true },
-            ]}
-          />
-          <TimeStack
-            day={day}
-            entries={[
-              { label: tt.std, time: task.flight.std },
-              { label: tt.etd, time: task.flight.etd },
-              { label: tt.atd, time: task.timeline.effectiveAtd, emphasis: true },
-            ]}
-          />
+          {hasPart(task.timeline.kind, "ARRIVAL_PART") && (
+            <TimeStack
+              day={day}
+              entries={[
+                { label: tt.sta, time: task.flight.sta },
+                { label: tt.eta, time: task.flight.eta },
+                { label: tt.ata, time: task.timeline.effectiveAta, emphasis: true },
+              ]}
+            />
+          )}
+          {hasPart(task.timeline.kind, "DEPARTURE_PART") && (
+            <TimeStack
+              day={day}
+              entries={[
+                { label: tt.std, time: task.flight.std },
+                { label: tt.etd, time: task.flight.etd },
+                { label: tt.atd, time: task.timeline.effectiveAtd, emphasis: true },
+              ]}
+            />
+          )}
         </div>
         <div className="rounded-lg bg-sky-50 px-3 py-2 font-medium text-sky-900">
           {next
@@ -99,7 +103,7 @@ export default async function AgentPage(props: PageProps<"/agent">) {
   const items = [
     ...tasks.map((task) => ({
       key: task.id,
-      at: task.timeline.shape.windows[0]?.start ?? task.flight.sta,
+      at: task.timeline.shape.windows[0].start,
       node: <TaskCard task={task} user={user} day={date} />,
     })),
     ...blocks.map((block) => ({ key: block.id, at: block.start, node: <BlockCard block={block} day={date} /> })),

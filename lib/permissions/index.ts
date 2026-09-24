@@ -88,7 +88,8 @@ export function inScope(actor: Actor, permission: Permission, subjectIds: readon
 export interface TaskAssignment {
   arrivalAgentId: string | null;
   departureAgentId: string | null;
-  type: TurnaroundType;
+  /** Null on a one-sided flight, which has only one part (rule 11). */
+  type: TurnaroundType | null;
 }
 
 /** The agents actually working the task; a quick turnaround has one (rule 8). */

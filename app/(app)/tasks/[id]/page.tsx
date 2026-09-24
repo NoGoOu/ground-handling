@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { DelayBadge, DeviationBadge, StatusBadge, TypeBadge } from "@/components/badges";
 import { TimeStack } from "@/components/time-stack";
 import { getTaskView, taskAssignment, type TaskView } from "@/lib/data/tasks";
+import { flightLabel } from "@/lib/flight";
+import { dayAnchors } from "@/lib/flight-day";
 import { messages } from "@/lib/messages";
 import { fmt } from "@/lib/messages/format";
 import {
@@ -14,7 +16,7 @@ import {
 } from "@/lib/permissions";
 import { requireUser, type CurrentUser } from "@/lib/session";
 import { formatTime, formatTimeOnDay, toLocalDate, toLocalDateTimeInput } from "@/lib/time";
-import { isRequiredMissing, type Part, type TimelineRow } from "@/lib/turnaround";
+import { hasPart, isRequiredMissing, type Part, type TimelineRow } from "@/lib/turnaround";
 import { changeStatus, recordNow, setMilestoneTime } from "./actions";
 import { MilestoneActions } from "./milestone-actions";
 import { StatusControl } from "./status-control";
@@ -32,40 +34,45 @@ interface ViewContext {
 
 function Header({ task, day }: { task: TaskView; day: string }) {
   const { flight, timeline } = task;
+  // Rule 11: a one-sided flight shows only the part it has.
+  const hasArrival = hasPart(timeline.kind, "ARRIVAL_PART");
+  const hasDeparture = hasPart(timeline.kind, "DEPARTURE_PART");
   const agents = [
-    { label: t.arrivalAgent, agent: task.arrivalAgent },
-    { label: t.departureAgent, agent: task.effectiveDepartureAgent },
+    ...(hasArrival ? [{ label: t.arrivalAgent, agent: task.arrivalAgent }] : []),
+    ...(hasDeparture ? [{ label: t.departureAgent, agent: task.effectiveDepartureAgent }] : []),
   ];
   return (
     <section className="flex flex-col gap-3 rounded-xl border border-neutral-200 bg-white p-4">
       <div className="flex flex-wrap items-center gap-2">
-        <h1 className="text-2xl font-bold">
-          {flight.inboundFlightNumber} / {flight.outboundFlightNumber}
-        </h1>
+        <h1 className="text-2xl font-bold">{flightLabel(flight)}</h1>
         <StatusBadge status={task.status} />
-        <TypeBadge type={timeline.shape.type} />
+        <TypeBadge type={timeline.shape.type} kind={timeline.kind} />
         <DelayBadge minutes={timeline.delayMinutes} />
       </div>
       <p className="text-neutral-600">
         {flight.airline.name} · {fmt(t.stand, { stand: flight.stand })}
       </p>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <TimeStack
-          day={day}
-          entries={[
-            { label: tt.sta, time: flight.sta },
-            { label: tt.eta, time: flight.eta },
-            { label: tt.ata, time: timeline.effectiveAta, emphasis: true },
-          ]}
-        />
-        <TimeStack
-          day={day}
-          entries={[
-            { label: tt.std, time: flight.std },
-            { label: tt.etd, time: flight.etd },
-            { label: tt.atd, time: timeline.effectiveAtd, emphasis: true },
-          ]}
-        />
+        {hasArrival && (
+          <TimeStack
+            day={day}
+            entries={[
+              { label: tt.sta, time: flight.sta },
+              { label: tt.eta, time: flight.eta },
+              { label: tt.ata, time: timeline.effectiveAta, emphasis: true },
+            ]}
+          />
+        )}
+        {hasDeparture && (
+          <TimeStack
+            day={day}
+            entries={[
+              { label: tt.std, time: flight.std },
+              { label: tt.etd, time: flight.etd },
+              { label: tt.atd, time: timeline.effectiveAtd, emphasis: true },
+            ]}
+          />
+        )}
         {agents.map(({ label, agent }) => (
           <div key={label} className="flex flex-col">
             <span className="text-xs text-neutral-500">{label}</span>
@@ -73,7 +80,7 @@ function Header({ task, day }: { task: TaskView; day: string }) {
           </div>
         ))}
       </div>
-      {timeline.shape.type === "LONG" && (
+      {timeline.shape.type === "LONG" && timeline.shape.breakMinutes !== null && (
         <p className="text-sm text-neutral-600">{fmt(t.breakInfo, { minutes: timeline.shape.breakMinutes })}</p>
       )}
       {task.frozen && <p className="text-sm text-neutral-600">{t.frozenNote}</p>}
@@ -203,8 +210,10 @@ export default async function TaskPage(props: PageProps<"/tasks/[id]">) {
   const task = await getTaskView(id);
   if (!task || !canViewTask(user, taskAssignment(task))) notFound();
 
-  const ctx: ViewContext = { task, user, day: toLocalDate(task.timeline.arrivalAnchor), now: new Date() };
-  const backHref = canManageFlights(user) ? `/flights?date=${toLocalDate(task.flight.sta)}` : homePathFor(user);
+  // The day of the list the task sits in: its arrival, or its departure when it has no arrival.
+  const day = toLocalDate(dayAnchors(task.timeline).order);
+  const ctx: ViewContext = { task, user, day, now: new Date() };
+  const backHref = canManageFlights(user) ? `/flights?date=${day}` : homePathFor(user);
 
   return (
     <div className="flex flex-col gap-4">

@@ -31,14 +31,39 @@ export interface MilestoneDef {
 }
 
 export interface FlightTimes {
-  sta: Date;
+  /** Null on a departure-only flight (rule 11). */
+  sta: Date | null;
   eta?: Date | null;
-  std: Date;
+  /** Null on an arrival-only flight (rule 11). */
+  std: Date | null;
   etd?: Date | null;
   /** From the external system. */
   ata?: Date | null;
   /** From the external system. */
   atd?: Date | null;
+}
+
+/**
+ * Rule 11: a turnaround has both parts; an arrival-only flight stays here, a
+ * departure-only flight is already here.
+ */
+export type FlightKind = "TURNAROUND" | "ARRIVAL_ONLY" | "DEPARTURE_ONLY";
+
+export function flightKind(flight: Pick<FlightTimes, "sta" | "std">): FlightKind {
+  if (flight.sta && flight.std) return "TURNAROUND";
+  if (flight.sta) return "ARRIVAL_ONLY";
+  if (flight.std) return "DEPARTURE_ONLY";
+  throw new Error("A flight needs an arrival or a departure part");
+}
+
+export function hasPart(kind: FlightKind, part: Part): boolean {
+  if (kind === "TURNAROUND") return true;
+  return part === "ARRIVAL_PART" ? kind === "ARRIVAL_ONLY" : kind === "DEPARTURE_ONLY";
+}
+
+/** Rule 11: a one-sided flight has only the milestones of its own part. */
+export function milestonesFor(kind: FlightKind, milestones: readonly MilestoneDef[]): MilestoneDef[] {
+  return milestones.filter((m) => hasPart(kind, m.part));
 }
 
 /** Recorded actual times, keyed by milestone definition id. */
@@ -101,30 +126,41 @@ export function effectiveActuals(
   };
 }
 
-/** Rule 1: effective ATA, else ETA, else STA. */
-export function arrivalAnchor(flight: FlightTimes, effectiveAta: Date | null): Date {
+/** Rule 1: effective ATA, else ETA, else STA; none on a departure-only flight (rule 11). */
+export function arrivalAnchor(flight: FlightTimes, effectiveAta: Date | null): Date | null {
+  if (!flight.sta) return null;
   return effectiveAta ?? flight.eta ?? flight.sta;
 }
 
-/** Rule 2: the later of (ETD, else STD) and (arrival anchor + minimum turnaround). */
+/**
+ * Rule 2: the later of (ETD, else STD) and (arrival anchor + minimum
+ * turnaround). Without an arrival part it is simply ETD, else STD (rule 11);
+ * an arrival-only flight has none.
+ */
 export function departureAnchor(
   flight: FlightTimes,
-  arrival: Date,
+  arrival: Date | null,
   params: TemplateParams,
-): Date {
-  return later(flight.etd ?? flight.std, addMinutes(arrival, params.minTurnaroundMinutes));
+): Date | null {
+  if (!flight.std) return null;
+  const scheduled = flight.etd ?? flight.std;
+  return arrival ? later(scheduled, addMinutes(arrival, params.minTurnaroundMinutes)) : scheduled;
 }
 
-/** Rule 3: anchor + offset, never earlier than the previous milestone's planned time. */
+/**
+ * Rule 3: anchor + offset, never earlier than the previous milestone's planned
+ * time. On a one-sided flight a milestone may point at the anchor the flight
+ * does not have; it then counts from the anchor that exists.
+ */
 export function plannedTimes(
   milestones: readonly MilestoneDef[],
-  arrival: Date,
-  departure: Date,
+  arrival: Date | null,
+  departure: Date | null,
 ): Map<string, Date> {
   const planned = new Map<string, Date>();
   let previous: Date | null = null;
   for (const def of sortByOrder(milestones)) {
-    const base = def.anchor === "ARRIVAL" ? arrival : departure;
+    const base = (def.anchor === "ARRIVAL" ? (arrival ?? departure) : (departure ?? arrival))!;
     let time = addMinutes(base, def.offsetMinutes);
     if (previous && time.getTime() < previous.getTime()) time = previous;
     planned.set(def.id, time);
@@ -170,9 +206,9 @@ export function orderConflicts(
   return conflicts;
 }
 
-/** Rule 7: effective ATD − STD when positive; null while there is no ATD. */
-export function delayMinutes(std: Date, effectiveAtd: Date | null): number | null {
-  if (!effectiveAtd) return null;
+/** Rule 7: effective ATD − STD when positive; null while there is no ATD or no departure. */
+export function delayMinutes(std: Date | null, effectiveAtd: Date | null): number | null {
+  if (!std || !effectiveAtd) return null;
   return Math.max(0, diffMinutes(effectiveAtd, std));
 }
 
@@ -205,10 +241,11 @@ export interface OccupancyWindow extends TimeWindow {
 }
 
 export interface TurnaroundShape {
-  type: TurnaroundType;
-  breakMinutes: number;
-  arrivalWindowEnd: Date;
-  departureWindowStart: Date;
+  /** Null on a one-sided flight: rule 11 gives it no turnaround type. */
+  type: TurnaroundType | null;
+  breakMinutes: number | null;
+  arrivalWindowEnd: Date | null;
+  departureWindowStart: Date | null;
   windows: OccupancyWindow[];
 }
 
@@ -260,13 +297,45 @@ export function turnaroundShape(
   };
 }
 
+/**
+ * "Ügynök-foglaltság", one-sided flight: one window, by the formula of the
+ * matching part of a long turnaround.
+ */
+export function oneSidedShape(
+  params: TemplateParams,
+  kind: Exclude<FlightKind, "TURNAROUND">,
+  anchor: Date,
+  lastArrival: Date,
+): TurnaroundShape {
+  if (kind === "ARRIVAL_ONLY") {
+    const arrivalWindowEnd = addMinutes(lastArrival, params.travelMinutes);
+    return {
+      type: null,
+      breakMinutes: null,
+      arrivalWindowEnd,
+      departureWindowStart: null,
+      windows: [{ part: "ARRIVAL_PART", start: addMinutes(anchor, -params.travelMinutes), end: arrivalWindowEnd }],
+    };
+  }
+  const departureWindowStart = addMinutes(anchor, -params.departureReportMinutes - params.travelMinutes);
+  return {
+    type: null,
+    breakMinutes: null,
+    arrivalWindowEnd: null,
+    departureWindowStart,
+    windows: [
+      { part: "DEPARTURE_PART", start: departureWindowStart, end: addMinutes(anchor, params.postDepartureMinutes) },
+    ],
+  };
+}
+
 export function windowsOverlap(a: TimeWindow, b: TimeWindow): boolean {
   return a.start.getTime() < b.end.getTime() && b.start.getTime() < a.end.getTime();
 }
 
 /** Rule 8: on a quick turnaround the arrival agent also does the departure part. */
 export function effectiveDepartureAgentId(
-  type: TurnaroundType,
+  type: TurnaroundType | null,
   arrivalAgentId: string | null,
   departureAgentId: string | null,
 ): string | null {
@@ -274,8 +343,11 @@ export function effectiveDepartureAgentId(
 }
 
 export interface Timeline {
-  arrivalAnchor: Date;
-  departureAnchor: Date;
+  kind: FlightKind;
+  /** Null on a departure-only flight. */
+  arrivalAnchor: Date | null;
+  /** Null on an arrival-only flight. */
+  departureAnchor: Date | null;
   effectiveAta: Date | null;
   effectiveAtd: Date | null;
   delayMinutes: number | null;
@@ -299,6 +371,9 @@ export function computeTimeline({
   recorded,
   thresholds = DEVIATION_THRESHOLDS,
 }: TimelineInput): Timeline {
+  const kind = flightKind(flight);
+  // Rule 11: the milestones of a missing part do not exist for this flight.
+  milestones = milestonesFor(kind, milestones);
   const { ata, atd } = effectiveActuals(flight, milestones, recorded);
   const arrival = arrivalAnchor(flight, ata);
   const departure = departureAnchor(flight, arrival, params);
@@ -332,13 +407,21 @@ export function computeTimeline({
     };
   });
 
+  const anchor = (arrival ?? departure)!;
+  const lastArrival = lastArrivalPlanned(milestones, planned, anchor);
+  const shape =
+    kind === "TURNAROUND"
+      ? turnaroundShape(params, arrival!, departure!, lastArrival)
+      : oneSidedShape(params, kind, anchor, lastArrival);
+
   return {
+    kind,
     arrivalAnchor: arrival,
     departureAnchor: departure,
     effectiveAta: ata,
     effectiveAtd: atd,
     delayMinutes: delayMinutes(flight.std, atd),
-    shape: turnaroundShape(params, arrival, departure, lastArrivalPlanned(milestones, planned, arrival)),
+    shape,
     rows,
   };
 }

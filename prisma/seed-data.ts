@@ -23,12 +23,14 @@ export const SEED_TEMPLATE = { name: "Alap", ...DEMO_TEMPLATE_PARAMS };
 export const SEED_MILESTONES = DEMO_MILESTONES;
 
 export interface SeedFlight {
-  inboundFlightNumber: string;
-  outboundFlightNumber: string;
+  /** Null on a departure-only flight (rule 11). */
+  inboundFlightNumber: string | null;
+  /** Null on an arrival-only flight (rule 11). */
+  outboundFlightNumber: string | null;
   stand: string;
-  sta: Date;
+  sta: Date | null;
   eta: Date | null;
-  std: Date;
+  std: Date | null;
   etd: Date | null;
   ata: Date | null;
   atd: Date | null;
@@ -128,6 +130,38 @@ export function buildSeedFlights(localDate: string): SeedFlight[] {
       atd: null,
       status: "PLANNED",
       arrivalAgent: null,
+      departureAgent: null,
+      records: [],
+    },
+    {
+      // Departure-only: the aircraft stayed here overnight (rule 11).
+      inboundFlightNumber: null,
+      outboundFlightNumber: "ZZ1612",
+      stand: "42",
+      sta: null,
+      eta: null,
+      std: at("07:00"),
+      etd: null,
+      ata: null,
+      atd: null,
+      status: "PLANNED",
+      arrivalAgent: null,
+      departureAgent: "ugynok1",
+      records: [],
+    },
+    {
+      // Arrival-only: the aircraft stays here (rule 11).
+      inboundFlightNumber: "ZZ1511",
+      outboundFlightNumber: null,
+      stand: "41",
+      sta: at("13:30"),
+      eta: null,
+      std: null,
+      etd: null,
+      ata: null,
+      atd: null,
+      status: "PLANNED",
+      arrivalAgent: "ugynok2",
       departureAgent: null,
       records: [],
     },
