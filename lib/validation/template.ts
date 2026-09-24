@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { messages } from "@/lib/messages";
-import { ATA_CODE, ATD_CODE, sortByOrder, type Anchor, type MilestoneDef, type Part } from "@/lib/turnaround";
+import { ATA_CODE, ATD_CODE, MAX_TEMPLATE_MINUTES, sortByOrder, type Anchor, type MilestoneDef, type Part } from "@/lib/turnaround";
 
 // Template editing rules: CLAUDE.md "MilestoneDefinition" and decision 4.
 
@@ -16,7 +16,7 @@ function intField(min: number, max: number, message: string) {
     .pipe(z.number().min(min, message).max(max, message));
 }
 
-const minutes = intField(0, 1440, e.minutes);
+const minutes = intField(0, MAX_TEMPLATE_MINUTES, e.minutes);
 
 export const TEMPLATE_FIELDS = [
   "name",

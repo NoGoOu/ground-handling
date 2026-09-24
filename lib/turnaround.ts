@@ -8,6 +8,9 @@ export type DeviationLevel = "green" | "yellow" | "red";
 export const ATA_CODE = "ATA";
 export const ATD_CODE = "ATD";
 
+/** Upper limit of every template duration; the daily list relies on it. */
+export const MAX_TEMPLATE_MINUTES = 1440;
+
 export interface TemplateParams {
   minTurnaroundMinutes: number;
   travelMinutes: number;

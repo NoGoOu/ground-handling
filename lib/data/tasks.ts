@@ -1,10 +1,13 @@
 import type { Prisma } from "@/generated/prisma/client";
 import type { TaskStatus } from "@/generated/prisma/enums";
 import { prisma } from "@/lib/db";
+import { candidateWindow, dayAnchors, forDay } from "@/lib/flight-day";
 import { parseTemplateSnapshot } from "@/lib/snapshot";
 import { getSettings } from "@/lib/settings";
 import { localDayRange } from "@/lib/time";
 import {
+  ATA_CODE,
+  ATD_CODE,
   computeTimeline,
   effectiveDepartureAgentId,
   type DeviationThresholds,
@@ -153,27 +156,48 @@ export async function getTaskView(id: string): Promise<TaskView | null> {
 }
 
 /**
- * Turnarounds whose STA or STD falls on the given Budapest day (provisional
- * decision 1), ordered by STA.
+ * Turnarounds that show on the given Budapest day (decision 1): the day their
+ * arrival anchor or effective departure falls on, ordered by the arrival anchor.
+ * The database fetches a wider set by the stored times; forDay decides.
  */
 export async function listTaskViewsForDay(
   localDate: string,
   extraWhere: Prisma.TaskWhereInput = {},
 ): Promise<TaskView[]> {
-  const { start, end } = localDayRange(localDate);
+  const day = localDayRange(localDate);
+  const window = candidateWindow(day);
+  const inWindow = { gte: window.start, lt: window.end };
   const settings = await getSettings();
   const tasks = await prisma.task.findMany({
     where: {
-      ...extraWhere,
-      flight: {
-        OR: [
-          { sta: { gte: start, lt: end } },
-          { std: { gte: start, lt: end } },
-        ],
-      },
+      AND: [
+        extraWhere,
+        {
+          OR: [
+            {
+              flight: {
+                OR: [
+                  { sta: inWindow },
+                  { eta: inWindow },
+                  { ata: inWindow },
+                  { std: inWindow },
+                  { etd: inWindow },
+                  { atd: inWindow },
+                ],
+              },
+            },
+            // An agent's ATA or ATD record can be the effective actual (rule 9).
+            {
+              records: {
+                some: { actualTime: inWindow, milestoneDefinition: { code: { in: [ATA_CODE, ATD_CODE] } } },
+              },
+            },
+          ],
+        },
+      ],
     },
     include: taskInclude,
-    orderBy: { flight: { sta: "asc" } },
   });
-  return tasks.map((task) => toTaskView(task, settings.deviationThresholds));
+  const views = tasks.map((task) => toTaskView(task, settings.deviationThresholds));
+  return forDay(views, (view) => dayAnchors(view.timeline), day);
 }

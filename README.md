@@ -6,7 +6,7 @@ Nyílt forráskódú webalkalmazás repülőtéri földi kiszolgálás (ground h
 
 **1. mérföldkő – napi munka**
 
-- **Napi járatlista** (műszakvezető): a nap járatai STA szerint, várható és tényleges időkkel, forduló típusával (gyors / hosszú), státusszal, késéssel és ügynök-kiosztással.
+- **Napi járatlista** (műszakvezető): a nap járatai a hatályos idők szerint (azon a napon, amelyre az érkezés vagy a hatályos indulás esik; a napokat késő járat a tényleges napján), érkezés szerint rendezve, várható és tényleges időkkel, forduló típusával (gyors / hosszú), státusszal, késéssel és ügynök-kiosztással.
 - **Járat létrehozása és szerkesztése**: a task automatikusan létrejön.
 - **Task nézet**: mérföldkövenként tervezett és tényleges idő, színezett eltérés, „Most” gomb és kézi időmegadás, ki rögzítette és ki módosította, sorrend-figyelmeztetés, státuszváltás. Az ATA és az ATD sorában a rendszerből kapott érték és az ügynök saját rögzítése egymás mellett látszik.
 - **Ügynök nézet**: a saját taskok telefonra optimalizálva.
