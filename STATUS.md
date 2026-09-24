@@ -4,6 +4,7 @@
 
 ## Mi készült el
 
+- 4. mérföldkő, 7. lépés: nevek és mentés a tervezetbe. Pozíciónként egy ügynök (a csapatok aktív tagjai); „Mentés a tervezetbe” a teljes tervre: a névvel ellátott pozíciókból egy-egy tervezet-műszak lesz, egyetlen operatív résszel (a beállított típussal), a pozíció műszakjának idejével. A publikált napok kimaradnak, a név nélküli pozíciók listázva. Ha bármelyik új műszak átfedne az ügynök egy meglévő tervezet-műszakjával (vagy két pozíciója egymással), semmi nem íródik, és a rendszer listázza az ütközéseket. Az újramentés a terv korábban mentett, még tervezetben lévő műszakjait cseréli (`lib/planning/draft.ts`, tesztekkel).
 - 4. mérföldkő, 6. lépés: tervezői felület (`/planning`, menü: „Tervezés”). Új terv időszakra (legfeljebb 31 nap), a program naponként számol; napváltó a terv napjaival; mutatók; sávos nézet pozíciónként (a műszak kiterjedése, a jelölt szünet, a megsértett szabályok); áthúzás másik vagy új pozícióba, szabálysértésnél figyelmeztetéssel, kézi jelöléssel; a nap vagy a teljes terv újraszámolása megerősítéssel; „Elavult” jelzés, ha a nap ablakai a számolás óta változtak. A Műszakvezető olvashatja a tervet. A tervezetbe mentett műszak a terv napjához kapcsolódik (`Shift.planDayId`), így az újraszámolás után is a nap következő mentése cseréli.
 - 4. mérföldkő, 5. lépés: a tervezési beállítások felülete (`/planning/settings`, „Tervezés” jogosultsággal): műszakhossz, a mentett műszak résztípusa (aktív, operatív), szünet, pihenőidő vagy átfedés (egyszerre csak az egyik), létszámtöbblet; űrlap-ellenőrzés tesztekkel.
 - 4. mérföldkő, 4. lépés: kiegyenlítés és döntetlen-feloldás (`lib/planning/balance.ts`). Az 1. lépés eredményéből indul, a minimum + létszámtöbblet pozíción belül; egy ablak áthelyezése vagy két ablak cseréje, ha javít, és minden korlát teljesül. A javulás sorrendje: a terhelések különbsége, a munkaidő, az üresjárat, végül a terhelések négyzetösszege (ez csak az elakadás ellen kell). A kipróbált létszámok közül a jobbik nyer, a pozíciók az első ablakuk szerint számozódnak. Mutatók: pozíciószám, pozíciónként foglaltság, műszakhossz, üresjárat, összes munkaidő, a terhelés minimuma, maximuma, különbsége. Tesztek: determinisztikus eredmény, a létszámtöbblet és a korlátok betartása, korlátok nélkül a legnagyobb átfedés. Egy 70 ablakos nap ~0,1 s.
@@ -16,8 +17,8 @@
 
 ## Állapot
 
-- Utolsó commit: `e6455a7` – feat: edit the planning settings (a 6. lépés commitja ezt követi)
-- Tesztek: `npm test` → 350 teszt, mind zöld
+- Utolsó commit: `e38d0be` – feat: show and adjust a plan on the band view (a 7. lépés commitja ezt követi)
+- Tesztek: `npm test` → 355 teszt, mind zöld
 - Lint és build: `npm run lint` hibátlan, `npx tsc --noEmit` tiszta, `npm run build` sikeres
 - Próba az adatbázison: a mintafájl importja után a 2024. 09. 10–16. hét terve 0,3 s alatt elkészül, naponként a pozíciószám a legnagyobb egyidejű átfedés; áthelyezés új pozícióba kézi jelöléssel, újraszámolás után a jelölés eltűnik; egy ETA-késés után a nap elavult, visszavonva újra friss. A felületet a böngészőben nem néztem meg (bejelentkezés kell hozzá).
 
@@ -31,4 +32,4 @@
 
 ## Következő lépés
 
-- 4. mérföldkő, 7. lépés: nevek hozzárendelése és mentés a tervezetbe (csak nem publikált napokra).
+- 4. mérföldkő, 8. lépés: „Kiosztás átvétele” gomb.

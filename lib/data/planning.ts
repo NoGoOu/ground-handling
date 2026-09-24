@@ -1,9 +1,12 @@
 import type { Prisma } from "@/generated/prisma/client";
+import { listPublicationsInRange } from "@/lib/data/publications";
+import { listRosterAgents } from "@/lib/data/shifts";
 import { listTaskViewsForDay, type TaskView } from "@/lib/data/tasks";
 import { prisma } from "@/lib/db";
 import { flightLabel } from "@/lib/flight";
 import { messages } from "@/lib/messages";
 import { planDay } from "@/lib/planning/balance";
+import { draftConflicts, draftPlan, type DraftConflict } from "@/lib/planning/draft";
 import { windowsOfDay, type PlanWindow } from "@/lib/planning/input";
 import {
   DEFAULT_PLANNING_SETTINGS,
@@ -13,7 +16,7 @@ import {
 } from "@/lib/planning/settings";
 import { itemWindow, planDayView, type PlanDayView } from "@/lib/planning/view";
 import { SETTINGS_ID } from "@/lib/settings";
-import { addDays } from "@/lib/time";
+import { addDays, localDayRange } from "@/lib/time";
 
 // Data side of the planner view (4. mérföldkő). The calculations are pure
 // (lib/planning); this file only loads and saves.
@@ -208,4 +211,121 @@ export async function movePlanItem(
     const items = await tx.planItem.findMany({ where: { positionId } });
     return { windows: items.map(itemWindow), settings: settingsFromJson(planDay.settings) };
   });
+}
+
+/** The agents a position may be named for: active members of a team. */
+export async function listPositionAgents() {
+  return listRosterAgents(null);
+}
+
+/** Names the positions of a plan day; an empty value clears the name. Unknown agents are refused. */
+export async function setPositionNames(planId: string, day: string, names: ReadonlyMap<string, string | null>) {
+  const planDay = await prisma.planDay.findUnique({
+    where: { planId_date: { planId, date: dateValue(day) } },
+    select: { positions: { select: { id: true } } },
+  });
+  if (!planDay) return false;
+  const known = new Set(planDay.positions.map((p) => p.id));
+  const userIds = [...new Set([...names.values()].filter((id): id is string => !!id))];
+  const agents = await listRosterAgents(userIds);
+  if (agents.length !== userIds.length || [...names.keys()].some((id) => !known.has(id))) return false;
+  await prisma.$transaction(
+    [...names].map(([id, userId]) => prisma.planPosition.update({ where: { id }, data: { userId } })),
+  );
+  return true;
+}
+
+export type DraftSaveResult =
+  | { ok: true; saved: number; publishedDays: string[]; unnamed: number }
+  | { ok: false; reason: "noSegmentType" }
+  | { ok: false; reason: "conflicts"; conflicts: DraftConflict[] };
+
+/**
+ * "Mentés a tervezetbe" for the whole plan: every named position becomes a
+ * draft shift of one segment. Published days are skipped; the other days'
+ * earlier draft shifts from this plan are replaced. Nothing is written while
+ * any new shift overlaps a draft shift of the same agent.
+ */
+export async function saveDraftShifts(planId: string, note: (day: string, number: number) => string): Promise<DraftSaveResult | null> {
+  const plan = await getPlan(planId);
+  if (!plan) return null;
+  const [days, publications, { segmentTypeId }] = await Promise.all([
+    prisma.planDay.findMany({
+      where: { planId },
+      select: {
+        id: true,
+        date: true,
+        settings: true,
+        positions: {
+          select: {
+            number: true,
+            userId: true,
+            user: { select: { name: true } },
+            items: { select: { id: true, positionId: true, taskId: true, part: true, start: true, end: true, manual: true } },
+          },
+        },
+      },
+    }),
+    listPublicationsInRange(plan.start, plan.end),
+    getPlanningSettings(),
+  ]);
+  const type = segmentTypeId
+    ? await prisma.segmentType.findFirst({ where: { id: segmentTypeId, active: true, operative: true }, select: { id: true } })
+    : null;
+  if (!type) return { ok: false, reason: "noSegmentType" };
+
+  const positions = days.flatMap((d) =>
+    d.positions.map((p) => ({
+      dayId: d.id,
+      day: dayText(d.date),
+      number: p.number,
+      userId: p.userId,
+      userName: p.user?.name ?? null,
+      windows: p.items.map(itemWindow),
+      settings: settingsFromJson(d.settings),
+    })),
+  );
+  const draft = draftPlan(positions, plan.days, publications);
+  const replaced = days.filter((d) => draft.savedDays.includes(dayText(d.date))).map((d) => d.id);
+
+  // The agents' other draft shifts around the period; the ones this save replaces do not count.
+  const around = { start: localDayRange(addDays(plan.start, -1)).start, end: localDayRange(addDays(plan.end, 2)).end };
+  const others = await prisma.shift.findMany({
+    where: {
+      layer: "DRAFT",
+      userId: { in: [...new Set(draft.shifts.map((s) => s.userId))] },
+      OR: [{ planDayId: null }, { planDayId: { notIn: replaced } }],
+      segments: { some: { start: { lt: around.end }, end: { gt: around.start } } },
+    },
+    select: { userId: true, segments: { select: { start: true, end: true } } },
+  });
+  const spans = others.flatMap((shift) =>
+    shift.segments.length
+      ? [
+          {
+            userId: shift.userId,
+            start: new Date(Math.min(...shift.segments.map((s) => s.start.getTime()))),
+            end: new Date(Math.max(...shift.segments.map((s) => s.end.getTime()))),
+          },
+        ]
+      : [],
+  );
+  const conflicts = draftConflicts(draft.shifts, spans);
+  if (conflicts.length > 0) return { ok: false, reason: "conflicts", conflicts };
+
+  await prisma.$transaction(async (tx) => {
+    await tx.shift.deleteMany({ where: { layer: "DRAFT", planDayId: { in: replaced } } });
+    for (const shift of draft.shifts) {
+      await tx.shift.create({
+        data: {
+          userId: shift.userId,
+          layer: "DRAFT",
+          note: note(shift.day, shift.number),
+          planDayId: shift.dayId,
+          segments: { create: [{ start: shift.start, end: shift.end, segmentTypeId: type.id }] },
+        },
+      });
+    }
+  });
+  return { ok: true, saved: draft.shifts.length, publishedDays: draft.publishedDays, unnamed: draft.unnamed.length };
 }

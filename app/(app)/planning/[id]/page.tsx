@@ -1,15 +1,17 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { boardRange, hourTicks } from "@/lib/board";
-import { getPlan, getPlanDayView } from "@/lib/data/planning";
+import { getPlan, getPlanDayView, listPositionAgents } from "@/lib/data/planning";
 import { messages } from "@/lib/messages";
 import { fmt } from "@/lib/messages/format";
 import { canPlan, canViewPlans } from "@/lib/permissions";
 import { requireCapability } from "@/lib/session";
 import { formatDateTime, formatDayShort, formatTimeOnDay, localDayRange } from "@/lib/time";
-import { moveItem, recalculateDay, recalculatePlan } from "../actions";
+import { moveItem, recalculateDay, recalculatePlan, savePositionNames, saveToDraft } from "../actions";
+import { NamesForm } from "./names-form";
 import { PlanBoard } from "./plan-board";
 import { RecalculateButton } from "./recalculate-button";
+import { SaveDraftButton } from "./save-draft-button";
 
 const t = messages.planning;
 
@@ -28,6 +30,7 @@ export default async function PlanPage(props: PageProps<"/planning/[id]">) {
   const day = requested && plan.days.includes(requested) ? requested : plan.days[0];
   const view = day ? await getPlanDayView(id, day) : null;
   const planner = canPlan(user);
+  const agents = planner ? await listPositionAgents() : [];
   const index = plan.days.indexOf(day);
 
   const range = view
@@ -143,6 +146,26 @@ export default async function PlanPage(props: PageProps<"/planning/[id]">) {
                 canEdit={planner}
                 action={moveItem.bind(null, id, day)}
               />
+
+              {planner && (
+                <section className="flex flex-col gap-3 rounded-xl border border-neutral-200 bg-white p-4">
+                  <h2 className="font-semibold">{t.names.title}</h2>
+                  <p className="text-sm text-neutral-600">{t.names.hint}</p>
+                  <NamesForm
+                    key={`${day}-${view.calculatedAt.toISOString()}`}
+                    positions={view.lanes.map((lane) => ({
+                      id: lane.positionId,
+                      number: lane.number,
+                      userId: lane.userId,
+                      shift: `${formatTimeOnDay(lane.shift.start, day)}–${formatTimeOnDay(lane.shift.end, day)}`,
+                    }))}
+                    agents={agents}
+                    action={savePositionNames.bind(null, id, day)}
+                  />
+                  <p className="border-t border-neutral-200 pt-3 text-sm text-neutral-600">{t.draft.hint}</p>
+                  <SaveDraftButton action={saveToDraft.bind(null, id)} />
+                </section>
+              )}
 
               <section className="flex flex-col gap-2">
                 <h2 className="font-semibold">{t.metrics.perPosition}</h2>

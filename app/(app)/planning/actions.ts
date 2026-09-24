@@ -3,12 +3,20 @@
 import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import { ActionError, actionUser, runAction, type ActionResult } from "@/lib/action";
-import { calculatePlanDays, createPlan, getPlan, movePlanItem } from "@/lib/data/planning";
+import {
+  calculatePlanDays,
+  createPlan,
+  getPlan,
+  movePlanItem,
+  saveDraftShifts,
+  setPositionNames,
+} from "@/lib/data/planning";
 import { messages } from "@/lib/messages";
 import { fmt } from "@/lib/messages/format";
 import { canPlan } from "@/lib/permissions";
 import { violations } from "@/lib/planning/position";
 import { getCurrentUser } from "@/lib/session";
+import { formatDateTime } from "@/lib/time";
 import { fieldErrors, formValues, type FormState } from "@/lib/validation/form";
 import { planPeriodSchema } from "@/lib/validation/planning";
 
@@ -75,4 +83,66 @@ export async function moveItem(
       warning: broken.length ? fmt(t.movedWarning, { rules: broken.map((v) => t.violations[v]).join(", ") }) : undefined,
     };
   });
+}
+
+/** The names of a plan day's positions: one select per position ("agent:<positionId>"). */
+export async function savePositionNames(
+  planId: string,
+  day: string,
+  _previous: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  return runAction(async () => {
+    await actionUser(canPlan);
+    const names = new Map<string, string | null>();
+    for (const [key, value] of formData.entries()) {
+      if (!key.startsWith("agent:") || typeof value !== "string") continue;
+      names.set(key.slice("agent:".length), value || null);
+    }
+    if (!(await setPositionNames(planId, day, names))) throw new ActionError(messages.planning.names.invalid);
+    refresh();
+  });
+}
+
+export interface DraftSaveState {
+  notice?: string[];
+  error?: string;
+  conflicts?: string[];
+}
+
+/** "Mentés a tervezetbe" for the whole plan (CLAUDE.md, "Nevek és tervezet"). */
+export async function saveToDraft(planId: string): Promise<DraftSaveState> {
+  const actor = await getCurrentUser();
+  if (!actor || !canPlan(actor)) return { error: messages.errors.forbidden };
+  const plan = await getPlan(planId);
+  if (!plan) return { error: messages.errors.notFound };
+
+  const d = messages.planning.draft;
+  const result = await saveDraftShifts(planId, (_day, number) =>
+    fmt(d.note, { start: plan.start, end: plan.end, number }),
+  );
+  if (!result) return { error: messages.errors.notFound };
+  if (!result.ok && result.reason === "noSegmentType") return { error: d.noSegmentType };
+  if (!result.ok) {
+    return {
+      error: d.conflicts,
+      conflicts: result.conflicts.map((c) =>
+        fmt(d.conflict, {
+          day: c.day,
+          number: c.number,
+          name: c.userName,
+          start: formatDateTime(c.clash.start),
+          end: formatDateTime(c.clash.end),
+        }),
+      ),
+    };
+  }
+  refresh();
+  return {
+    notice: [
+      fmt(d.saved, { count: result.saved }),
+      ...(result.unnamed ? [fmt(d.unnamed, { count: result.unnamed })] : []),
+      ...(result.publishedDays.length ? [fmt(d.published, { days: result.publishedDays.join(", ") })] : []),
+    ],
+  };
 }
