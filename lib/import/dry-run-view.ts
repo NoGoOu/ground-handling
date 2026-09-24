@@ -2,6 +2,7 @@ import { flightLabel } from "@/lib/flight";
 import { messages } from "@/lib/messages";
 import { fmt } from "@/lib/messages/format";
 import { formatDateTime } from "@/lib/time";
+import { flightKind } from "@/lib/turnaround";
 import { describeRowError } from "./describe";
 import type { DiffEntry, ExistingFlight, FieldChange, ImportDiff } from "./diff";
 import type { ImportedTurnaround, ImportPlan, PairingWarning } from "./pairing";
@@ -124,7 +125,7 @@ export function dryRunView({
           flightLabel(flight),
           flight.sta ? `${formatDateTime(flight.sta)} · ${flight.origin ?? "–"}` : "–",
           flight.std ? `${formatDateTime(flight.std)} · ${flight.destination ?? "–"}` : "–",
-          "",
+          messages.flightKind[flightKind(flight)],
           parts.map((part) => t.missingParts[part]).join(", "),
         ];
       }),

@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { MissingBadge } from "@/components/badges";
 import { estimateText } from "@/components/estimate-note";
 import { listTemplateOptions } from "@/lib/data/templates";
 import { prisma } from "@/lib/db";
@@ -67,6 +68,9 @@ export default async function EditFlightPage(props: PageProps<"/flights/[id]/edi
         <h1 className="text-2xl font-bold">
           {t.editTitle}: {flightLabel(flight)}
         </h1>
+        <div>
+          <MissingBadge arrival={flight.arrivalMissing} departure={flight.departureMissing} />
+        </div>
         {(flight.ata || flight.atd) && (
           <p className="text-sm text-neutral-600">
             {fmt(t.systemTimes, {

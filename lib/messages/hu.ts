@@ -531,6 +531,27 @@ export const hu = {
     profileName: "Profil neve",
     profileSubmit: "Profil mentése",
     profileSaved: "Profil mentve.",
+    save: {
+      submit: "Mentés",
+      saving: "Mentés…",
+      hint: "A mentés a próbafuttatás szerint ír: csak a menetrendi mezőket, az ETA, ETD, ATA, ATD, a késés, a törlés és a kiosztás érintetlen marad. A „párosítás változott” és a hibás sorok nem íródnak.",
+    },
+    saved: "Import mentve: {summary}.",
+    runs: {
+      title: "Utolsó importok",
+      empty: "Még nem volt import.",
+      columns: { at: "Időpont", by: "Ki", file: "Fájl", profile: "Profil", period: "Időszak", summary: "Összesítés" },
+      summary: "{new} új, {changed} változott, {repaired} átpárosítva, {unchanged} változatlan, {conflicts} nem írható, {errors} hibás, {missing} hiányzó",
+      noProfile: "– profil nélkül –",
+    },
+    missing: {
+      title: "Az utolsó importból hiányzó járatok",
+      hint: "Egy korábban ugyanazzal a profillal importált járat nincs benne az új fájlban. Nem törlődik és nem kerül töröltre: te döntesz. A jelölés törölhető; a rész töröltre állítása a járat oldalán, a járatkezelési jogosultsággal történik.",
+      empty: "Nincs hiányzó járat.",
+      columns: { flight: "Járat", arrival: "Érkezés (STA)", departure: "Indulás (STD)", parts: "Hiányzik", run: "Import" },
+      clear: "Jelölés törlése",
+    },
+    missingBadge: "Az utolsó importból hiányzik: {parts}",
     dryRun: {
       submit: "Próbafuttatás",
       running: "Próbafuttatás…",
@@ -597,6 +618,7 @@ export const hu = {
       profileName: "A profil neve 1–60 karakter.",
       range: "Adj meg érvényes napokat; az első nap nem lehet későbbi az utolsónál.",
       mappingProblems: "A párosítás nem teljes: {problems}",
+      nothingToSave: "Nincs mit menteni: a szűrésnek egy járat sem felel meg.",
     },
   },
   delay: {

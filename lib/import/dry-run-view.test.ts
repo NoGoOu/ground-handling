@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { diffImport, planPeriod } from "@/lib/import/diff";
+import { diffImport, planPeriod, type ExistingFlight } from "@/lib/import/diff";
 import { dryRunView } from "@/lib/import/dry-run-view";
 import { NETLINE_MAPPING, netlineTable } from "@/lib/import/netline.fixture";
 import { planImport } from "@/lib/import/pairing";
@@ -41,5 +41,32 @@ describe("dry run of the sample", () => {
     expect(newGroup.rows).toHaveLength(10);
     expect(newGroup.more).toBe(40);
     expect(short.missingChecked).toBe(false);
+  });
+});
+
+describe("dry run with a flight missing from the file", () => {
+  const gone: ExistingFlight = {
+    id: "gone",
+    airline: "FR",
+    inboundFlightNumber: "FR9999",
+    outboundFlightNumber: null,
+    arrivalFlightDate: "2024-09-10",
+    departureFlightDate: null,
+    origin: "PMI",
+    destination: null,
+    sta: new Date("2024-09-10T09:50:00Z"),
+    std: null,
+    aircraftType: null,
+    aircraftConfig: null,
+    importProfileId: "p",
+    operational: false,
+  };
+  const diff = diffImport({ plan, existing: [gone], airlines, profileId: "p", period });
+  const view = dryRunView({ plan, diff, existing: [gone], period, profileId: "p" });
+
+  it("lists it with its kind and the missing parts", () => {
+    expect(view.summary.missing).toBe(1);
+    const missing = view.groups.find((g) => g.kind === "missing")!;
+    expect(missing.rows).toEqual([["FR9999", "2024. 09. 10. 11:50 · PMI", "–", "Csak érkező", "érkezés"]]);
   });
 });

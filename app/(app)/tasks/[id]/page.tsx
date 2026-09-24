@@ -1,6 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CancelBadges, DelayBadge, DeviationBadge, LateBadge, StatusBadge, TypeBadge } from "@/components/badges";
+import {
+  CancelBadges,
+  DelayBadge,
+  DeviationBadge,
+  LateBadge,
+  MissingBadge,
+  StatusBadge,
+  TypeBadge,
+} from "@/components/badges";
 import { EstimateNote } from "@/components/estimate-note";
 import { TimeStack } from "@/components/time-stack";
 import { getTaskView, taskAssignment, type TaskView } from "@/lib/data/tasks";
@@ -50,6 +58,7 @@ function Header({ task, day }: { task: TaskView; day: string }) {
         <TypeBadge type={timeline.shape.type} kind={timeline.activeKind ?? timeline.kind} />
         <LateBadge late={task.late} />
         <CancelBadges arrival={flight.arrivalCancelled} departure={flight.departureCancelled} />
+        <MissingBadge arrival={flight.arrivalMissing} departure={flight.departureMissing} />
         <DelayBadge minutes={timeline.delayMinutes} />
       </div>
       <p className="text-neutral-600">

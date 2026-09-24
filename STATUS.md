@@ -4,20 +4,16 @@
 
 ## Mi készült el
 
-- 1. és 2. mérföldkő: kész. Utómunka: „Késik” csak a sárga eltérés-küszöb fölött (`096fd27`).
-- 3. mérföldkő, 6. lépés: próbafuttatás és összesítés, semmi nem íródik. A tervezett fordulók összevetése a meglévő járatokkal (`lib/import/diff.ts`, tiszta függvény, tesztekkel): új, változott (mezőnként), változatlan, átpárosítható, „párosítás változott” (üzemi adat, összevonás vagy elvesző pár miatt nem íródik), hibás (sor- és légitársaság-hibák), párosítatlan és hiányzó (ugyanazzal a profillal, a fájl időszakán belül). Kézzel felvett járat is megtalálható járatszám és nap szerint.
-- 3. mérföldkő, 5. lépés: párosító felület. Mezőnként oszlopválasztás (a fejlécekből javasolt kezdő párosítással), UTC vagy budapesti idő, dátumtartomány, BUD-szűrés; élő, értelmezett előnézet az első sorokra ugyanazokkal a tiszta függvényekkel; a párosítás profilként menthető, és az azonos fejlécű fájlnál (munkalappal és fejlécsorral együtt) a rendszer felajánlja.
-- 3. mérföldkő, 4. lépés: fordulók képzése (`lib/import/pairing.ts`): BUD-szűrés még az értelmezés előtt; az érkezés a következő járat első, utána induló példányával párosul, a többi csak érkező, illetve csak induló; ismétlődő sor, hiányzó vagy már foglalt következő járat figyelmeztetéssel; dátumtartomány, a széleken is párosítva. Tesztek a `docs/schedule-import.md` táblázatának minden sorára (27 forduló, 1 csak érkező, 22 csak induló, 2 kiszűrt sor).
-- 3. mérföldkő, 3. lépés: átalakítások tiszta, tesztelt függvényekként (`lib/import/transform.ts`): üres jelölők (pl. „N/A”), szóközlevágás, járatszám-egységesítés (`' 428'` → FR428, `055` → FR55, összevont cella is), dátum (Excel-sorszám és szöveges alakok), idő (a nap törtrésze a percre kerekítve, a leírt másodperc levágva), dátum és idő egy cellából, napeltolás, UTC vagy budapesti idő, napminta és időszak-kibontás. A párosítás (`lib/import/mapping.ts`) ezekből egy sorból járatlábakat állít elő; tesztek a mintafájl soraival.
-- 3. mérföldkő, 2. lépés: fájlbeolvasás. CSV, JSON, XLSX és XLS beolvasása nyers cellákká (SheetJS 0.20.3 a hivatalos CDN-ről, jóváhagyva); feltöltés 25 MB-ig (a server action és a proxy korlátja is emelve), a fájl a varázsló lépései között az adatbázisban marad, egy napig; munkalap- és fejlécsor-választás, a munkalap első sorai és előnézet. Tesztek a mintafájllal (munkalapok, fejléc, 14 sor, nyers cellák), CSV, XLS és JSON esetekkel, fejléc-ujjlenyomattal.
-- 3. mérföldkő, 1. lépés: adatmodell és migráció. A légitársaság alapértelmezett sablonja (admin felületen állítható, a listán is látszik); a járat forrása (kézi vagy import), állomásai, a két rész üzemnapja, típusa, konfigurációja, importprofilja és részenkénti hiányzó-jelölése; `ImportProfile`, `ImportRun` (napló) és `ImportUpload` (a feltöltött fájl a varázsló lépései között). A két rész azonosítója egyedi kulcs (légitársaság + járatszám + üzemnap + állomás). Az állóhely nem kötelező (az importált járatnak nincs). Új jogosultság: „Járatrend importálása” (Admin, Tervező), tesztekkel.
+- 3. mérföldkő, 7. lépés: az import mentése a próbafuttatás szerint, egy tranzakcióban. Új járat taskkal, a változott járatnál csak a menetrendi mezők íródnak; az ETA/ETD, ATA/ATD, a késés, a törlés és a kiosztás érintetlen. Importnapló az import oldalon. Egy korábban ugyanazzal a profillal importált, az új fájlból hiányzó járat részenként „Az utolsó importból hiányzik” jelölést kap: a napi listán, a task és a járat oldalán látszik, az import oldalon listázva, ahol a jelölés törölhető; ha a járat újra benne van a fájlban, a jelölés magától lekerül.
+- 3. mérföldkő, 1–6. lépés: adatmodell (a légitársaság alapértelmezett sablonja, a járat forrása, állomásai, üzemnapjai, importprofilja, hiányzó-jelölése; „Járatrend importálása” jogosultság), fájlbeolvasás (CSV, JSON, XLSX, XLS, 25 MB-ig), átalakítások, fordulók képzése (tesztek a `docs/schedule-import.md` táblázatára: 27 forduló, 1 csak érkező, 22 csak induló, 2 kiszűrt sor), párosító felület profilokkal, próbafuttatás.
+- Utómunka: „Késik” csak a sárga eltérés-küszöb fölött (`096fd27`).
 
 ## Állapot
 
-- Utolsó commit: `2589fb4` – feat: map the columns of a schedule file (a 6. lépés commitja ezt követi)
-- Tesztek: `npm test` → 293 teszt, mind zöld
+- Utolsó commit: `9a29268` – feat: dry run a schedule import (a 7. lépés commitja ezt követi)
+- Tesztek: `npm test` → 294 teszt, mind zöld
 - Lint és build: `npm run lint` hibátlan, `npx tsc --noEmit` tiszta
-- Kézi próba: a mintafájl próbafuttatása FR légitársaság nélkül 50 hibás sort ad („nincs ilyen légitársaság: FR”); a Ryanair felvétele és az alapértelmezett sablon beállítása után 50 új, 23 párosítatlan, 2 kiszűrt sor; az adatbázisban utána sincs FR-járat és importnapló. Korábban: feltöltés, párosítás, profil mentése és felajánlása.
+- Kézi próba a mintafájllal: első mentés 50 új járat, 23 párosítatlan, 2 kiszűrt sor; a 2024. 09. 10-i napi listán megjelennek. Késés, rész-törlés és kiosztás után újraimportálva 50 változatlan, nincs duplikáció, a kézi adatok megmaradtak. Az FR3111/FR4305 sorai nélküli fájl 3 járatot jelöl hiányzónak; a jelölés törölhető, a teljes fájl újraimportálása után egy sem hiányzik.
 
 ## Eltérések a CLAUDE.md-től
 
@@ -31,4 +27,4 @@
 
 ## Következő lépés
 
-- 3. mérföldkő, 7. lépés: mentés (upsert, csak menetrendi mezők, hiányzó-jelölés a napi listán és a járaton, importnapló).
+- 3. mérföldkő, 8. lépés: README (az import használata) és indítás tiszta állapotból Docker Compose-zal.

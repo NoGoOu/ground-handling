@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CancelBadges, DelayBadge, LateBadge, StatusBadge, TypeBadge } from "@/components/badges";
+import { CancelBadges, DelayBadge, LateBadge, MissingBadge, StatusBadge, TypeBadge } from "@/components/badges";
 import { DateNav } from "@/components/date-nav";
 import { TimeStack } from "@/components/time-stack";
 import { listTaskViewsForDay, type TaskView } from "@/lib/data/tasks";
@@ -87,6 +87,7 @@ export default async function FlightsPage(props: PageProps<"/flights">) {
                     <div className="mt-1 flex flex-wrap gap-1">
                       <LateBadge late={task.late} />
                       <CancelBadges arrival={task.flight.arrivalCancelled} departure={task.flight.departureCancelled} />
+                      <MissingBadge arrival={task.flight.arrivalMissing} departure={task.flight.departureMissing} />
                     </div>
                   </td>
                   <td className="px-3 py-2 font-medium">{task.flight.stand ?? t.noStand}</td>

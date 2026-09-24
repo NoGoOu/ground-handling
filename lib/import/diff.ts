@@ -53,6 +53,8 @@ export type DiffEntry =
       changes: FieldChange[];
       /** The flight's pairing changes too; allowed because it has no operational data. */
       repair: boolean;
+      /** On a re-pairing, the part the flight keeps; the other one is replaced. */
+      kept?: Part;
     }
   | { kind: "conflict"; turnaround: ImportedTurnaround; flightIds: string[]; reason: ConflictReason }
   | { kind: "error"; turnaround: ImportedTurnaround; reason: "unknownAirline" | "noTemplate" };
@@ -216,6 +218,7 @@ export function diffImport({
       flightId: carrier.id,
       changes: scheduleChanges(carrier, turnaround),
       repair: true,
+      kept: carrier === byArrival ? "ARRIVAL_PART" : "DEPARTURE_PART",
     });
   }
 

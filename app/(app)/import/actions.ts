@@ -1,8 +1,16 @@
 "use server";
 
+import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import { ActionError, actionUser, runAction, type ActionResult } from "@/lib/action";
-import { loadAirlines, loadExistingFlights, loadUploadTable, saveProfile, saveUpload } from "@/lib/data/imports";
+import {
+  applyImport,
+  loadAirlines,
+  loadExistingFlights,
+  loadUploadTable,
+  saveProfile,
+  saveUpload,
+} from "@/lib/data/imports";
 import { prisma } from "@/lib/db";
 import { describeProblem } from "@/lib/import/describe";
 import { diffImport, planPeriod } from "@/lib/import/diff";
@@ -132,4 +140,43 @@ export async function dryRunImport(uploadId: string, _previous: DryRunState, for
   if ("error" in prepared) return { error: prepared.error };
   const { plan, diff, existing, period, profileId } = prepared;
   return { view: dryRunView({ plan, diff, existing, period, profileId }) };
+}
+
+/**
+ * Mentés: writes what the dry run shows, computed again from the stored file
+ * and the database as they are now, and logs the import.
+ */
+export async function saveImport(uploadId: string, _previous: DryRunState, formData: FormData): Promise<DryRunState> {
+  const actor = await getCurrentUser();
+  if (!actor || !canImportSchedule(actor)) return { error: messages.errors.forbidden };
+  const prepared = await prepareImport(actor, uploadId, formData);
+  if ("error" in prepared) return { error: prepared.error };
+  const { plan, diff, existing, period, profileId, upload } = prepared;
+  if (!period) return { error: e.nothingToSave };
+
+  const { summary } = dryRunView({ plan, diff, existing, period, profileId });
+  const runId = await applyImport({
+    userId: actor.id,
+    diff,
+    profileId,
+    fileName: upload.fileName,
+    fileSize: upload.size,
+    period,
+    summary: { ...summary, filteredRows: plan.filteredRows, totalRows: plan.totalRows },
+  });
+  redirect(`/import?run=${runId}`);
+}
+
+/** The planner has looked at a flight missing from the last import: the marker goes. */
+export async function clearMissingMarker(flightId: string): Promise<ActionResult> {
+  return runAction(async () => {
+    await actionUser(canImportSchedule);
+    const flight = await prisma.flight.findUnique({ where: { id: flightId }, select: { id: true } });
+    if (!flight) throw new ActionError(messages.errors.notFound);
+    await prisma.flight.update({
+      where: { id: flightId },
+      data: { arrivalMissing: false, departureMissing: false, missingImportRunId: null },
+    });
+    refresh();
+  });
 }

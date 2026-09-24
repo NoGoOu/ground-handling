@@ -1,7 +1,8 @@
 import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db";
-import type { AirlineInfo, ExistingFlight } from "@/lib/import/diff";
+import type { AirlineInfo, ExistingFlight, ImportDiff } from "@/lib/import/diff";
 import type { ImportMapping } from "@/lib/import/mapping";
+import type { ImportedTurnaround } from "@/lib/import/pairing";
 import type { StoredProfile } from "@/lib/import/profiles";
 import { readFile, tableFrom } from "@/lib/import/read";
 import { mappingSchema } from "@/lib/validation/import";
@@ -119,4 +120,181 @@ export async function loadExistingFlights(window: { start: Date; end: Date }): P
 export async function loadAirlines(): Promise<AirlineInfo[]> {
   const airlines = await prisma.airline.findMany({ select: { id: true, iataCode: true, defaultTemplateId: true } });
   return airlines.map((a) => ({ id: a.id, code: a.iataCode, defaultTemplateId: a.defaultTemplateId }));
+}
+
+const flightDate = (date: string) => new Date(`${date}T00:00:00Z`);
+
+/** The schedule fields of a turnaround: the only fields an import writes (CLAUDE.md, 3. mérföldkő). */
+function scheduleData(turnaround: ImportedTurnaround) {
+  const { arrival, departure } = turnaround;
+  return {
+    inboundFlightNumber: arrival?.flightNumber ?? null,
+    sta: arrival?.sta ?? null,
+    origin: arrival?.origin ?? null,
+    arrivalFlightDate: arrival ? flightDate(arrival.flightDate) : null,
+    outboundFlightNumber: departure?.flightNumber ?? null,
+    std: departure?.std ?? null,
+    destination: departure?.destination ?? null,
+    departureFlightDate: departure ? flightDate(departure.flightDate) : null,
+    aircraftType: departure?.aircraftType ?? arrival?.aircraftType ?? null,
+    aircraftConfig: departure?.aircraftConfig ?? arrival?.aircraftConfig ?? null,
+  };
+}
+
+const NO_ARRIVAL = { inboundFlightNumber: null, sta: null, origin: null, arrivalFlightDate: null };
+const NO_DEPARTURE = { outboundFlightNumber: null, std: null, destination: null, departureFlightDate: null };
+
+export interface ImportSummary {
+  new: number;
+  changed: number;
+  repaired: number;
+  unchanged: number;
+  conflicts: number;
+  errors: number;
+  unpaired: number;
+  missing: number;
+  filteredRows: number;
+  totalRows: number;
+}
+
+/**
+ * Writes an import as the dry run decided it, in one transaction: re-paired
+ * flights first give up the legs they lose, then every matched flight gets its
+ * schedule fields, the new flights are created with their tasks, and the
+ * missing markers are set. Estimates, actuals, delays, cancellations,
+ * assignments, stands and templates are never touched.
+ */
+export async function applyImport({
+  userId,
+  diff,
+  profileId,
+  fileName,
+  fileSize,
+  period,
+  summary,
+}: {
+  userId: string;
+  diff: ImportDiff;
+  profileId: string | null;
+  fileName: string;
+  fileSize: number;
+  period: { start: string; end: string };
+  summary: ImportSummary;
+}): Promise<string> {
+  const imported = { source: "IMPORT" as const, ...(profileId ? { importProfileId: profileId } : {}) };
+  const found = { arrivalMissing: false, departureMissing: false, missingImportRunId: null };
+
+  return prisma.$transaction(
+    async (tx) => {
+      const run = await tx.importRun.create({
+        data: {
+          profileId,
+          fileName,
+          fileSize,
+          rangeStart: flightDate(period.start),
+          rangeEnd: flightDate(period.end),
+          summary: summary as unknown as Prisma.InputJsonValue,
+          createdById: userId,
+        },
+        select: { id: true },
+      });
+
+      // 1. A re-paired flight gives up the leg it loses, so another flight may take it.
+      for (const entry of diff.entries) {
+        if (entry.kind !== "changed" || !entry.repair) continue;
+        await tx.flight.update({
+          where: { id: entry.flightId },
+          data: entry.kept === "ARRIVAL_PART" ? NO_DEPARTURE : NO_ARRIVAL,
+        });
+      }
+
+      // 2. Matched flights: the schedule fields, the profile, and "found again".
+      for (const entry of diff.entries) {
+        if (entry.kind !== "changed") continue;
+        await tx.flight.update({
+          where: { id: entry.flightId },
+          data: { ...scheduleData(entry.turnaround), ...imported, ...found },
+        });
+      }
+      const unchanged = diff.entries.flatMap((e) => (e.kind === "unchanged" ? [e.flightId] : []));
+      if (unchanged.length > 0) {
+        await tx.flight.updateMany({ where: { id: { in: unchanged } }, data: { ...imported, ...found } });
+      }
+
+      // 3. New flights, each with its task (one task per flight, CLAUDE.md).
+      const created = diff.entries.flatMap((e) =>
+        e.kind === "new"
+          ? [{ airlineId: e.airlineId, templateId: e.templateId, ...scheduleData(e.turnaround), ...imported }]
+          : [],
+      );
+      if (created.length > 0) {
+        const flights = await tx.flight.createManyAndReturn({ data: created, select: { id: true } });
+        await tx.task.createMany({ data: flights.map((flight) => ({ flightId: flight.id })) });
+      }
+
+      // 4. "Az utolsó importból hiányzik": marked, never deleted or cancelled.
+      for (const part of ["ARRIVAL_PART", "DEPARTURE_PART"] as const) {
+        const ids = diff.missing.filter((m) => m.parts.includes(part)).map((m) => m.flightId);
+        if (ids.length > 0) {
+          await tx.flight.updateMany({
+            where: { id: { in: ids } },
+            data: {
+              ...(part === "ARRIVAL_PART" ? { arrivalMissing: true } : { departureMissing: true }),
+              missingImportRunId: run.id,
+            },
+          });
+        }
+      }
+      if (diff.present.length > 0) {
+        await tx.flight.updateMany({ where: { id: { in: diff.present } }, data: found });
+      }
+      return run.id;
+    },
+    // A full season is thousands of flights.
+    { timeout: 120_000, maxWait: 10_000 },
+  );
+}
+
+/** The import log, newest first. */
+export async function listImportRuns(limit = 10) {
+  const runs = await prisma.importRun.findMany({
+    orderBy: { createdAt: "desc" },
+    take: limit,
+    select: {
+      id: true,
+      createdAt: true,
+      fileName: true,
+      rangeStart: true,
+      rangeEnd: true,
+      summary: true,
+      createdBy: { select: { name: true } },
+      profile: { select: { name: true } },
+    },
+  });
+  return runs.map((run) => ({ ...run, summary: run.summary as unknown as ImportSummary }));
+}
+
+export async function findImportRun(id: string) {
+  const run = await prisma.importRun.findUnique({ where: { id }, select: { id: true, summary: true } });
+  return run && { id: run.id, summary: run.summary as unknown as ImportSummary };
+}
+
+/** Flights marked "az utolsó importból hiányzik", for the planner to decide on. */
+export async function listMissingFlights() {
+  return prisma.flight.findMany({
+    where: { OR: [{ arrivalMissing: true }, { departureMissing: true }] },
+    orderBy: [{ sta: "asc" }, { std: "asc" }],
+    select: {
+      id: true,
+      inboundFlightNumber: true,
+      outboundFlightNumber: true,
+      sta: true,
+      std: true,
+      origin: true,
+      destination: true,
+      arrivalMissing: true,
+      departureMissing: true,
+      missingImportRun: { select: { createdAt: true, fileName: true } },
+    },
+  });
 }

@@ -47,6 +47,7 @@ export function MappingForm({
   profileName,
   saveProfileAction,
   dryRunAction,
+  saveImportAction,
 }: {
   headers: string[];
   previewRows: Cell[][];
@@ -57,16 +58,28 @@ export function MappingForm({
   profileName: string;
   saveProfileAction: Action;
   dryRunAction: DryRunAction;
+  saveImportAction: DryRunAction;
 }) {
   const [columns, setColumns] = useState(initial.columns);
   const [timeZone, setTimeZone] = useState<TimeZone>(initial.timeZone);
   const [range, setRange] = useState({ start: "", end: "" });
   const [saved, saveFormAction, saving] = useActionState(saveProfileAction, null);
   const [dryRun, dryRunFormAction, running] = useActionState(dryRunAction, {});
+  const [saveResult, saveImportFormAction, importing] = useActionState(saveImportAction, {});
 
   const mapping: ImportMapping = { sheet: initial.sheet, headerRow: initial.headerRow, columns, timeZone };
   const problems = mappingProblems(mapping, headers);
   const activeRange = range.start && range.end && range.start <= range.end ? range : undefined;
+
+  // The same inputs go to the dry run and to the save.
+  const importFields = (
+    <>
+      <input type="hidden" name="mapping" value={JSON.stringify(mapping)} />
+      <input type="hidden" name="start" value={range.start} />
+      <input type="hidden" name="end" value={range.end} />
+      <input type="hidden" name="profileId" value={profileId ?? ""} />
+    </>
+  );
 
   // A handful of rows: cheap enough to read again on every change.
   const resolved = problems.length === 0 ? resolveMapping(mapping, headers) : null;
@@ -228,10 +241,7 @@ export function MappingForm({
       )}
 
       <form action={dryRunFormAction} className="flex flex-wrap items-center gap-3">
-        <input type="hidden" name="mapping" value={JSON.stringify(mapping)} />
-        <input type="hidden" name="start" value={range.start} />
-        <input type="hidden" name="end" value={range.end} />
-        <input type="hidden" name="profileId" value={profileId ?? ""} />
+        {importFields}
         <button type="submit" disabled={running || problems.length > 0} className="btn btn-primary">
           {running ? t.dryRun.running : t.dryRun.submit}
         </button>
@@ -241,7 +251,25 @@ export function MappingForm({
           </span>
         )}
       </form>
-      {dryRun.view && <DryRunResult view={dryRun.view} station={station} />}
+      {dryRun.view && (
+        <>
+          <DryRunResult view={dryRun.view} station={station} />
+          <form action={saveImportFormAction} className="flex flex-col gap-2 rounded-xl border border-sky-200 bg-sky-50 p-4">
+            {importFields}
+            <p className="text-sm text-sky-900">{t.save.hint}</p>
+            <div className="flex flex-wrap items-center gap-3">
+              <button type="submit" disabled={importing || running} className="btn btn-primary">
+                {importing ? t.save.saving : t.save.submit}
+              </button>
+              {saveResult.error && (
+                <span role="alert" className="text-sm font-medium text-red-700">
+                  {saveResult.error}
+                </span>
+              )}
+            </div>
+          </form>
+        </>
+      )}
 
       <form action={saveFormAction} className="flex flex-col gap-2 rounded-xl border border-dashed border-neutral-300 bg-white p-4">
         <h2 className="font-semibold">{t.profileSave}</h2>

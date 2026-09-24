@@ -19,3 +19,8 @@ export function describeRowError(error: RowError): string {
   const reason = t.rowErrors[error.code];
   return error.value ? `${reason}: „${error.value.trim()}”` : reason;
 }
+
+/** "12 új, 3 változott, …" of a saved import. */
+export function importSummaryText(summary: Record<string, number>): string {
+  return fmt(t.runs.summary, summary);
+}

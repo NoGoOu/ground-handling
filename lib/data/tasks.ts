@@ -89,6 +89,9 @@ export interface TaskView {
     departureCancellation: Cancellation | null;
     arrivalCancelled: boolean;
     departureCancelled: boolean;
+    /** "Az utolsó importból hiányzik", per part. */
+    arrivalMissing: boolean;
+    departureMissing: boolean;
   };
   /** "Késik": the effective arrival or departure is later than scheduled. */
   late: Lateness;
@@ -174,6 +177,8 @@ function toTaskView(task: TaskWithRelations, thresholds: DeviationThresholds): T
         : null,
       arrivalCancelled: flight.arrivalCancelled,
       departureCancelled: flight.departureCancelled,
+      arrivalMissing: flight.arrivalMissing,
+      departureMissing: flight.departureMissing,
     },
     late: lateness(flight, timeline, thresholds.yellowMax),
     arrivalAgent: task.arrivalAgent,

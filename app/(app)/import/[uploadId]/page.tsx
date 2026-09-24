@@ -10,7 +10,7 @@ import { messages } from "@/lib/messages";
 import { fmt } from "@/lib/messages/format";
 import { canImportSchedule } from "@/lib/permissions";
 import { requireCapability } from "@/lib/session";
-import { dryRunImport, saveImportProfile } from "../actions";
+import { dryRunImport, saveImport, saveImportProfile } from "../actions";
 import { MappingForm } from "./mapping-form";
 
 const t = messages.import;
@@ -215,6 +215,7 @@ export default async function ImportUploadPage(props: PageProps<"/import/[upload
             profileName={profile?.name ?? ""}
             saveProfileAction={saveImportProfile.bind(null, upload.id)}
             dryRunAction={dryRunImport.bind(null, upload.id)}
+            saveImportAction={saveImport.bind(null, upload.id)}
           />
         </>
       )}

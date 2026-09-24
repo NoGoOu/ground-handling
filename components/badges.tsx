@@ -68,3 +68,17 @@ export function CancelBadges({ arrival, departure }: { arrival: boolean; departu
     </>
   );
 }
+
+/** "Az utolsó importból hiányzik" (3. mérföldkő): the planner decides about the flight. */
+export function MissingBadge({ arrival, departure }: { arrival: boolean; departure: boolean }) {
+  if (!arrival && !departure) return null;
+  const parts = [
+    arrival ? messages.import.dryRun.missingParts.ARRIVAL_PART : null,
+    departure ? messages.import.dryRun.missingParts.DEPARTURE_PART : null,
+  ].filter(Boolean);
+  return (
+    <span className={`${base} bg-orange-100 text-orange-900`}>
+      {fmt(messages.import.missingBadge, { parts: parts.join(", ") })}
+    </span>
+  );
+}
