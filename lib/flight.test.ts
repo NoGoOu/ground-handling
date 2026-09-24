@@ -1,13 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { DEMO_MILESTONES, DEMO_TEMPLATE_PARAMS } from "@/lib/demo-template";
 import { flightLabel, lateness } from "@/lib/flight";
-import { computeTimeline, type FlightTimes, type MilestoneDef } from "@/lib/turnaround";
+import { computeTimeline, DEVIATION_THRESHOLDS, type FlightTimes, type MilestoneDef } from "@/lib/turnaround";
 
 const milestones: MilestoneDef[] = DEMO_MILESTONES.map((m) => ({ ...m, id: m.code }));
 const at = (iso: string) => new Date(`${iso}:00Z`);
 
-function latenessOf(flight: FlightTimes) {
-  return lateness(flight, computeTimeline({ flight, params: DEMO_TEMPLATE_PARAMS, milestones, recorded: new Map() }));
+/** The yellow threshold of the default setting: 5 minutes. */
+function latenessOf(flight: FlightTimes, threshold = DEVIATION_THRESHOLDS.yellowMax) {
+  const timeline = computeTimeline({ flight, params: DEMO_TEMPLATE_PARAMS, milestones, recorded: new Map() });
+  return lateness(flight, timeline, threshold);
 }
 
 describe("flight label", () => {
@@ -43,7 +45,19 @@ describe("late flight", () => {
   });
 
   it("counts the effective ATD as the departure", () => {
-    expect(latenessOf({ ...onTime, atd: at("2026-09-24T11:05") }).late).toBe(true);
+    expect(latenessOf({ ...onTime, atd: at("2026-09-24T11:06") }).late).toBe(true);
+  });
+
+  it("needs more than the yellow deviation threshold", () => {
+    expect(latenessOf({ ...onTime, eta: at("2026-09-24T10:05") }).late).toBe(false);
+    expect(latenessOf({ ...onTime, eta: at("2026-09-24T10:06") }).late).toBe(true);
+    expect(latenessOf({ ...onTime, atd: at("2026-09-24T11:05") }).late).toBe(false);
+  });
+
+  it("follows the global setting", () => {
+    const tenLate = { ...onTime, eta: at("2026-09-24T10:10") };
+    expect(latenessOf(tenLate, 10).late).toBe(false);
+    expect(latenessOf(tenLate, 9).late).toBe(true);
   });
 
   it("keeps the original day of a flight that is days late", () => {

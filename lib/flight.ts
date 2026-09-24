@@ -1,4 +1,4 @@
-import type { Timeline } from "@/lib/turnaround";
+import { diffMinutes, type Timeline } from "@/lib/turnaround";
 
 // Small display rules for a flight.
 
@@ -23,18 +23,22 @@ export interface Lateness {
 /**
  * "Késés és törlés": a flight is late when its effective arrival (the arrival
  * anchor) or its effective departure (ATD, else the departure anchor) is later
- * than scheduled. A cancelled part does not count.
+ * than scheduled by more than the yellow deviation threshold (global setting,
+ * 5 minutes by default). A cancelled part does not count.
  */
 export function lateness(
   flight: { sta: Date | null; std: Date | null; arrivalCancelled?: boolean; departureCancelled?: boolean },
   timeline: Pick<Timeline, "arrivalAnchor" | "departureAnchor" | "effectiveAtd">,
+  thresholdMinutes: number,
 ): Lateness {
-  const arrival = timeline.arrivalAnchor;
-  if (flight.sta && !flight.arrivalCancelled && arrival && arrival.getTime() > flight.sta.getTime()) {
+  const lateBy = (effective: Date | null, scheduled: Date) =>
+    !!effective && diffMinutes(effective, scheduled) > thresholdMinutes;
+
+  if (flight.sta && !flight.arrivalCancelled && lateBy(timeline.arrivalAnchor, flight.sta)) {
     return { late: true, scheduled: flight.sta };
   }
   const departure = timeline.effectiveAtd ?? timeline.departureAnchor;
-  if (flight.std && !flight.departureCancelled && departure && departure.getTime() > flight.std.getTime()) {
+  if (flight.std && !flight.departureCancelled && lateBy(departure, flight.std)) {
     return { late: true, scheduled: flight.std };
   }
   return { late: false, scheduled: null };

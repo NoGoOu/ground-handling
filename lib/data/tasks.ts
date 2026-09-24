@@ -174,7 +174,7 @@ function toTaskView(task: TaskWithRelations, thresholds: DeviationThresholds): T
       arrivalCancelled: flight.arrivalCancelled,
       departureCancelled: flight.departureCancelled,
     },
-    late: lateness(flight, timeline),
+    late: lateness(flight, timeline, thresholds.yellowMax),
     arrivalAgent: task.arrivalAgent,
     departureAgent: task.departureAgent,
     effectiveDepartureAgent:
