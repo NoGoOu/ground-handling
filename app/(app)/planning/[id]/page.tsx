@@ -4,14 +4,22 @@ import { boardRange, hourTicks } from "@/lib/board";
 import { getPlan, getPlanDayView, listPositionAgents } from "@/lib/data/planning";
 import { messages } from "@/lib/messages";
 import { fmt } from "@/lib/messages/format";
-import { canPlan, canViewPlans } from "@/lib/permissions";
+import { canAssignTasks, canPlan, canViewPlans } from "@/lib/permissions";
 import { requireCapability } from "@/lib/session";
 import { formatDateTime, formatDayShort, formatTimeOnDay, localDayRange } from "@/lib/time";
-import { moveItem, recalculateDay, recalculatePlan, savePositionNames, saveToDraft } from "../actions";
+import {
+  moveItem,
+  recalculateDay,
+  recalculatePlan,
+  savePositionNames,
+  saveToDraft,
+  takeOverAssignment,
+} from "../actions";
 import { NamesForm } from "./names-form";
 import { PlanBoard } from "./plan-board";
 import { RecalculateButton } from "./recalculate-button";
 import { SaveDraftButton } from "./save-draft-button";
+import { TakeoverButton } from "./takeover-button";
 
 const t = messages.planning;
 
@@ -146,6 +154,15 @@ export default async function PlanPage(props: PageProps<"/planning/[id]">) {
                 canEdit={planner}
                 action={moveItem.bind(null, id, day)}
               />
+
+              {canAssignTasks(user) && (
+                <section className="flex flex-col gap-3 rounded-xl border border-neutral-200 bg-white p-4">
+                  <h2 className="font-semibold">{t.takeover.title}</h2>
+                  <p className="text-sm text-neutral-600">{t.takeover.hint}</p>
+                  {view.stale && <p className="text-sm text-amber-900">{t.takeover.stale}</p>}
+                  <TakeoverButton action={takeOverAssignment.bind(null, id, day)} />
+                </section>
+              )}
 
               {planner && (
                 <section className="flex flex-col gap-3 rounded-xl border border-neutral-200 bg-white p-4">

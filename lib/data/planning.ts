@@ -1,7 +1,7 @@
 import type { Prisma } from "@/generated/prisma/client";
 import { listPublicationsInRange } from "@/lib/data/publications";
 import { listRosterAgents } from "@/lib/data/shifts";
-import { listTaskViewsForDay, type TaskView } from "@/lib/data/tasks";
+import { getTaskView, listTaskViewsForDay, type TaskView } from "@/lib/data/tasks";
 import { prisma } from "@/lib/db";
 import { flightLabel } from "@/lib/flight";
 import { messages } from "@/lib/messages";
@@ -14,9 +14,11 @@ import {
   settingsFromJson,
   type PlanningSettings,
 } from "@/lib/planning/settings";
+import type { TakeoverItem, TakeoverResult, TakeoverTask } from "@/lib/planning/takeover";
 import { itemWindow, planDayView, type PlanDayView } from "@/lib/planning/view";
 import { SETTINGS_ID } from "@/lib/settings";
 import { addDays, localDayRange } from "@/lib/time";
+import { hasPart } from "@/lib/turnaround";
 
 // Data side of the planner view (4. mérföldkő). The calculations are pure
 // (lib/planning); this file only loads and saves.
@@ -328,4 +330,40 @@ export async function saveDraftShifts(planId: string, note: (day: string, number
     }
   });
   return { ok: true, saved: draft.shifts.length, publishedDays: draft.publishedDays, unnamed: draft.unnamed.length };
+}
+
+/** What "Kiosztás átvétele" needs of a plan day: its items with the named agents, and the tasks now. */
+export async function loadTakeover(planId: string, day: string): Promise<{ items: TakeoverItem[]; tasks: Map<string, TakeoverTask> } | null> {
+  const planDay = await prisma.planDay.findUnique({
+    where: { planId_date: { planId, date: dateValue(day) } },
+    select: { items: { select: { taskId: true, part: true, position: { select: { userId: true } } } } },
+  });
+  if (!planDay) return null;
+  const items = planDay.items.map((item) => ({ taskId: item.taskId, part: item.part, agentId: item.position.userId }));
+  const tasks = new Map<string, TakeoverTask>();
+  for (const taskId of new Set(items.map((item) => item.taskId))) {
+    const view = await getTaskView(taskId);
+    if (!view) continue;
+    const kind = view.timeline.activeKind;
+    tasks.set(taskId, {
+      id: taskId,
+      flightLabel: flightLabel(view.flight),
+      type: view.timeline.shape.type,
+      activeParts: (["ARRIVAL_PART", "DEPARTURE_PART"] as const).filter((part) => !!kind && hasPart(kind, part)),
+      arrivalAgentId: view.arrivalAgent?.id ?? null,
+      departureAgentId: view.departureAgent?.id ?? null,
+    });
+  }
+  return { items, tasks };
+}
+
+export async function applyTakeover(updates: TakeoverResult["updates"]) {
+  await prisma.$transaction(
+    updates.map((u) =>
+      prisma.task.update({
+        where: { id: u.taskId },
+        data: { arrivalAgentId: u.arrivalAgentId, departureAgentId: u.departureAgentId },
+      }),
+    ),
+  );
 }

@@ -3,18 +3,23 @@
 import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import { ActionError, actionUser, runAction, type ActionResult } from "@/lib/action";
+import { getBoardForDay } from "@/lib/data/board";
 import {
+  applyTakeover,
   calculatePlanDays,
   createPlan,
   getPlan,
+  loadTakeover,
   movePlanItem,
   saveDraftShifts,
   setPositionNames,
 } from "@/lib/data/planning";
+import { listRosterAgents } from "@/lib/data/shifts";
 import { messages } from "@/lib/messages";
 import { fmt } from "@/lib/messages/format";
-import { canPlan } from "@/lib/permissions";
+import { canAssignTask, canAssignTasks, canAssignToAgent, canPlan } from "@/lib/permissions";
 import { violations } from "@/lib/planning/position";
+import { takeOver } from "@/lib/planning/takeover";
 import { getCurrentUser } from "@/lib/session";
 import { formatDateTime } from "@/lib/time";
 import { fieldErrors, formValues, type FormState } from "@/lib/validation/form";
@@ -144,5 +149,59 @@ export async function saveToDraft(planId: string): Promise<DraftSaveState> {
       ...(result.unnamed ? [fmt(d.unnamed, { count: result.unnamed })] : []),
       ...(result.publishedDays.length ? [fmt(d.published, { days: result.publishedDays.join(", ") })] : []),
     ],
+  };
+}
+
+export interface TakeoverState {
+  notice?: string;
+  skipped?: string[];
+  conflicts?: string[];
+  error?: string;
+}
+
+/**
+ * "Kiosztás átvétele" for one plan day (CLAUDE.md, 4. mérföldkő): the plan's
+ * agents onto the still unassigned parts, within the actor's scope. Conflicts
+ * warn as on the band view, they never block.
+ */
+export async function takeOverAssignment(planId: string, day: string): Promise<TakeoverState> {
+  const actor = await getCurrentUser();
+  if (!actor || !canAssignTasks(actor)) return { error: messages.errors.forbidden };
+  const input = await loadTakeover(planId, day);
+  if (!input) return { error: messages.errors.notFound };
+
+  const t = messages.planning.takeover;
+  const result = takeOver(
+    input.items,
+    input.tasks,
+    (task, agentId) => canAssignTask(actor, task) && canAssignToAgent(actor, agentId),
+  );
+  await applyTakeover(result.updates);
+  refresh();
+
+  const names = new Map(
+    (await listRosterAgents(null)).map((agent) => [agent.id, agent.name] as const),
+  );
+  const skipped = result.skipped.map((s) =>
+    fmt(t.skipped, {
+      flight: [s.flightLabel, t.parts[s.part]].filter(Boolean).join(" "),
+      reason: fmt(t.reasons[s.reason], { name: (s.agentId && names.get(s.agentId)) || "?" }),
+    }),
+  );
+
+  // The usual warnings of the band view, for the tasks just assigned.
+  const assignedTasks = new Set(result.assigned.map((a) => a.taskId));
+  const board = await getBoardForDay(day);
+  const conflicts = board.lanes
+    .flatMap((lane) => lane.boxes)
+    .filter((box) => assignedTasks.has(box.taskId) && box.conflicts.length > 0)
+    .map((box) =>
+      fmt(t.conflict, { flight: box.flightLabel, reasons: box.conflicts.map((kind) => messages.board.conflicts[kind]).join(", ") }),
+    );
+
+  return {
+    notice: result.assigned.length ? fmt(t.done, { count: result.assigned.length }) : t.nothing,
+    skipped,
+    conflicts: [...new Set(conflicts)],
   };
 }
