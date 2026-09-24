@@ -5,6 +5,7 @@
 ## Mi készült el
 
 - 1. és 2. mérföldkő: kész. Utómunka: „Késik” csak a sárga eltérés-küszöb fölött (`096fd27`).
+- 3. mérföldkő, 5. lépés: párosító felület. Mezőnként oszlopválasztás (a fejlécekből javasolt kezdő párosítással), UTC vagy budapesti idő, dátumtartomány, BUD-szűrés; élő, értelmezett előnézet az első sorokra ugyanazokkal a tiszta függvényekkel; a párosítás profilként menthető, és az azonos fejlécű fájlnál (munkalappal és fejlécsorral együtt) a rendszer felajánlja.
 - 3. mérföldkő, 4. lépés: fordulók képzése (`lib/import/pairing.ts`): BUD-szűrés még az értelmezés előtt; az érkezés a következő járat első, utána induló példányával párosul, a többi csak érkező, illetve csak induló; ismétlődő sor, hiányzó vagy már foglalt következő járat figyelmeztetéssel; dátumtartomány, a széleken is párosítva. Tesztek a `docs/schedule-import.md` táblázatának minden sorára (27 forduló, 1 csak érkező, 22 csak induló, 2 kiszűrt sor).
 - 3. mérföldkő, 3. lépés: átalakítások tiszta, tesztelt függvényekként (`lib/import/transform.ts`): üres jelölők (pl. „N/A”), szóközlevágás, járatszám-egységesítés (`' 428'` → FR428, `055` → FR55, összevont cella is), dátum (Excel-sorszám és szöveges alakok), idő (a nap törtrésze a percre kerekítve, a leírt másodperc levágva), dátum és idő egy cellából, napeltolás, UTC vagy budapesti idő, napminta és időszak-kibontás. A párosítás (`lib/import/mapping.ts`) ezekből egy sorból járatlábakat állít elő; tesztek a mintafájl soraival.
 - 3. mérföldkő, 2. lépés: fájlbeolvasás. CSV, JSON, XLSX és XLS beolvasása nyers cellákká (SheetJS 0.20.3 a hivatalos CDN-ről, jóváhagyva); feltöltés 25 MB-ig (a server action és a proxy korlátja is emelve), a fájl a varázsló lépései között az adatbázisban marad, egy napig; munkalap- és fejlécsor-választás, a munkalap első sorai és előnézet. Tesztek a mintafájllal (munkalapok, fejléc, 14 sor, nyers cellák), CSV, XLS és JSON esetekkel, fejléc-ujjlenyomattal.
@@ -12,10 +13,10 @@
 
 ## Állapot
 
-- Utolsó commit: `95e55d8` – feat: add the schedule import transformations (a 4. lépés commitja ezt követi)
-- Tesztek: `npm test` → 270 teszt, mind zöld
+- Utolsó commit: `74fe6eb` – feat: pair imported flights into turnarounds (az 5. lépés commitja ezt követi)
+- Tesztek: `npm test` → 279 teszt, mind zöld
 - Lint és build: `npm run lint` hibátlan, `npx tsc --noEmit` tiszta
-- Kézi próba: a mintafájl feltöltése, a két munkalap közti váltás, az előnézet a 14 adatsorral; nem támogatott fájltípus elutasítva. Korábban: az alapértelmezett sablon beállítása, az új jogosultság a szerepkör-mátrixban.
+- Kézi próba: a mintafájl feltöltése és előnézete; a javasolt párosítás mind a 16 NetLine-oszlopot eltalálta; az értelmezett előnézet budapesti időben mutatja a lábakat, a 13–14. sor kiszűrve; időzóna- és dátumtartomány-váltás élőben; a profil mentése, és új látogatáskor a felajánlása.
 
 ## Eltérések a CLAUDE.md-től
 
@@ -28,4 +29,4 @@
 
 ## Következő lépés
 
-- 3. mérföldkő, 5. lépés: párosító felület (oszlop-hozzárendelés, átalakítások, BUD- és dátumtartomány-szűrés, profil mentése és felajánlása).
+- 3. mérföldkő, 6. lépés: próbafuttatás és összesítés (új, változott, változatlan, hibás, párosítatlan és hiányzó sorok); semmi nem íródik.
