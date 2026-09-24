@@ -1,6 +1,6 @@
 # Ground Handling App – projektleírás
 
-*Verzió: 22 · 2026. szeptember 24.*
+*Verzió: 23 · 2026. szeptember 24.*
 
 Nyílt forráskódú webalkalmazás repülőtéri földi kiszolgálás (ground handling) szervezésére. Minden járatfordulóhoz egy task tartozik, benne mérföldkövekkel, amelyeknek van tervezett és tényleges időpontja. A mérföldkövek légitársaságonként testreszabható sablonokból jönnek. A hozzáférés szerepkör alapú.
 
@@ -54,7 +54,7 @@ Az alábbi táblázat az alapértelmezett szerepköröket írja le. A 2. mérfö
 ## Adatmodell
 
 - **User:** name, username, passwordHash, roles (egy vagy több szerepkör, 2. mérföldkő), egyéni jogosultságok (2. mérföldkő), team (opcionális, 2. mérföldkő), active
-- **Airline:** name, iataCode
+- **Airline:** name, iataCode, defaultTemplate (3. mérföldkő)
 - **TurnaroundTemplate:** airline, name, és a paraméterek:
   - `minTurnaroundMinutes` (gyors forduló ATA-tól off-blockig): 25
   - `travelMinutes` (kiutazás / visszautazás): 5
@@ -95,7 +95,7 @@ A 2. mérföldkő 10. lépésében épül meg.
 
 - **Késés rögzítése:** a járaton külön művelet, amellyel új várható érkezés és/vagy indulás adható meg, a forrás megjegyzésével (pl. „email a légitársaságtól”). A járat azonosítója (légitársaság + járatszám + menetrendi nap) nem változik: nem jön létre új járat, és a később érkező üzenetek is ehhez a járathoz párosulnak.
 - **Hatályos ETA/ETD:** mindig a legutóbbi érték számít, akár kézzel, akár üzenetből jött. Mellette látszik a forrás, és hogy ki és mikor rögzítette.
-- **„Késik” jelölés:** ha a hatályos érkezés vagy indulás későbbi a menetrendinél, a járat mindenhol (napi lista, task nézet, ügynök nézet, sávos nézet) „Késik” címkét kap, az eredeti menetrendi nappal és idővel. Így mindenki látja, hogy késett járatról van szó, nem újról.
+- **„Késik” jelölés:** ha a hatályos érkezés vagy indulás több mint a sárga eltérés-küszöbbel (globális beállítás, alapértelmezés 5 perc) későbbi a menetrendinél, a járat mindenhol (napi lista, task nézet, ügynök nézet, sávos nézet) „Késik” címkét kap, az eredeti menetrendi nappal és idővel. Így mindenki látja, hogy késett járatról van szó, nem újról.
 - **Törlés (cancelled):** a járatot nem töröljük az adatbázisból, hanem töröltre állítjuk. Az érkezési és az indulási rész külön is töröltre állítható; ha mindkettő törölt, az egész járat törölt.
   - A törölt rész áthúzva látszik a listákon. Nem számít bele a foglaltságba, a forduló típusába, a sávos nézetbe és az ütközésvizsgálatba, és a mérföldköveit hiányzóként sem jelöljük.
   - Ha csak az egyik rész törölt, a járat a megmaradt rész szerint csak érkező vagy csak induló járatként viselkedik (11. időszámítási szabály).
@@ -144,6 +144,7 @@ Ezt a logikát egy külön modulba kell tenni (`lib/turnaround.ts`), tiszta füg
    - Csak érkező (a gép itt marad): csak az érkezési rész mérföldkövei tartoznak hozzá. Az érkezési horgony az 1. szabály szerint számol; indulási horgony, késés és forduló típus nincs.
    - Csak induló (a gép már itt van): csak az indulási rész mérföldkövei tartoznak hozzá. Az indulási horgony a hatályos ETD, ennek hiányában az STD (érkezési horgony nincs, így a `minTurnaroundMinutes` sem játszik); a késés a 7. szabály szerint számol; forduló típus nincs.
    - A hiányzó rész mérföldkövei, köztük az ATA, illetve az ATD, nem jelennek meg, és hiányzóként sem jelöljük őket.
+   - A mérföldkő horgonya és része a sablonban független egymástól. Ha egy mérföldkő horgonya hiányzik (egy oldalas vagy részben törölt járat), a meglévő horgonytól számol, és a 3. szabály szerint nem kerülhet az előző mérföldkő elé.
 
 ## Ügynök-foglaltság
 
@@ -158,7 +159,7 @@ A foglaltsági ablakokra már most legyen függvény és teszt (a forduló típu
 - Az ablakok félig nyitott intervallumok (kezdet ≤ t < vég), így az egymásba érő ablakok nem számítanak átfedésnek.
 - Unit tesztek: a küszöb körüli esetek (szünet = `minBreakMinutes` − 1 és = `minBreakMinutes`), és annak ellenőrzése, hogy hosszú fordulónál a két ablak soha nem fedi át egymást.
 
-## 1. mérföldkő (MVP) – ezt építsd most
+## 1. mérföldkő (MVP) – kész
 
 1. Projekt alapváz: Next.js + TypeScript, Prisma, PostgreSQL, Tailwind, ESLint, Vitest, Docker Compose.
 2. Prisma séma a fenti adatmodell szerint, migrációval.
@@ -201,7 +202,7 @@ Minden lépés végén futtatható állapot és egy commit.
 
 ## 2. mérföldkő – műszakbeosztás és sávos idősoros nézet
 
-Az MVP után ezt építjük, a lenti lépésterv szerint.
+Kész (2026. szeptember 24.). A leírás a megépült működés referenciája.
 
 ### Beosztás rétegei
 
@@ -267,6 +268,34 @@ Műszakvezetői, tervezői és admin nézet, asztali gépre. Telefonon ne törj�
 14. Ügynök nézet: a saját blokkjai megjelennek
 15. README és STATUS.md frissítése
 
+## 3. mérföldkő – járatrend-import
+
+**Ezt építjük most.** A részletes leírás, a mintafájl tanulságai és a tesztadat várt eredményei: `docs/schedule-import.md`. A tesztadat: `ryanair-netline-bud-sample.xlsx` (a projekt tesztadatai közé, pl. `tests/fixtures/schedule/`).
+
+### Szabályok
+
+- A jogosult felhasználó (új jogosultság: „járatrend importálása”, alapértelmezés szerint a Tervező és az Admin szerepkörben) fájlt tölt fel: CSV, JSON, XLSX vagy XLS.
+- Az oszlopokat a mi mezőinkhez párosítja, átalakításokkal. A párosítás profilként elmenthető, és azonos fejlécű fájlnál a rendszer felajánlja.
+- Csak a BUD-ot érintő sorok és a megadott dátumtartomány kerülnek be.
+- A fordulókat a következő-járat oszlop alapján képezzük: az érkezést a következő járat első olyan példányával párosítjuk, amely az érkezés után indul BUD-ról. Ahol nincs következő járat, csak érkező járat lesz; az az indulás, amely egyetlen érkezés következő járata sem, csak induló járat lesz (11. időszámítási szabály).
+- Mentés előtt próbafuttatás összesítéssel; semmi nem íródik, amíg a felhasználó jóvá nem hagyja.
+- Az import csak a menetrendi mezőket írja (járatszámok, STA, STD, típus). Az ETA, ETD, ATA, ATD, a késés, a törlés és a kiosztás érintetlen marad.
+- Azonosítás: légitársaság + járatszám + menetrendi dátum + állomás. A meglévő járat frissül, nem duplikálódik.
+- A légitársaságot a járatszám légitársasági kódja adja, a sablon a légitársaság alapértelmezett sablonja. Ha a légitársaság nem létezik, vagy nincs alapértelmezett sablonja, a sor hibásként jelenik meg az előnézetben.
+- Hiányzó járat: ha egy korábban ugyanazzal a profillal importált járat a fájl időszakán belül hiányzik az új fájlból, nem törlődik és nem kerül töröltre, hanem „az utolsó importból hiányzik” jelölést kap, és a tervező dönt róla.
+- Minden import naplózott: ki, mikor, milyen fájlt, milyen profillal, és az összesítés.
+
+### Lépésterv
+
+1. Adatmodell és migráció: a légitársaság alapértelmezett sablonja (az admin felületen beállítható); a járat forrása (kézi vagy import) és a hiányzó-jelölés; importprofil (név, fejléc-ujjlenyomat, párosítás); importnapló. Új jogosultság: „járatrend importálása”
+2. Fájlbeolvasás: CSV, JSON, XLSX, XLS; munkalap és fejlécsor választása; előnézet; tesztek a mintafájllal
+3. Átalakítások tiszta, tesztelt függvényekként: szóközlevágás, járatszám-egységesítés, dátum és idő összevonása, időszak-kibontás napminta szerint, napeltolás, időzóna (UTC vagy helyi)
+4. Fordulók képzése, tesztekkel a mintafájl várt eredményeire (`docs/schedule-import.md`)
+5. Párosító felület: oszlop-hozzárendelés, átalakítások, BUD- és dátumtartomány-szűrés, profil mentése és felajánlása
+6. Próbafuttatás és összesítés: új, változott, változatlan, hibás, párosítatlan és hiányzó sorok; semmi nem íródik
+7. Mentés: upsert, csak menetrendi mezők, hiányzó-jelölés (látszik a napi listán és a járaton), importnapló
+8. README és STATUS.md frissítése
+
 ## További eldöntött szabályok
 
 Ezeket a kérdéseket a megrendelő 2026. szeptember 22-én jóváhagyta; a kód is ezekre a számokra hivatkozik.
@@ -282,10 +311,17 @@ Ezeket a kérdéseket a megrendelő 2026. szeptember 22-én jóváhagyta; a kód
 9. **Ügynök nézet időkerete:** naptári nap, dátumválasztóval, ugyanúgy, mint a műszakvezetői listán.
 10. **„Most” gomb:** rögzítés után „Javítás”-ra vált, hogy egy véletlen érintés ne írjon felül kész időt.
 11. **Törlés:** légitársaság, sablon, felhasználó és rögzítés egyelőre nem törölhető; a felhasználó inaktiválható, a járat pedig törlés helyett töröltre állítható (lásd „Késés és törlés”). A légitársaságra és a sablonra a végleges szabály még nyitott.
+12. **Ügynök = csapattag:** a kódban az „ügynök” a csapat tagja; minden ügynök egy csapat tagja.
+13. **Beosztás táblázat:** heti ablakban jelenik meg.
+14. **Beosztás szerkesztése:** a tervezet és a valós rétegben a rész és a műszak eltávolítható; a publikált réteg zárolt.
+15. **Blokk:** csak nem operatív részből képezhető.
+16. **Járat részének elhagyása:** egy rész nem hagyható el a járatból, ha már van hozzá rögzítés vagy rendszerből kapott ATA/ATD.
+17. **Törölt rész:** nem rögzíthető rá mérföldkő és késés. A listán a saját napján marad, áthúzva; a napszűrés a meglévő részek szerint számol.
+18. **ETA/ETD módosítása:** csak a „Késés rögzítése” művelettel; minden változás a járatnaplóba kerül.
 
 ## Később (most ne építsd)
 
-- **3. mérföldkő – üzenetek** (MVT, LDM, CPM, UCM, később PTM és PSM). A formátumok, a kódok, az ellenőrzések és a valós minták leírása: `docs/messages.md`.
+- **6. mérföldkő – üzenetek** (MVT, LDM, CPM, UCM, később PTM és PSM). A formátumok, a kódok, az ellenőrzések és a valós minták leírása: `docs/messages.md`.
   - Fogadás és feldolgozás: a nyers szöveg és a feldolgozott adat tárolása járatonként, verziózva (a javított üzenet nem írja felül a korábbit, de mindig a legfrissebb érvényes látszik). Hibatűrő feldolgozó; az ellenőrzések eltérésnél figyelmeztetnek. A minták tesztadatok.
   - Járatonként egy fül, amit az ügynök is lát.
   - Az ATA és az ATD forrása az MVT (on-block, illetve off-block). A BUD-ra érkező járat ETA-ja az indulási állomás MVT-jéből jön.
@@ -295,13 +331,13 @@ Ezeket a kérdéseket a megrendelő 2026. szeptember 22-én jóváhagyta; a kód
 - Járat-infografika: a feldolgozott üzenetekből összegzett nézet (total pax, compartment-terheltség, speciális utasok és információk), a forrásüzenet idejével.
 - Személyre szabható elrendezés: az ügynök drag and droppal állítja be, mit lát és hogyan, felhasználónként mentve. Csak azután, hogy a fix elrendezés bevált.
 - A lezárt taskok utólagos javításának jogosultsága
-- **Tervezői nézet, automatikus kiosztással** (külön mérföldkő, a sorrendje később dől el):
+- **4. mérföldkő – tervezői nézet, automatikus kiosztással:**
   - Névtelen pozíciókkal dolgozik: a program az előre ismert járatokból pozíciókat számol (időtartam és szükséges képesítések), a tervező ezekhez neveket rendel, és ebből lesz a beosztás tervezete. A megjelenítés a sávos nézetre épül, sávonként egy pozícióval.
-  - Feltételei: jogosítások (a Képzések és jogosítások nyilvántartásból, lásd lent) és előre ismert járatrend (lásd Járatrend-import).
+  - Feltétele az előre ismert járatrend (3. mérföldkő). Mivel a képzések az 5. mérföldkőben jönnek, a 4. mérföldkő még jogosítások nélkül, csak az időablakok és a tervezési paraméterek alapján dolgozik; a jogosítás-feltételek az 5. mérföldkővel kerülnek bele.
   - Beállítható tervezési paraméterek: pihenőidő két task között, megengedett átfedés két task között, a műszak minimális és maximális hossza, munkaközi szünet, megengedett létszámtöbblet a minimumhoz képest. Ezek a tervezés szabályai, függetlenek az operatív ütközés-figyelmeztetésektől.
   - A cél sorrendje: 1. egyenletes terhelés a pozíciók között, 2. minél kevesebb ember, 3. minél kevesebb munkaóra, 4. minél kevesebb üresjárat a műszakon belül. Az egyenletes terhelés a megengedett létszámon belül értendő, hogy a program ne vegyen fel több embert csak a kiegyenlítés kedvéért.
   - Algoritmus, külső AI nélkül. Az eredmény a tervező által kézzel módosítható.
-- **Képzések és jogosítások** (külön mérföldkő, a sorrendje később dől el):
+- **5. mérföldkő – képzések és jogosítások:**
   - Jogosítás: név, kód, alapértelmezett érvényességi idő. Képzés: név, az általa adott jogosítás (opcionális), van-e dolgozat, és ha igen, milyen eredménnyel sikeres.
   - Képzési rekord: ügynök, képzés, teljesítés dátuma, a dolgozat eredménye, sikeres-e, az érvényesség vége (a dátumból számolva, felülírható), csatolt fájlok.
   - Az ügynök jogosításai a rekordokból származnak: mindig a legutolsó sikeres rekord érvényessége számít, külön kézi lista nincs.
@@ -315,8 +351,7 @@ Ezeket a kérdéseket a megrendelő 2026. szeptember 22-én jóváhagyta; a kód
 - Szolgáltatások rögzítése taskonként, időpontokkal
 - Késéskód rögzítése, ha van késés (az MVT DL sorába kerül)
 - Kimutatások légitársaságonként (kiszállítás és beszállítás hossza, földi idő, késések)
-- **Járatrend-import** (külön mérföldkő, a tervezői nézet előtt): fájlfeltöltés (CSV, JSON, XLSX, XLS) oszlop-párosítással, elmenthető párosítási profilokkal, időszak-kibontással és a fordulók képzésével. Csak a menetrendi mezőket írja; az ETA, ETD, ATA és ATD az üzenetekből jön, és az import nem írja felül őket. A leírás és a mintafájl tanulságai: `docs/schedule-import.md`.
-- Üzenetek küldése a külső rendszer felé (az előállítás a 3. mérföldkő része; a küldés csatornája még nyitott)
+- Üzenetek küldése a külső rendszer felé (az előállítás a 6. mérföldkő része; a küldés csatornája még nyitott)
 - Több nyelv támogatása
 
 ## Állapotjelentés (`STATUS.md`)
