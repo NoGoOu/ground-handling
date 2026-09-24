@@ -89,7 +89,7 @@ export default async function FlightsPage(props: PageProps<"/flights">) {
                       <CancelBadges arrival={task.flight.arrivalCancelled} departure={task.flight.departureCancelled} />
                     </div>
                   </td>
-                  <td className="px-3 py-2 font-medium">{task.flight.stand}</td>
+                  <td className="px-3 py-2 font-medium">{task.flight.stand ?? t.noStand}</td>
                   <td className={`px-3 py-2 ${task.flight.arrivalCancelled ? "line-through opacity-60" : ""}`}>
                     <TimeStack
                       day={date}

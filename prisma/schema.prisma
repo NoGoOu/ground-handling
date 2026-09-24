@@ -67,6 +67,9 @@ model User {
   arrivalCancels     Flight[]          @relation("ArrivalCancelledBy")
   departureCancels   Flight[]          @relation("DepartureCancelledBy")
   flightEvents       FlightEvent[]
+  importProfiles     ImportProfile[]
+  importRuns         ImportRun[]
+  importUploads      ImportUpload[]
 }
 
 /// A role is a name plus the permissions ticked for it (CLAUDE.md, "Jogosultsági rendszer").
@@ -201,17 +204,20 @@ model ShiftSegment {
 }
 
 model Airline {
-  id        String               @id @default(cuid())
-  name      String
-  iataCode  String               @unique
-  templates TurnaroundTemplate[]
-  flights   Flight[]
+  id                String               @id @default(cuid())
+  name              String
+  iataCode          String               @unique
+  /// The template an imported flight of this airline gets (3. mérföldkő).
+  defaultTemplateId String?
+  defaultTemplate   TurnaroundTemplate?  @relation("AirlineDefaultTemplate", fields: [defaultTemplateId], references: [id])
+  templates         TurnaroundTemplate[] @relation("AirlineTemplates")
+  flights           Flight[]
 }
 
 model TurnaroundTemplate {
   id                     String  @id @default(cuid())
   airlineId              String
-  airline                Airline @relation(fields: [airlineId], references: [id])
+  airline                Airline @relation("AirlineTemplates", fields: [airlineId], references: [id])
   name                   String
   minTurnaroundMinutes   Int
   travelMinutes          Int
@@ -221,6 +227,7 @@ model TurnaroundTemplate {
 
   milestones MilestoneDefinition[]
   flights    Flight[]
+  defaultFor Airline[]             @relation("AirlineDefaultTemplate")
 
   @@unique([airlineId, name])
 }
@@ -257,11 +264,30 @@ model Flight {
   eta                  DateTime?
   std                  DateTime?
   etd                  DateTime?
-  stand                String
+  /// Unknown until the shift lead sets it (an imported flight has none).
+  stand                String?
+
+  // 3. mérföldkő: where the flight comes from, and what identifies its legs.
+  source              FlightSource   @default(MANUAL)
+  /// Origin of the arrival part and destination of the departure part.
+  origin              String?
+  destination         String?
+  /// Operating dates of the two legs (the departure day at the leg's origin).
+  arrivalFlightDate   DateTime?      @db.Date
+  departureFlightDate DateTime?      @db.Date
+  aircraftType        String?
+  aircraftConfig      String?
+  importProfileId     String?
+  importProfile       ImportProfile? @relation(fields: [importProfileId], references: [id])
+  /// "Az utolsó importból hiányzik", per part, until the planner clears it.
+  arrivalMissing      Boolean        @default(false)
+  departureMissing    Boolean        @default(false)
+  missingImportRunId  String?
+  missingImportRun    ImportRun?     @relation("MissingFromImport", fields: [missingImportRunId], references: [id])
   /// From the external system.
-  ata                  DateTime?
+  ata                 DateTime?
   /// From the external system.
-  atd                  DateTime?
+  atd                 DateTime?
 
   // "Késés és törlés": where the current ETA and ETD came from.
   etaSource       EstimateSource?
@@ -291,6 +317,8 @@ model Flight {
   task   Task?
   events FlightEvent[]
 
+  @@unique([airlineId, inboundFlightNumber, arrivalFlightDate, origin])
+  @@unique([airlineId, outboundFlightNumber, departureFlightDate, destination])
   @@index([sta])
   @@index([std])
 }
@@ -360,4 +388,60 @@ model FlightEvent {
   createdAt   DateTime        @default(now())
 
   @@index([flightId, createdAt])
+}
+
+enum FlightSource {
+  MANUAL
+  IMPORT
+}
+
+/// A saved column mapping; offered again for a file with the same header.
+model ImportProfile {
+  id                String   @id @default(cuid())
+  name              String   @unique
+  /// Hash of the normalised header row of the file the profile was made for.
+  headerFingerprint String
+  /// Sheet, header row, column mapping, transformations and filters.
+  mapping           Json
+  createdById       String
+  createdBy         User     @relation(fields: [createdById], references: [id])
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  flights Flight[]
+  runs    ImportRun[]
+
+  @@index([headerFingerprint])
+}
+
+/// Log of a saved import: who, when, which file, which profile, and the summary.
+model ImportRun {
+  id          String         @id @default(cuid())
+  profileId   String?
+  profile     ImportProfile? @relation(fields: [profileId], references: [id])
+  fileName    String
+  fileSize    Int
+  rangeStart  DateTime       @db.Date
+  rangeEnd    DateTime       @db.Date
+  summary     Json
+  createdById String
+  createdBy   User           @relation(fields: [createdById], references: [id])
+  createdAt   DateTime       @default(now())
+
+  missingFlights Flight[] @relation("MissingFromImport")
+
+  @@index([createdAt])
+}
+
+/// An uploaded file kept between the steps of the import; removed after a day.
+model ImportUpload {
+  id          String   @id @default(cuid())
+  fileName    String
+  size        Int
+  content     Bytes
+  createdById String
+  createdBy   User     @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+
+  @@index([createdAt])
 }

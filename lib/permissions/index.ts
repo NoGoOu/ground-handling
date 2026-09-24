@@ -199,6 +199,7 @@ export function rosterVisibleUserIds(actor: Actor): string[] | null {
 
 // Thin, readable wrappers over `can`. They check permissions, never role names.
 export const canManageFlights = (actor: Actor) => can(actor, "FLIGHT_MANAGE");
+export const canImportSchedule = (actor: Actor) => can(actor, "SCHEDULE_IMPORT");
 export const canAssignTasks = (actor: Actor) => can(actor, "TASK_ASSIGN");
 export const canViewOwnTasks = (actor: Actor) => can(actor, "TASK_VIEW");
 export const canViewBoard = (actor: Actor) => can(actor, "BOARD_VIEW");
@@ -222,6 +223,7 @@ const ROUTE_PERMISSIONS: [prefix: string, permissions: Permission[]][] = [
   ["/admin/settings", ["SETTINGS_MANAGE"]],
   ["/admin", ["USER_MANAGE", "ROLE_MANAGE", "TEAM_MANAGE", "AIRLINE_MANAGE", "SETTINGS_MANAGE"]],
   ["/flights", ["FLIGHT_MANAGE"]],
+  ["/import", ["SCHEDULE_IMPORT"]],
   ["/shifts/types", ["SEGMENT_TYPE_MANAGE"]],
   ["/shifts", ["ROSTER_VIEW", "ROSTER_DRAFT"]],
   ["/board", ["BOARD_VIEW"]],

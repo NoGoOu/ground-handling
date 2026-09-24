@@ -86,7 +86,7 @@ export default async function EditFlightPage(props: PageProps<"/flights/[id]/edi
           templateId: flight.templateId,
           inboundFlightNumber: flight.inboundFlightNumber ?? "",
           outboundFlightNumber: flight.outboundFlightNumber ?? "",
-          stand: flight.stand,
+          stand: flight.stand ?? "",
           sta: input(flight.sta),
           std: input(flight.std),
         }}

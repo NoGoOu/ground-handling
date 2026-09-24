@@ -72,7 +72,8 @@ export interface TaskView {
     inboundFlightNumber: string | null;
     /** The departure part; null on an arrival-only flight (rule 11). */
     outboundFlightNumber: string | null;
-    stand: string;
+    /** Null until the shift lead sets it. */
+    stand: string | null;
     sta: Date | null;
     eta: Date | null;
     std: Date | null;

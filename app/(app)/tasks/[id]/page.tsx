@@ -53,7 +53,7 @@ function Header({ task, day }: { task: TaskView; day: string }) {
         <DelayBadge minutes={timeline.delayMinutes} />
       </div>
       <p className="text-neutral-600">
-        {flight.airline.name} · {fmt(t.stand, { stand: flight.stand })}
+        {flight.airline.name} · {fmt(t.stand, { stand: flight.stand ?? messages.flightForm.none })}
       </p>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {hasArrival && (

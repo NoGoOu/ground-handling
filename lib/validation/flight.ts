@@ -36,7 +36,12 @@ export const flightSchema = z
     templateId: z.string().min(1, e.template),
     inboundFlightNumber: optionalFlightNumber,
     outboundFlightNumber: optionalFlightNumber,
-    stand: z.string().trim().min(1, e.stand).max(10, e.stand),
+    // The stand can wait: an imported flight has none until the shift lead sets it.
+    stand: z
+      .string()
+      .trim()
+      .max(10, e.stand)
+      .transform((value) => value || null),
     sta: optionalTime,
     std: optionalTime,
   })

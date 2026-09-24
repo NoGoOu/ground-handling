@@ -28,6 +28,7 @@ export const PERMISSIONS = {
   TASK_STATUS: { label: "Task státuszának váltása", scoped: true, group: "Taskok" },
   TASK_ASSIGN: { label: "Task kiosztása", scoped: true, group: "Taskok" },
   FLIGHT_MANAGE: { label: "Járatok kezelése", scoped: false, group: "Járatok" },
+  SCHEDULE_IMPORT: { label: "Járatrend importálása", scoped: false, group: "Járatok" },
   BOARD_VIEW: { label: "Sávos nézet megtekintése", scoped: false, group: "Beosztás" },
   ROSTER_VIEW: { label: "Beosztás megtekintése", scoped: true, group: "Beosztás" },
   ROSTER_DRAFT: { label: "Beosztás tervezése", scoped: false, group: "Beosztás" },
@@ -84,6 +85,7 @@ export const DEFAULT_ROLES: { name: string; builtIn: boolean; permissions: Parti
       ROSTER_PUBLISH: "ALL",
       ROSTER_ACTUAL_EDIT: "ALL",
       SEGMENT_TYPE_MANAGE: "ALL",
+      SCHEDULE_IMPORT: "ALL",
     },
   },
   {

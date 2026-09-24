@@ -6,8 +6,9 @@ import { canManageAirlines } from "@/lib/permissions";
 import { requireCapability } from "@/lib/session";
 import { createTemplate } from "../../templates/actions";
 import { TemplateCreateForm } from "../../templates/template-forms";
-import { updateAirline } from "../actions";
+import { setDefaultTemplate, updateAirline } from "../actions";
 import { AirlineForm } from "../airline-form";
+import { DefaultTemplateForm } from "../default-template-form";
 
 const t = messages.airlineForm;
 
@@ -38,6 +39,13 @@ export default async function AirlinePage(props: PageProps<"/admin/airlines/[id]
 
       <section className="flex flex-col gap-3">
         <h2 className="text-xl font-semibold">{t.templates}</h2>
+        {airline.templates.length > 0 && (
+          <DefaultTemplateForm
+            action={setDefaultTemplate.bind(null, airline.id)}
+            templates={airline.templates.map(({ id, name }) => ({ id, name }))}
+            current={airline.defaultTemplateId}
+          />
+        )}
         <TemplateCreateForm action={createTemplate.bind(null, airline.id)} />
         {airline.templates.length === 0 ? (
           <p className="text-neutral-600">{t.noTemplates}</p>

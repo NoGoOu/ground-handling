@@ -38,7 +38,7 @@ function TaskCard({ task, user, day }: { task: TaskView; user: CurrentUser; day:
           <DelayBadge minutes={task.timeline.delayMinutes} />
         </div>
         <div className="text-neutral-700">
-          {fmt(messages.task.stand, { stand: task.flight.stand })} ·{" "}
+          {fmt(messages.task.stand, { stand: task.flight.stand ?? messages.flightForm.none })} ·{" "}
           {fmt(t.myParts, { parts: parts.map((p) => messages.part[p]).join(", ") })}
         </div>
         <div className="grid grid-cols-2 gap-3 text-base">

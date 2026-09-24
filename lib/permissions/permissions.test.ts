@@ -240,6 +240,13 @@ describe("routes", () => {
     expect(canAccessPath(admin, "/admin/roles")).toBe(true);
   });
 
+  it("gives the schedule import to the planner and the admin", () => {
+    expect(canAccessPath(planner, "/import")).toBe(true);
+    expect(canAccessPath(admin, "/import")).toBe(true);
+    expect(canAccessPath(lead, "/import")).toBe(false);
+    expect(canAccessPath(anna, "/import")).toBe(false);
+  });
+
   it("keeps the segment types with the planner", () => {
     expect(canAccessPath(planner, "/shifts/types")).toBe(true);
     expect(canAccessPath(admin, "/shifts/types")).toBe(true);

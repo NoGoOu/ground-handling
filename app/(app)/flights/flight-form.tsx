@@ -53,8 +53,8 @@ export function FlightForm({
         </select>
       </FormField>
 
-      <FormField label={t.stand} error={error("stand")}>
-        <input name="stand" defaultValue={value("stand")} className="input max-w-40" required />
+      <FormField label={t.stand} hint={messages.form.optional} error={error("stand")}>
+        <input name="stand" defaultValue={value("stand")} maxLength={10} className="input max-w-40" />
       </FormField>
 
       <p className="text-sm text-neutral-600">

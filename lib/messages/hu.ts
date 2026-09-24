@@ -188,6 +188,7 @@ export const hu = {
     show: "Mutasd",
   },
   flights: {
+    noStand: "–",
     empty: "Erre a napra nincs járat.",
     count: "{count} járat",
     newFlight: "Új járat",
@@ -294,11 +295,15 @@ export const hu = {
     templateCount: "{count} sablon",
     noTemplates: "Ennek a légitársaságnak még nincs sablonja.",
     empty: "Még nincs légitársaság.",
-    columns: { name: "Név", iataCode: "IATA", templates: "Sablonok" },
+    defaultTemplate: "Alapértelmezett sablon",
+    defaultTemplateHint: "A járatrend-import ezzel a sablonnal hozza létre a légitársaság járatait.",
+    noDefaultTemplate: "– nincs –",
+    columns: { name: "Név", iataCode: "IATA", templates: "Sablonok", defaultTemplate: "Alapértelmezett sablon" },
     errors: {
       name: "Add meg a nevet (legfeljebb 100 karakter).",
       iataCode: "Az IATA-kód 2 karakter: betű vagy szám.",
       iataTaken: "Ez az IATA-kód már foglalt.",
+      templateNotOwn: "Csak a légitársaság saját sablonja lehet az alapértelmezett.",
     },
   },
   roleForm: {
@@ -504,7 +509,7 @@ export const hu = {
     errors: {
       template: "Válassz sablont.",
       flightNumber: "2–10 karakter, betűk és számok.",
-      stand: "Add meg az állóhelyet (legfeljebb 10 karakter).",
+      stand: "Az állóhely legfeljebb 10 karakter.",
       time: "Adj meg érvényes időpontot.",
       stdBeforeSta: "Az STD-nek később kell lennie az STA-nál.",
       noPart: "Add meg legalább az érkezési vagy az indulási részt.",

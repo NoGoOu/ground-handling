@@ -4,19 +4,20 @@
 
 ## Mi készült el
 
-- 1. és 2. mérföldkő: kész.
-- Utómunka a 23-as verzió szerint: a „Késik” címke csak akkor jelenik meg, ha a hatályos érkezés vagy indulás több mint a sárga eltérés-küszöbbel (globális beállítás, alapértelmezés 5 perc) későbbi a menetrendinél. Tesztekkel, a küszöb körüli esetekre is.
+- 1. és 2. mérföldkő: kész. Utómunka: „Késik” csak a sárga eltérés-küszöb fölött (`096fd27`).
+- 3. mérföldkő, 1. lépés: adatmodell és migráció. A légitársaság alapértelmezett sablonja (admin felületen állítható, a listán is látszik); a járat forrása (kézi vagy import), állomásai, a két rész üzemnapja, típusa, konfigurációja, importprofilja és részenkénti hiányzó-jelölése; `ImportProfile`, `ImportRun` (napló) és `ImportUpload` (a feltöltött fájl a varázsló lépései között). A két rész azonosítója egyedi kulcs (légitársaság + járatszám + üzemnap + állomás). Az állóhely nem kötelező (az importált járatnak nincs). Új jogosultság: „Járatrend importálása” (Admin, Tervező), tesztekkel.
 
 ## Állapot
 
-- Utolsó commit: `4809850` – docs: close milestone 2 after a clean start (az utómunka commitja ezt követi)
-- Tesztek: `npm test` → 212 teszt, mind zöld
+- Utolsó commit: `eeadc94` – docs: update CLAUDE.md to version 23 and add the milestone 3 references (az 1. lépés commitja ezt követi)
+- Tesztek: `npm test` → 213 teszt, mind zöld
 - Lint és build: `npm run lint` hibátlan, `npx tsc --noEmit` tiszta
-- Kézi próba: a demo napon a ZZ1101 érkezése 4 percet késik (nem „Késik”), az indulása 6 percet („Késik · menetrend: 09. 24. 07:55”).
+- Kézi próba: az alapértelmezett sablon törlése és beállítása a légitársaság oldalán; a szerepkör-mátrixban az új jogosultság az Adminnál és a Tervezőnél be van pipálva.
 
 ## Eltérések a CLAUDE.md-től
 
-- nincs (a korábbi eltérések a „További eldöntött szabályok” 12–18. pontjai lettek)
+- **Az állóhely nem kötelező** (jóváhagyott feltételezés): az importált járatnak nincs, a műszakvezető tölti ki.
+- **A „menetrendi dátum” a járat üzemnapja** (az indulás napja az indulóállomáson), ezt tárolja a két rész azonosítója.
 
 ## Kérdések a tervezéshez
 
@@ -24,4 +25,4 @@
 
 ## Következő lépés
 
-- 3. mérföldkő (járatrend-import): a lépések vázlata jóváhagyásra vár.
+- 3. mérföldkő, 2. lépés: fájlbeolvasás (CSV, JSON, XLSX, XLS), munkalap és fejlécsor választása, előnézet, tesztek a mintafájllal.

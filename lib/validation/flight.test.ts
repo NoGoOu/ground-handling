@@ -28,8 +28,10 @@ describe("flight form validation", () => {
     expect(data.std?.toISOString()).toBe("2026-09-22T05:55:00.000Z");
   });
 
-  it("requires a template and a stand", () => {
-    expect(Object.keys(errorsFor({ templateId: "", stand: "" })).sort()).toEqual(["stand", "templateId"]);
+  it("requires a template, but the stand can wait", () => {
+    expect(Object.keys(errorsFor({ templateId: "", stand: "" }))).toEqual(["templateId"]);
+    expect(flightSchema.parse({ ...valid, stand: " " }).stand).toBeNull();
+    expect(errorsFor({ stand: "x".repeat(11) })).toHaveProperty("stand");
   });
 
   it("rejects malformed flight numbers and times", () => {

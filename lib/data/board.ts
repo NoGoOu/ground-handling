@@ -11,7 +11,7 @@ function toBoardTask(task: TaskView): BoardTask {
   return {
     id: task.id,
     flightLabel: flightLabel(task.flight),
-    stand: task.flight.stand,
+    stand: task.flight.stand ?? messages.flightForm.none,
     status: task.status,
     late: task.late.scheduled
       ? fmt(messages.late.scheduled, {

@@ -44,6 +44,9 @@ async function main() {
     await tx.milestoneRecord.deleteMany();
     await tx.task.deleteMany();
     await tx.flight.deleteMany();
+    await tx.importRun.deleteMany();
+    await tx.importProfile.deleteMany();
+    await tx.importUpload.deleteMany();
     await tx.milestoneDefinition.deleteMany();
     await tx.turnaroundTemplate.deleteMany();
     await tx.airline.deleteMany();
@@ -99,6 +102,7 @@ async function main() {
       include: { milestones: true },
     });
     const milestoneId = new Map(template.milestones.map((m) => [m.code, m.id]));
+    await tx.airline.update({ where: { id: airline.id }, data: { defaultTemplateId: template.id } });
 
     // Roster: segment types, one published period and the actual layer.
     const segmentTypeIds = new Map<string, string>();
