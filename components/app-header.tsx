@@ -2,7 +2,14 @@ import Link from "next/link";
 import { logout } from "@/app/(app)/actions";
 import { NavLinks } from "@/components/nav-links";
 import { messages } from "@/lib/messages";
-import { canManageFlights, canOpenAdmin, canViewBoard, canViewOwnTasks, canViewRoster } from "@/lib/permissions";
+import {
+  canImportSchedule,
+  canManageFlights,
+  canOpenAdmin,
+  canViewBoard,
+  canViewOwnTasks,
+  canViewRoster,
+} from "@/lib/permissions";
 import type { CurrentUser } from "@/lib/session";
 
 function linksFor(user: CurrentUser) {
@@ -10,6 +17,7 @@ function linksFor(user: CurrentUser) {
   if (canManageFlights(user)) links.push({ href: "/flights", label: messages.nav.flights });
   if (canViewBoard(user)) links.push({ href: "/board", label: messages.nav.board });
   if (canViewRoster(user)) links.push({ href: "/shifts", label: messages.nav.shifts });
+  if (canImportSchedule(user)) links.push({ href: "/import", label: messages.nav.import });
   // "My tasks" is the agents' view; agents are the users who belong to a team.
   if (user.teamId && canViewOwnTasks(user)) links.push({ href: "/agent", label: messages.nav.myTasks });
   if (canOpenAdmin(user)) links.push({ href: "/admin", label: messages.nav.admin });
