@@ -800,7 +800,7 @@ export const hu = {
         gone: "a task már nem létezik",
         outOfScope: "az ügynök vagy a task a hatókörödön kívül esik",
       },
-      parts: { WHOLE: "", ARRIVAL_PART: "érkezés", DEPARTURE_PART: "indulás" },
+      parts: { WHOLE: "forduló", ARRIVAL_PART: "érkezés", DEPARTURE_PART: "indulás" },
       conflictsTitle: "Ütközés (a mentés megtörtént, a sávos nézeten jelölve):",
       conflict: "{flight}: {reasons}",
       stale: "A terv elavult: a kiosztás a taskok mostani alakja szerint történik.",

@@ -184,7 +184,7 @@ export async function takeOverAssignment(planId: string, day: string): Promise<T
   );
   const skipped = result.skipped.map((s) =>
     fmt(t.skipped, {
-      flight: [s.flightLabel, t.parts[s.part]].filter(Boolean).join(" "),
+      flight: `${s.flightLabel} ${t.parts[s.part]}`,
       reason: fmt(t.reasons[s.reason], { name: (s.agentId && names.get(s.agentId)) || "?" }),
     }),
   );
