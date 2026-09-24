@@ -1,6 +1,6 @@
 # Járatrend-import – Ground Handling App
 
-*Verzió: 4 · 2026. szeptember 24.*
+*Verzió: 5 · 2026. szeptember 24.*
 
 Referencia a 3. mérföldkőhöz (járatrend-import), a CLAUDE.md „3. mérföldkő” szakasza hivatkozik rá.
 
@@ -52,6 +52,8 @@ A mintafájl alapján ezekre biztosan szükség van:
 - A menetrendi adat tehát addig érvényes, amíg üzenet (pl. MVT) mást nem mond. Ez a CLAUDE.md pontossági sorrendjéből következik (STA/STD → ETA/ETD → ATA/ATD).
 - Azonosítás újraimportálásnál: légitársaság + járatszám + menetrendi dátum + állomás. A meglévő járat frissül, nem duplikálódik.
 - Ha egy korábban importált járat hiányzik az új fájlból, nem törlődik, hanem ellenőrzésre jelölve marad.
+- Ha újraimportáláskor két korábbi egyoldalú járatból forduló lesz, a kettő összevonható, de csak akkor, ha a kikerülő járat az importból jött létre, és nincs rajta üzemi adat (rögzítés, kiosztás, késés, törlés). Különben „párosítás változott” jelzés, kézi döntés.
+- A menetrendi dátum a járat üzemnapja: az indulás napja az indulóállomáson.
 - A légitársaságot a járatszám légitársasági kódja adja (a mintafájlban az `Al` oszlop); az üzemeltető (`Own`) nem számít. A létrehozott járat sablonja ennek a légitársaságnak az alapértelmezett sablonja.
 
 ## Mintafájl: Ryanair NetLine-export (2024. szeptember 6.)
@@ -89,7 +91,7 @@ A mintafájl 14 soros kivonata, mindkét munkalappal (`Template_Auto_Export(netl
 | 6 + 7 + 8 | FR4092 PRG→BUD, FR4091 BUD→PRG | kedd és szerda | egy érkező sor, két induló sor | kedden és szerdán is STA 05:10, STD 05:35 |
 | 9 + 10 | FR3111 PMI→BUD, FR4305 BUD→TSF | 09.10–09.24, kedd | gyors forduló | STA 09:50, STD 10:15 |
 | 11 | FR1659 BUD→STN | kedd és csütörtök | a kivonatban egyetlen érkezés sem mutat rá | csak induló járat, STD 05:00 |
-| 12 | FR1027 BUD→DUB | szerda | `DD` = „+1” | STD 21:10; az érkezés másnap (BUD szempontjából nem számít) |
+| 12 | FR1027 BUD→DUB | szerda | `DD` = „+1” | 8 szerda (2024. 10. 30. – 12. 18.), STD 21:10; az érkezés másnap (BUD szempontjából nem számít) |
 | 13, 14 | FR428 PFO→NCL, FR7690 CFU→ARN | – | nem érinti BUD-ot; a 13. sor járatszáma szóközzel kezdődik (`' 428'`) | kiszűrve |
 
 A sorszámok a munkalap adatsoraira vonatkoznak (a fejléc nélkül). Az `OnwdEventGt` értékei az eredetiek (pl. az 1. sorban 175 = 7 × 25 perc), ezeket az import nem használja.

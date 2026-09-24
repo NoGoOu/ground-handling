@@ -1,6 +1,6 @@
 # Ground Handling App – projektleírás
 
-*Verzió: 23 · 2026. szeptember 24.*
+*Verzió: 24 · 2026. szeptember 24.*
 
 Nyílt forráskódú webalkalmazás repülőtéri földi kiszolgálás (ground handling) szervezésére. Minden járatfordulóhoz egy task tartozik, benne mérföldkövekkel, amelyeknek van tervezett és tényleges időpontja. A mérföldkövek légitársaságonként testreszabható sablonokból jönnek. A hozzáférés szerepkör alapú.
 
@@ -270,7 +270,7 @@ Műszakvezetői, tervezői és admin nézet, asztali gépre. Telefonon ne törj�
 
 ## 3. mérföldkő – járatrend-import
 
-**Ezt építjük most.** A részletes leírás, a mintafájl tanulságai és a tesztadat várt eredményei: `docs/schedule-import.md`. A tesztadat: `ryanair-netline-bud-sample.xlsx` (a projekt tesztadatai közé, pl. `tests/fixtures/schedule/`).
+**Kész** (2026. szeptember 24.); a lenti utómunka a 4. mérföldkő előtt készül el. A részletes leírás, a mintafájl tanulságai és a tesztadat várt eredményei: `docs/schedule-import.md`. A tesztadat: `ryanair-netline-bud-sample.xlsx` (a projekt tesztadatai közé, pl. `tests/fixtures/schedule/`).
 
 ### Szabályok
 
@@ -284,6 +284,7 @@ Műszakvezetői, tervezői és admin nézet, asztali gépre. Telefonon ne törj�
 - A légitársaságot a járatszám légitársasági kódja adja, a sablon a légitársaság alapértelmezett sablonja. Ha a légitársaság nem létezik, vagy nincs alapértelmezett sablonja, a sor hibásként jelenik meg az előnézetben.
 - Hiányzó járat: ha egy korábban ugyanazzal a profillal importált járat a fájl időszakán belül hiányzik az új fájlból, nem törlődik és nem kerül töröltre, hanem „az utolsó importból hiányzik” jelölést kap, és a tervező dönt róla.
 - Minden import naplózott: ki, mikor, milyen fájlt, milyen profillal, és az összesítés.
+- Összevonás újraimportáláskor: ha két korábbi egyoldalú járatból az új fájl szerint forduló lesz, a kettő összevonható, és a kikerülő járat törlődik, de csak akkor, ha az importból jött létre, és nincs rajta üzemi adat (rögzítés, kiosztás, késés, törlés). Minden más esetben „párosítás változott” jelzés, kézi döntés.
 
 ### Lépésterv
 
@@ -295,6 +296,82 @@ Műszakvezetői, tervezői és admin nézet, asztali gépre. Telefonon ne törj�
 6. Próbafuttatás és összesítés: új, változott, változatlan, hibás, párosítatlan és hiányzó sorok; semmi nem íródik
 7. Mentés: upsert, csak menetrendi mezők, hiányzó-jelölés (látszik a napi listán és a járaton), importnapló
 8. README és STATUS.md frissítése
+
+### Utómunka (a 4. mérföldkő előtt)
+
+1. Seed: Ryanair (FR) légitársaság a demo sablonnal mint alapértelmezett sablonnal, és a NetLine-export párosítási profilja, hogy a README-ben leírt próba beállítás nélkül elvégezhető legyen.
+2. Egyoldalú járatok összevonása újraimportáláskor, a fenti szabály szerint, tesztekkel.
+
+## 4. mérföldkő – tervezői nézet, automatikus kiosztással
+
+**Ezt építjük most**, a 3. mérföldkő utómunkája után. Jogosítások nélkül: a jogosítás-feltételek az 5. mérföldkővel kerülnek bele. Algoritmus, külső AI nélkül.
+
+### Folyamat
+
+1. A tervező kiválaszt egy időszakot (kezdő és záró nap); a program naponként számol.
+2. **Bemenet:** a nap járatainak foglaltsági ablakai (lásd Ügynök-foglaltság). Gyors fordulónál egy ablak, hosszú fordulónál kettő (külön pozícióba is kerülhetnek), csak érkező és csak induló járatnál egy; a törölt részek kimaradnak. Egy nap feladatai azok az ablakok, amelyek az adott napon kezdődnek (Europe/Budapest).
+3. **Számítás:** névtelen pozíciók („1. pozíció”, „2. pozíció” …), mindegyik egy leendő műszak.
+4. **Áttekintés és módosítás:** a sávos nézet, sávonként egy pozícióval, napváltóval, a mutatókkal. A tervező a taskokat kézzel áthúzhatja egyik pozícióból a másikba; ha ez megsért egy korlátot, a rendszer figyelmeztet, de engedi.
+5. **Nevek hozzárendelése:** pozíciónként egy ügynök, majd „Mentés a tervezetbe”: pozíciónként egy műszak a beosztás tervezet rétegében. Innen a 2. mérföldkő publikálása és valós rétege viszi tovább.
+6. **Kiosztás átvétele:** külön gombbal a terv kiosztása átvehető a taskokra (lásd lent).
+
+### Pozíció és műszak
+
+- Egy pozíció a hozzá rendelt ablakok sorozata. A műszak kezdete az első ablak kezdete, vége az utolsó ablak vége. Ha így rövidebb a minimális műszakhossznál, a vége kitolódik a minimumig. A műszak nem lehet hosszabb a maximális műszakhossznál.
+- Két egymást követő ablak között a rés legalább a pihenőidő. Ha átfedés megengedett, a rés legfeljebb ennyivel lehet negatív. Egyszerre csak az egyik paraméter lehet nullánál nagyobb.
+- Szünet: ha a műszak hosszabb a szünetküszöbnél, a pozícióban kell lennie legalább szünethossznyi feladatmentes résnek; a program ezt a rést szünetként jelöli a tervben.
+- Mentéskor a műszak egyetlen operatív részből áll (alapértelmezés szerint a Műszak típussal); a szünet a tervben jelölve marad.
+
+### Cél és algoritmus
+
+1. **Minimális pozíciószám a korlátok mellett:** időrendben haladva minden ablak egy olyan meglévő pozícióba kerül, amelyben a korlátok teljesülnek; új pozíció csak akkor nyílik, ha ilyen nincs. Korlátok nélkül ez bizonyíthatóan minimális: a pozíciók száma a legnagyobb egyidejű átfedés (félig nyitott ablakokkal).
+2. **Egyenletes terhelés** a megengedett létszámon belül (minimum + a megengedett létszámtöbblet): a pozíciók foglaltsági perceinek különbségét áthelyezéssel és cserével csökkenti, a korlátok megtartásával.
+3. **Döntetlennél** a kevesebb munkaóra (a műszakhosszak összege), majd a kevesebb üresjárat (műszakidő − foglaltsági idő) dönt.
+
+- Az eredmény determinisztikus: ugyanarra a bemenetre mindig ugyanaz. Tiszta függvények (`lib/planning/`), unit tesztekkel.
+- Mutatók: pozíciószám; pozíciónként foglaltsági perc, műszakhossz és üresjárat; összes munkaóra; a terhelés minimuma, maximuma és különbsége.
+
+### Tervezési beállítások
+
+Globális beállítás, a Tervező és az Admin szerkeszti. Számoláskor a terv lemásolja, így a későbbi módosítás a régi terveket nem változtatja meg. Az értékek helyőrzők, a szünetszabályt a Munka törvénykönyve szerint ellenőrizni kell.
+
+- minimális műszakhossz: 240 perc; maximális: 720 perc
+- szünet: 20 perc, ha a műszak hosszabb 360 percnél
+- pihenőidő két task között: 0 perc; megengedett átfedés: 0 perc (egyszerre csak az egyik lehet nullánál nagyobb)
+- megengedett létszámtöbblet a minimumhoz képest: 0
+
+### A terv
+
+- Tartalma: időszak, a beállítások másolata, naponként a pozíciók, az ablak–pozíció hozzárendelés, a kézi módosítások jelölése és a pozíciókhoz rendelt nevek.
+- Az újraszámolás felülírja a kézi módosításokat, ezért előtte megerősítést kér.
+- Ha a járatok a számolás után változnak (import, késés, törlés), a terv „elavult” jelzést kap, és újraszámolható.
+
+### Nevek és tervezet
+
+- Pozíciónként egy ügynök választható. Ha az ügynöknek a tervezet rétegben már van átfedő műszakja, a mentés nem lehetséges (a 2. mérföldkő szabálya).
+- A mentés csak a még nem publikált napokra ír, mert a publikált beosztás zárolt.
+
+### Kiosztás átvétele
+
+- Külön gomb, a taskok kiosztására vonatkozó jogosultsághoz kötve (alapértelmezés szerint a Műszakvezető).
+- A terv alapján beállítja az érkezési és az indulási ügynököt, **csak a még kiosztatlan részeken**; a már kiosztottakat kihagyja és listázza. Gyors fordulónál mindkét rész ugyanahhoz az ügynökhöz kerül.
+- Az ütközés-figyelmeztetések a szokásosak (2. mérföldkő).
+
+### Jogosultság
+
+- Új jogosultság: „tervezés” (tervezői nézet, számolás, beállítások, nevek, mentés a tervezetbe), alapértelmezés szerint a Tervező és az Admin szerepkörben.
+
+### Lépésterv
+
+1. Adatmodell és migráció: tervezési beállítások, terv (időszak, beállítás-másolat, napok, pozíciók, ablak–pozíció hozzárendelés, kézi jelölés, nevek); „tervezés” jogosultság; seed: a beállítások alapértékei
+2. Bemenet: a napi ablakok kigyűjtése a tervhez, tiszta függvényként (tesztek: gyors, hosszú, egyoldalú, törölt, éjszakázó)
+3. Algoritmus, 1. lépés: minimális pozíciószám a korlátokkal (tesztek: korlát nélkül = legnagyobb egyidejű átfedés; pihenő; átfedés; maximális műszakhossz; szünet)
+4. Algoritmus, 2–3. lépés: kiegyenlítés és döntetlen-feloldás, mutatók (tesztek: determinisztikus eredmény, a létszámtöbblet betartása, a korlátok megtartása)
+5. Tervezési beállítások felülete
+6. Tervezői felület: időszak, számolás, napváltó, sávos nézet pozíciókkal, mutatók, kézi áthúzás figyelmeztetéssel, újraszámolás megerősítéssel, elavultság jelzése
+7. Nevek hozzárendelése és mentés a tervezetbe (csak nem publikált napokra)
+8. Kiosztás átvétele gomb
+9. README és STATUS.md frissítése
 
 ## További eldöntött szabályok
 
@@ -318,6 +395,8 @@ Ezeket a kérdéseket a megrendelő 2026. szeptember 22-én jóváhagyta; a kód
 16. **Járat részének elhagyása:** egy rész nem hagyható el a járatból, ha már van hozzá rögzítés vagy rendszerből kapott ATA/ATD.
 17. **Törölt rész:** nem rögzíthető rá mérföldkő és késés. A listán a saját napján marad, áthúzva; a napszűrés a meglévő részek szerint számol.
 18. **ETA/ETD módosítása:** csak a „Késés rögzítése” művelettel; minden változás a járatnaplóba kerül.
+19. **Állóhely:** nem kötelező; az importált járatnak nincs, a műszakvezető tölti ki.
+20. **Menetrendi dátum:** a járat üzemnapja, vagyis az indulás napja az indulóállomáson. Ez azonosítja a két részt, és ez szerepel az üzenetek fejlécében is.
 
 ## Később (most ne építsd)
 
@@ -331,12 +410,6 @@ Ezeket a kérdéseket a megrendelő 2026. szeptember 22-én jóváhagyta; a kód
 - Járat-infografika: a feldolgozott üzenetekből összegzett nézet (total pax, compartment-terheltség, speciális utasok és információk), a forrásüzenet idejével.
 - Személyre szabható elrendezés: az ügynök drag and droppal állítja be, mit lát és hogyan, felhasználónként mentve. Csak azután, hogy a fix elrendezés bevált.
 - A lezárt taskok utólagos javításának jogosultsága
-- **4. mérföldkő – tervezői nézet, automatikus kiosztással:**
-  - Névtelen pozíciókkal dolgozik: a program az előre ismert járatokból pozíciókat számol (időtartam és szükséges képesítések), a tervező ezekhez neveket rendel, és ebből lesz a beosztás tervezete. A megjelenítés a sávos nézetre épül, sávonként egy pozícióval.
-  - Feltétele az előre ismert járatrend (3. mérföldkő). Mivel a képzések az 5. mérföldkőben jönnek, a 4. mérföldkő még jogosítások nélkül, csak az időablakok és a tervezési paraméterek alapján dolgozik; a jogosítás-feltételek az 5. mérföldkővel kerülnek bele.
-  - Beállítható tervezési paraméterek: pihenőidő két task között, megengedett átfedés két task között, a műszak minimális és maximális hossza, munkaközi szünet, megengedett létszámtöbblet a minimumhoz képest. Ezek a tervezés szabályai, függetlenek az operatív ütközés-figyelmeztetésektől.
-  - A cél sorrendje: 1. egyenletes terhelés a pozíciók között, 2. minél kevesebb ember, 3. minél kevesebb munkaóra, 4. minél kevesebb üresjárat a műszakon belül. Az egyenletes terhelés a megengedett létszámon belül értendő, hogy a program ne vegyen fel több embert csak a kiegyenlítés kedvéért.
-  - Algoritmus, külső AI nélkül. Az eredmény a tervező által kézzel módosítható.
 - **5. mérföldkő – képzések és jogosítások:**
   - Jogosítás: név, kód, alapértelmezett érvényességi idő. Képzés: név, az általa adott jogosítás (opcionális), van-e dolgozat, és ha igen, milyen eredménnyel sikeres.
   - Képzési rekord: ügynök, képzés, teljesítés dátuma, a dolgozat eredménye, sikeres-e, az érvényesség vége (a dátumból számolva, felülírható), csatolt fájlok.
