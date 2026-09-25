@@ -18,11 +18,13 @@ export default async function TemplatePage(props: PageProps<"/admin/templates/[i
   const { id } = await props.params;
   const template = await prisma.turnaroundTemplate.findUnique({
     where: { id },
-    include: { airline: true, milestones: true },
+    include: { airline: true, milestones: true, taskType: true },
   });
   if (!template) notFound();
 
   const milestones = sortByOrder(template.milestones);
+  const parts = { arrival: template.arrivalPart, departure: template.departurePart };
+  const partsKey = parts.arrival && parts.departure ? "BOTH" : parts.arrival ? "ARRIVAL" : "DEPARTURE";
 
   // Preview: planned times relative to ATA on a quick turnaround (STD = ATA + minimum), as in rule 4.
   const ata = new Date(Date.UTC(2000, 0, 1, 12, 0));
@@ -31,6 +33,7 @@ export default async function TemplatePage(props: PageProps<"/admin/templates/[i
     params: template,
     milestones,
     recorded: new Map(),
+    templateParts: parts,
   });
   const previewFor = (milestoneId: string) => {
     const row = preview.rows.find((r) => r.milestone.id === milestoneId);
@@ -47,6 +50,12 @@ export default async function TemplatePage(props: PageProps<"/admin/templates/[i
       <div>
         <h1 className="text-2xl font-bold">{fmt(t.title, { name: template.name })}</h1>
         <p className="text-neutral-600">{fmt(t.airline, { airline: `${template.airline.name} (${template.airline.iataCode})` })}</p>
+        <p className="text-neutral-600">
+          {fmt(t.typeAndParts, {
+            type: `${template.taskType.name} (${template.taskType.code})`,
+            parts: t.partsChoice[partsKey],
+          })}
+        </p>
       </div>
 
       <section className="flex flex-col gap-3 rounded-xl border border-neutral-200 bg-white p-4">
@@ -92,6 +101,7 @@ export default async function TemplatePage(props: PageProps<"/admin/templates/[i
                 key={milestone.id}
                 milestone={milestone}
                 locked={isLockedCode(milestone.code)}
+                parts={parts}
                 preview={previewFor(milestone.id)}
                 isFirst={index === 0}
                 isLast={index === milestones.length - 1}
@@ -103,7 +113,7 @@ export default async function TemplatePage(props: PageProps<"/admin/templates/[i
           </ul>
         </div>
         <p className="text-xs text-neutral-500">{t.previewHint}</p>
-        <AddMilestoneForm action={addMilestone.bind(null, template.id)} />
+        <AddMilestoneForm action={addMilestone.bind(null, template.id)} parts={parts} />
       </section>
     </div>
   );

@@ -5,7 +5,7 @@ import { ActionFeedback } from "@/components/action-feedback";
 import { FormField, FormMessage } from "@/components/form-field";
 import type { ActionResult } from "@/lib/action";
 import { messages } from "@/lib/messages";
-import type { MilestoneDef } from "@/lib/turnaround";
+import type { MilestoneDef, TemplateParts } from "@/lib/turnaround";
 import type { TemplateFormInput } from "@/lib/validation/template";
 import type { TemplateCreateState, TemplateFormState } from "./actions";
 import { milestoneGrid } from "./milestone-grid";
@@ -16,16 +16,44 @@ type Action = (state: ActionResult | null, formData: FormData) => Promise<Action
 
 export function TemplateCreateForm({
   action,
+  taskTypes,
 }: {
   action: (state: TemplateCreateState, formData: FormData) => Promise<TemplateCreateState>;
+  taskTypes: { id: string; name: string; code: string }[];
 }) {
   const [state, formAction, pending] = useActionState(action, {});
   return (
-    <form action={formAction} className="flex max-w-lg flex-col gap-2">
+    <form action={formAction} className="flex max-w-3xl flex-col gap-2">
       <FormMessage message={state.message} />
-      <div className="flex items-end gap-2">
+      <div className="flex flex-wrap items-end gap-2">
         <FormField label={t.newName} error={state.errors?.name}>
           <input name="name" defaultValue={state.values?.name ?? ""} className="input" required />
+        </FormField>
+        <FormField label={t.taskType} error={state.errors?.taskTypeId}>
+          <select
+            name="taskTypeId"
+            defaultValue={state.values?.taskTypeId ?? (taskTypes.length === 1 ? taskTypes[0].id : "")}
+            className="input"
+            required
+          >
+            <option value="" disabled>
+              –
+            </option>
+            {taskTypes.map((type) => (
+              <option key={type.id} value={type.id}>
+                {type.name} ({type.code})
+              </option>
+            ))}
+          </select>
+        </FormField>
+        <FormField label={t.templateParts} error={state.errors?.parts}>
+          <select name="parts" defaultValue={state.values?.parts ?? "BOTH"} className="input">
+            {(Object.keys(t.partsChoice) as (keyof typeof t.partsChoice)[]).map((key) => (
+              <option key={key} value={key}>
+                {t.partsChoice[key]}
+              </option>
+            ))}
+          </select>
         </FormField>
         <button type="submit" disabled={pending} className="btn btn-primary mb-0.5">
           {t.create}
@@ -84,7 +112,19 @@ export function TemplateParamsForm({
   );
 }
 
-function MilestoneFields({ milestone, locked }: { milestone?: MilestoneDef; locked: boolean }) {
+/** Only the template's own parts are offered (5. mérföldkő). */
+function MilestoneFields({
+  milestone,
+  locked,
+  parts,
+}: {
+  milestone?: MilestoneDef;
+  locked: boolean;
+  parts: TemplateParts;
+}) {
+  const partOptions = (["ARRIVAL_PART", "DEPARTURE_PART"] as const).filter((part) =>
+    part === "ARRIVAL_PART" ? parts.arrival : parts.departure,
+  );
   return (
     <>
       <label className="flex flex-col gap-1 lg:contents">
@@ -137,12 +177,15 @@ function MilestoneFields({ milestone, locked }: { milestone?: MilestoneDef; lock
         <span className="text-xs text-neutral-500 lg:hidden">{t.part}</span>
         <select
           name="part"
-          defaultValue={milestone?.part ?? "ARRIVAL_PART"}
+          defaultValue={milestone?.part ?? partOptions[0]}
           disabled={locked}
           className="input py-1 text-sm"
         >
-          <option value="ARRIVAL_PART">{t.parts.ARRIVAL_PART}</option>
-          <option value="DEPARTURE_PART">{t.parts.DEPARTURE_PART}</option>
+          {partOptions.map((part) => (
+            <option key={part} value={part}>
+              {t.parts[part]}
+            </option>
+          ))}
         </select>
       </label>
     </>
@@ -152,6 +195,7 @@ function MilestoneFields({ milestone, locked }: { milestone?: MilestoneDef; lock
 export function MilestoneRowForm({
   milestone,
   locked,
+  parts,
   preview,
   isFirst,
   isLast,
@@ -161,6 +205,7 @@ export function MilestoneRowForm({
 }: {
   milestone: MilestoneDef;
   locked: boolean;
+  parts: TemplateParts;
   preview: string;
   isFirst: boolean;
   isLast: boolean;
@@ -184,7 +229,7 @@ export function MilestoneRowForm({
           key={JSON.stringify(milestone)}
           className={`flex flex-1 flex-col gap-2 ${milestoneGrid}`}
         >
-          <MilestoneFields milestone={milestone} locked={locked} />
+          <MilestoneFields milestone={milestone} locked={locked} parts={parts} />
           <span className="text-sm text-neutral-600 tabular-nums lg:text-center">
             <span className="text-xs text-neutral-500 lg:hidden">{t.preview}: </span>
             {preview}
@@ -235,7 +280,7 @@ export function MilestoneRowForm({
   );
 }
 
-export function AddMilestoneForm({ action }: { action: Action }) {
+export function AddMilestoneForm({ action, parts }: { action: Action; parts: TemplateParts }) {
   const [result, formAction, pending] = useActionState(action, null);
   return (
     <form
@@ -244,7 +289,7 @@ export function AddMilestoneForm({ action }: { action: Action }) {
     >
       <h3 className="font-semibold">{t.add}</h3>
       <div className={`flex flex-col gap-2 ${milestoneGrid}`}>
-        <MilestoneFields locked={false} />
+        <MilestoneFields locked={false} parts={parts} />
         <span />
         <button type="submit" disabled={pending} className="btn btn-primary py-1">
           {t.addButton}

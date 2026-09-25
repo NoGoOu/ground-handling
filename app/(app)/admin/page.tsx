@@ -12,6 +12,7 @@ export default async function AdminPage() {
     { href: "/admin/roles", title: t.roles, hint: t.rolesHint },
     { href: "/admin/teams", title: t.teams, hint: t.teamsHint },
     { href: "/admin/airlines", title: t.airlines, hint: t.airlinesHint },
+    { href: "/admin/task-types", title: messages.taskTypes.title, hint: messages.taskTypes.hint },
     { href: "/admin/settings", title: t.settings, hint: t.settingsHint },
   ];
   return (

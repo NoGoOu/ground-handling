@@ -12,7 +12,11 @@ export default async function AirlinesPage() {
   const airlines = await prisma.airline.findMany({
     include: {
       _count: { select: { templates: true } },
-      taskTypes: { where: { isPrimary: true, active: true }, select: { template: { select: { name: true } } } },
+      taskTypes: {
+        where: { active: true },
+        select: { isPrimary: true, taskType: { select: { code: true } } },
+        orderBy: { taskType: { code: "asc" } },
+      },
     },
     orderBy: { name: "asc" },
   });
@@ -38,7 +42,7 @@ export default async function AirlinesPage() {
                 <th className="px-3 py-2">{t.columns.name}</th>
                 <th className="px-3 py-2">{t.columns.iataCode}</th>
                 <th className="px-3 py-2">{t.columns.templates}</th>
-                <th className="px-3 py-2">{t.columns.defaultTemplate}</th>
+                <th className="px-3 py-2">{t.columns.taskTypes}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-100">
@@ -51,7 +55,11 @@ export default async function AirlinesPage() {
                   </td>
                   <td className="px-3 py-2 font-mono">{airline.iataCode}</td>
                   <td className="px-3 py-2">{fmt(t.templateCount, { count: airline._count.templates })}</td>
-                  <td className="px-3 py-2">{airline.taskTypes[0]?.template.name ?? t.noDefaultTemplate}</td>
+                  <td className="px-3 py-2 font-mono text-xs">
+                    {airline.taskTypes.length === 0
+                      ? messages.taskTypes.summaryNone
+                      : airline.taskTypes.map((row) => `${row.taskType.code}${row.isPrimary ? "*" : ""}`).join(", ")}
+                  </td>
                 </tr>
               ))}
             </tbody>

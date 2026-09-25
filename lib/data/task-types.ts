@@ -6,17 +6,6 @@ import { tasksForNewFlight, type AirlineTaskTypeSpec, type TaskSpec } from "@/li
 
 export const BASE_TASK_TYPE = { name: "Alap", code: "ALAP" } as const;
 
-/** The id of the "Alap" task type, made when it is missing. */
-export async function baseTaskTypeId(): Promise<string> {
-  const type = await prisma.taskType.upsert({
-    where: { code: BASE_TASK_TYPE.code },
-    create: BASE_TASK_TYPE,
-    update: {},
-    select: { id: true },
-  });
-  return type.id;
-}
-
 /** The tasks a new flight of each airline gets (lib/task-types); airlines without an active task type are missing. */
 export async function newFlightTasksByAirline(airlineId?: string): Promise<Map<string, TaskSpec[]>> {
   const rows = await prisma.airlineTaskType.findMany({

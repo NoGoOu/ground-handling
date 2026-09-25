@@ -1,6 +1,16 @@
 import { z } from "zod";
 import { messages } from "@/lib/messages";
-import { ATA_CODE, ATD_CODE, MAX_TEMPLATE_MINUTES, sortByOrder, type Anchor, type MilestoneDef, type Part } from "@/lib/turnaround";
+import {
+  ATA_CODE,
+  ATD_CODE,
+  BOTH_PARTS,
+  MAX_TEMPLATE_MINUTES,
+  sortByOrder,
+  type Anchor,
+  type MilestoneDef,
+  type Part,
+  type TemplateParts,
+} from "@/lib/turnaround";
 
 // Template editing rules: CLAUDE.md "MilestoneDefinition" and decision 4.
 
@@ -70,12 +80,24 @@ export function isLockedCode(code: string): boolean {
 
 type StructureItem = Pick<MilestoneDef, "order" | "code" | "anchor" | "offsetMinutes" | "required" | "part">;
 
-/** Checks a whole milestone list; returns an error message or null. */
-export function templateStructureError(milestones: readonly StructureItem[]): string | null {
+/**
+ * Checks a whole milestone list; returns an error message or null. Since the
+ * task types (5. mérföldkő) a template may have one part only: ATA is required
+ * with an arrival part, ATD with a departure part, and no milestone may belong
+ * to a part the template does not have.
+ */
+export function templateStructureError(
+  milestones: readonly StructureItem[],
+  parts: TemplateParts = BOTH_PARTS,
+): string | null {
   const sorted = sortByOrder(milestones);
   const codes = sorted.map((m) => m.code);
   if (new Set(codes).size !== codes.length) return e.codeTaken;
-  if (!codes.includes(ATA_CODE) || !codes.includes(ATD_CODE)) return e.missingSystemMilestone;
+  const hasPart = (part: Part) => (part === "ARRIVAL_PART" ? parts.arrival : parts.departure);
+  if (sorted.some((m) => !hasPart(m.part))) return e.partNotInTemplate;
+  if ((parts.arrival && !codes.includes(ATA_CODE)) || (parts.departure && !codes.includes(ATD_CODE))) {
+    return e.missingSystemMilestone;
+  }
   for (const m of sorted) {
     const locked = LOCKED_MILESTONES[m.code];
     if (
@@ -88,14 +110,25 @@ export function templateStructureError(milestones: readonly StructureItem[]): st
       return messages.templateForm.locked;
     }
   }
-  if (codes[0] !== ATA_CODE) return e.ataFirst;
-  if (codes.at(-1) !== ATD_CODE) return e.atdLast;
+  if (parts.arrival && codes[0] !== ATA_CODE) return e.ataFirst;
+  if (parts.departure && codes.at(-1) !== ATD_CODE) return e.atdLast;
   const firstDeparture = sorted.findIndex((m) => m.part === "DEPARTURE_PART");
   if (firstDeparture >= 0 && sorted.slice(firstDeparture).some((m) => m.part === "ARRIVAL_PART")) {
     return e.partOrder;
   }
   return null;
 }
+
+/** The parts a new template gets, as the create form offers them. */
+export const TEMPLATE_PARTS = {
+  BOTH: { arrival: true, departure: true },
+  ARRIVAL: { arrival: true, departure: false },
+  DEPARTURE: { arrival: false, departure: true },
+} as const satisfies Record<string, TemplateParts>;
+
+export type TemplatePartsChoice = keyof typeof TEMPLATE_PARTS;
+
+export const templatePartsSchema = z.enum(["BOTH", "ARRIVAL", "DEPARTURE"], { error: e.templateParts });
 
 /** Ids in their new order after moving one milestone up or down by one place. */
 export function moveInOrder<T extends { id: string; order: number }>(

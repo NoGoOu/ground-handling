@@ -10,6 +10,7 @@ import { canManageAirlines } from "@/lib/permissions";
 import { getCurrentUser } from "@/lib/session";
 import { AIRLINE_FIELDS, airlineSchema, type AirlineFormInput } from "@/lib/validation/airline";
 import { fieldErrors, formValues, type FormState } from "@/lib/validation/form";
+import { airlineTaskTypesError, airlineTaskTypesFrom } from "@/lib/validation/task-type";
 
 export type AirlineFormState = FormState<AirlineFormInput>;
 
@@ -48,45 +49,52 @@ export async function updateAirline(
 }
 
 /**
- * The template imported flights of this airline get (3. mérföldkő); empty
- * clears it. Since the task types (5. mérföldkő) this is the template of the
- * airline's primary task type.
+ * An airline's task types (CLAUDE.md, 5. mérföldkő): per task type a
+ * template, active, and one primary. A task type without a template is not
+ * used. The change only reaches new flights.
  */
-export async function setDefaultTemplate(
+export async function saveAirlineTaskTypes(
   airlineId: string,
   _previous: ActionResult | null,
   formData: FormData,
 ): Promise<ActionResult> {
   return runAction(async () => {
     await actionUser(canManageAirlines);
-    const templateId = String(formData.get("defaultTemplateId") ?? "");
-    if (templateId) {
-      const template = await prisma.turnaroundTemplate.findFirst({
-        where: { id: templateId, airlineId },
-        select: { id: true },
-      });
-      if (!template) throw new ActionError(messages.airlineForm.errors.templateNotOwn);
-    }
     const airline = await prisma.airline.findUnique({ where: { id: airlineId }, select: { id: true } });
     if (!airline) throw new ActionError(messages.errors.notFound);
+    const taskTypes = await prisma.taskType.findMany({ select: { id: true } });
+    const { rows, primaryId } = airlineTaskTypesFrom(
+      formData,
+      taskTypes.map((type) => type.id),
+    );
+    const error = airlineTaskTypesError(rows, primaryId);
+    if (error) throw new ActionError(error);
+
+    // Every chosen template has to be this airline's, for that task type.
+    const chosen = rows.filter((row) => row.templateId);
+    const templates = await prisma.turnaroundTemplate.findMany({
+      where: { id: { in: chosen.map((row) => row.templateId!) }, airlineId },
+      select: { id: true, taskTypeId: true },
+    });
+    const taskTypeOf = new Map(templates.map((template) => [template.id, template.taskTypeId]));
+    if (chosen.some((row) => taskTypeOf.get(row.templateId!) !== row.taskTypeId)) {
+      throw new ActionError(messages.taskTypes.errors.templateNotOwn);
+    }
+
     await prisma.$transaction(async (tx) => {
-      if (!templateId) {
-        await tx.airlineTaskType.deleteMany({ where: { airlineId, isPrimary: true } });
-        return;
+      // The primary flag is unique per airline: clear it before setting it again.
+      await tx.airlineTaskType.updateMany({ where: { airlineId }, data: { isPrimary: false } });
+      await tx.airlineTaskType.deleteMany({
+        where: { airlineId, taskTypeId: { notIn: chosen.map((row) => row.taskTypeId) } },
+      });
+      for (const row of chosen) {
+        const data = { templateId: row.templateId!, active: row.active, isPrimary: row.taskTypeId === primaryId };
+        await tx.airlineTaskType.upsert({
+          where: { airlineId_taskTypeId: { airlineId, taskTypeId: row.taskTypeId } },
+          create: { airlineId, taskTypeId: row.taskTypeId, ...data },
+          update: data,
+        });
       }
-      const { taskTypeId } = await tx.turnaroundTemplate.findUniqueOrThrow({
-        where: { id: templateId },
-        select: { taskTypeId: true },
-      });
-      await tx.airlineTaskType.updateMany({
-        where: { airlineId, isPrimary: true, NOT: { taskTypeId } },
-        data: { isPrimary: false },
-      });
-      await tx.airlineTaskType.upsert({
-        where: { airlineId_taskTypeId: { airlineId, taskTypeId } },
-        create: { airlineId, taskTypeId, templateId, active: true, isPrimary: true },
-        update: { templateId, active: true, isPrimary: true },
-      });
     });
     refresh();
   });

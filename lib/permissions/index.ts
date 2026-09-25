@@ -224,6 +224,7 @@ const ROUTE_PERMISSIONS: [prefix: string, permissions: Permission[]][] = [
   ["/admin/teams", ["TEAM_MANAGE"]],
   ["/admin/airlines", ["AIRLINE_MANAGE"]],
   ["/admin/templates", ["AIRLINE_MANAGE"]],
+  ["/admin/task-types", ["AIRLINE_MANAGE"]],
   ["/admin/settings", ["SETTINGS_MANAGE"]],
   ["/admin", ["USER_MANAGE", "ROLE_MANAGE", "TEAM_MANAGE", "AIRLINE_MANAGE", "SETTINGS_MANAGE"]],
   ["/flights", ["FLIGHT_MANAGE"]],

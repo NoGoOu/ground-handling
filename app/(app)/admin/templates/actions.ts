@@ -4,7 +4,6 @@ import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import { Prisma } from "@/generated/prisma/client";
 import { ActionError, actionUser, runAction, type ActionResult } from "@/lib/action";
-import { baseTaskTypeId } from "@/lib/data/task-types";
 import { prisma } from "@/lib/db";
 import { DEMO_MILESTONES, DEMO_TEMPLATE_PARAMS } from "@/lib/demo-template";
 import { messages } from "@/lib/messages";
@@ -21,6 +20,8 @@ import {
   moveInOrder,
   TEMPLATE_FIELDS,
   templateNameSchema,
+  templatePartsSchema,
+  TEMPLATE_PARTS,
   templateSchema,
   templateStructureError,
   type MilestoneData,
@@ -33,7 +34,7 @@ import {
 const e = messages.templateForm.errors;
 
 export type TemplateFormState = FormState<TemplateFormInput>;
-export type TemplateCreateState = FormState<{ name: string }>;
+export type TemplateCreateState = FormState<{ name: string; taskTypeId: string; parts: string }>;
 
 function isUniqueViolation(error: unknown): boolean {
   return error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002";
@@ -50,18 +51,30 @@ export async function createTemplate(
   formData: FormData,
 ): Promise<TemplateCreateState> {
   if (!(await isAdmin())) return { message: messages.errors.forbidden };
-  const values = formValues(formData, ["name"]);
+  const values = formValues(formData, ["name", "taskTypeId", "parts"]);
   const name = templateNameSchema.safeParse(values.name);
   if (!name.success) return { errors: { name: e.name }, values };
+  const partsChoice = templatePartsSchema.safeParse(values.parts);
+  if (!partsChoice.success) return { errors: { parts: e.templateParts }, values };
+  const taskType = values.taskTypeId
+    ? await prisma.taskType.findUnique({ where: { id: values.taskTypeId }, select: { id: true } })
+    : null;
+  if (!taskType) return { errors: { taskTypeId: e.taskType }, values };
+  const parts = TEMPLATE_PARTS[partsChoice.data];
 
-  // A new template starts with the demo parameters and the two system milestones.
-  const systemMilestones = DEMO_MILESTONES.filter((m) => isLockedCode(m.code)).map((m, i) => ({ ...m, order: i + 1 }));
+  // A new template starts with the demo parameters and the system milestones
+  // of its parts: ATA with an arrival part, ATD with a departure part.
+  const systemMilestones = DEMO_MILESTONES.filter(
+    (m) => isLockedCode(m.code) && (m.part === "ARRIVAL_PART" ? parts.arrival : parts.departure),
+  ).map((m, i) => ({ ...m, order: i + 1 }));
   let templateId: string;
   try {
     const template = await prisma.turnaroundTemplate.create({
       data: {
         airlineId,
-        taskTypeId: await baseTaskTypeId(),
+        taskTypeId: taskType.id,
+        arrivalPart: parts.arrival,
+        departurePart: parts.departure,
         name: name.data,
         ...DEMO_TEMPLATE_PARAMS,
         milestones: { create: systemMilestones },
@@ -99,9 +112,19 @@ async function loadMilestones(templateId: string) {
   return prisma.milestoneDefinition.findMany({ where: { templateId }, orderBy: { order: "asc" } });
 }
 
+/** The parts of the template (5. mérföldkő): fixed when it is made. */
+async function loadParts(templateId: string) {
+  const template = await prisma.turnaroundTemplate.findUnique({
+    where: { id: templateId },
+    select: { arrivalPart: true, departurePart: true },
+  });
+  if (!template) throw new ActionError(messages.errors.notFound);
+  return { arrival: template.arrivalPart, departure: template.departurePart };
+}
+
 /** Validates the whole list before anything is written. */
-function assertStructure(milestones: Parameters<typeof templateStructureError>[0]) {
-  const error = templateStructureError(milestones);
+async function assertStructure(templateId: string, milestones: Parameters<typeof templateStructureError>[0]) {
+  const error = templateStructureError(milestones, await loadParts(templateId));
   if (error) throw new ActionError(error);
 }
 
@@ -143,7 +166,7 @@ export async function updateMilestone(
     if (!target) throw new ActionError(messages.errors.notFound);
 
     const data = parseMilestone(formData, isLockedCode(target.code) ? target.code : undefined);
-    assertStructure(milestones.map((m) => (m.id === milestoneId ? { ...m, ...data } : m)));
+    await assertStructure(templateId, milestones.map((m) => (m.id === milestoneId ? { ...m, ...data } : m)));
     await prisma.milestoneDefinition.update({ where: { id: milestoneId }, data });
     refresh();
   });
@@ -164,7 +187,7 @@ export async function addMilestone(
     const ids = milestones.map((m) => m.id);
     ids.splice(index, 0, NEW);
     const candidate = [...milestones, { ...data, id: NEW, order: 0 }].map((m) => ({ ...m, order: ids.indexOf(m.id) + 1 }));
-    assertStructure(candidate);
+    await assertStructure(templateId, candidate);
 
     await prisma.$transaction(async (tx) => {
       const created = await tx.milestoneDefinition.create({ data: { ...data, templateId, order: index + 1 } });
@@ -187,7 +210,7 @@ export async function moveMilestone(
 
     const milestones = await loadMilestones(templateId);
     const ids = moveInOrder(milestones, milestoneId, direction);
-    assertStructure(milestones.map((m) => ({ ...m, order: ids.indexOf(m.id) + 1 })));
+    await assertStructure(templateId, milestones.map((m) => ({ ...m, order: ids.indexOf(m.id) + 1 })));
     await prisma.$transaction((tx) => writeOrder(tx, ids));
     refresh();
   });

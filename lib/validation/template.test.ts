@@ -112,3 +112,27 @@ describe("ordering helpers", () => {
     expect(insertIndex(demo, "DEPARTURE_PART")).toBe(9); // before ATD
   });
 });
+
+describe("templates with one part (5. mérföldkő)", () => {
+  const departureOnly = demo.filter((m) => m.part === "DEPARTURE_PART").map((m, i) => ({ ...m, order: i + 1 }));
+  const arrivalOnly = demo.filter((m) => m.part === "ARRIVAL_PART").map((m, i) => ({ ...m, order: i + 1 }));
+  const DEPARTURE = { arrival: false, departure: true };
+  const ARRIVAL = { arrival: true, departure: false };
+
+  it("need only the system milestone of their part", () => {
+    expect(templateStructureError(departureOnly, DEPARTURE)).toBeNull();
+    expect(templateStructureError(arrivalOnly, ARRIVAL)).toBeNull();
+    expect(templateStructureError(departureOnly.filter((m) => m.code !== "ATD"), DEPARTURE)).toBe(e.missingSystemMilestone);
+    expect(templateStructureError(arrivalOnly.filter((m) => m.code !== "ATA"), ARRIVAL)).toBe(e.missingSystemMilestone);
+  });
+
+  it("keep ATA first only with an arrival part, ATD last only with a departure part", () => {
+    expect(templateStructureError(arrivalOnly.map((m) => (m.code === "ATA" ? { ...m, order: 99 } : m)), ARRIVAL)).toBe(e.ataFirst);
+    expect(templateStructureError(departureOnly.map((m) => (m.code === "ATD" ? { ...m, order: 0 } : m)), DEPARTURE)).toBe(e.atdLast);
+  });
+
+  it("take no milestone of a part they do not have", () => {
+    expect(templateStructureError(demo, DEPARTURE)).toBe(e.partNotInTemplate);
+    expect(templateStructureError(demo, ARRIVAL)).toBe(e.partNotInTemplate);
+  });
+});
