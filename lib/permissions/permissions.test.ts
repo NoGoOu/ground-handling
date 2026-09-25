@@ -8,12 +8,14 @@ import {
   canChangeTaskStatus,
   canRecordMilestone,
   canEditLayer,
+  canManageTraining,
   canPlan,
   canViewLayer,
   canViewPlans,
   canViewLayerOf,
   canViewRosterOf,
   canViewTask,
+  canViewTrainingOf,
   DEFAULT_ROLES,
   effectivePermissions,
   homePathFor,
@@ -21,6 +23,7 @@ import {
   inScope,
   rosterVisibleUserIds,
   scopeOf,
+  trainingVisibleUserIds,
   visibleLayers,
   type Actor,
   type TaskAssignment,
@@ -280,5 +283,34 @@ describe("routes", () => {
     expect(homePathFor(planner)).toBe("/shifts");
     expect(homePathFor(anna)).toBe("/agent");
     expect(homePathFor(admin)).toBe("/flights");
+  });
+});
+
+describe("training data (6. mérföldkő)", () => {
+  const coordinator = actorWith("olga", ["Oktatási koordinátor"]);
+
+  it("lets the coordinator manage and see everyone", () => {
+    expect(canManageTraining(coordinator)).toBe(true);
+    expect(canViewTrainingOf(coordinator, "anyone")).toBe(true);
+    expect(trainingVisibleUserIds(coordinator)).toBeNull();
+    expect(canAccessPath(coordinator, "/training/records")).toBe(true);
+  });
+
+  it("shows an agent their own data only", () => {
+    expect(canManageTraining(anna)).toBe(false);
+    expect(canViewTrainingOf(anna, "anna")).toBe(true);
+    expect(canViewTrainingOf(anna, "bela")).toBe(false);
+    expect(trainingVisibleUserIds(anna)).toEqual(["anna"]);
+    expect(canAccessPath(anna, "/training")).toBe(true);
+    expect(canAccessPath(anna, "/training/records")).toBe(false);
+  });
+
+  it("shows the shift lead the team", () => {
+    const leadOfAnna = actorWith("lead", ["Műszakvezető"], ["anna"]);
+    expect(canViewTrainingOf(leadOfAnna, "anna")).toBe(true);
+    expect(canViewTrainingOf(leadOfAnna, "bela")).toBe(false);
+    expect(trainingVisibleUserIds(leadOfAnna)).toEqual(["lead", "anna"]);
+    expect(canManageTraining(lead)).toBe(false);
+    expect(canAccessPath(lead, "/training/qualifications")).toBe(false);
   });
 });

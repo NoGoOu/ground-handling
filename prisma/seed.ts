@@ -47,6 +47,10 @@ async function main() {
     await tx.setting.upsert({ where: { id: SETTINGS_ID }, create: { id: SETTINGS_ID }, update: {} });
 
     await tx.plan.deleteMany();
+    // Training data (6. mérföldkő): records and their file rows, trainings, requirements.
+    await tx.trainingRecord.deleteMany();
+    await tx.training.deleteMany();
+    await tx.taskRequirement.deleteMany();
     await tx.shift.deleteMany();
     await tx.publication.deleteMany();
     await tx.segmentType.deleteMany();
@@ -61,6 +65,7 @@ async function main() {
     await tx.turnaroundTemplate.deleteMany();
     await tx.airline.deleteMany();
     await tx.taskType.deleteMany();
+    await tx.qualification.deleteMany();
     await tx.team.deleteMany();
     await tx.user.deleteMany();
     await tx.role.deleteMany();

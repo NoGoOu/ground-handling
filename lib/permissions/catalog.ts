@@ -36,6 +36,8 @@ export const PERMISSIONS = {
   ROSTER_ACTUAL_EDIT: { label: "Valós beosztás szerkesztése", scoped: false, group: "Beosztás" },
   SEGMENT_TYPE_MANAGE: { label: "Műszakrész-típusok kezelése", scoped: false, group: "Beosztás" },
   PLANNING: { label: "Tervezés", scoped: false, group: "Beosztás" },
+  TRAINING_MANAGE: { label: "Képzések kezelése", scoped: false, group: "Képzések" },
+  TRAINING_VIEW: { label: "Képzési adatok megtekintése", scoped: true, group: "Képzések" },
   USER_MANAGE: { label: "Felhasználók kezelése", scoped: false, group: "Adminisztráció" },
   ROLE_MANAGE: { label: "Szerepkörök kezelése", scoped: false, group: "Adminisztráció" },
   TEAM_MANAGE: { label: "Csapatok kezelése", scoped: false, group: "Adminisztráció" },
@@ -69,6 +71,8 @@ export function permissionGroups(): { group: string; permissions: Permission[] }
 
 /** The default roles the seed and the migration create. */
 export const BUILT_IN_ADMIN_ROLE = "Admin";
+/** The new default role of the 6. mérföldkő. */
+export const TRAINING_COORDINATOR_ROLE = "Oktatási koordinátor";
 
 export const DEFAULT_ROLES: { name: string; builtIn: boolean; permissions: Partial<Record<Permission, Scope>> }[] = [
   {
@@ -102,6 +106,16 @@ export const DEFAULT_ROLES: { name: string; builtIn: boolean; permissions: Parti
       BOARD_VIEW: "ALL",
       ROSTER_VIEW: "ALL",
       ROSTER_ACTUAL_EDIT: "ALL",
+      // The shift lead leads the team: its members' training data (6. mérföldkő).
+      TRAINING_VIEW: "TEAM",
+    },
+  },
+  {
+    name: TRAINING_COORDINATOR_ROLE,
+    builtIn: false,
+    permissions: {
+      TRAINING_MANAGE: "ALL",
+      TRAINING_VIEW: "ALL",
     },
   },
   {
@@ -111,6 +125,7 @@ export const DEFAULT_ROLES: { name: string; builtIn: boolean; permissions: Parti
       TASK_VIEW: "SELF",
       TASK_RECORD: "SELF",
       TASK_STATUS: "SELF",
+      TRAINING_VIEW: "SELF",
     },
   },
 ];

@@ -210,6 +210,24 @@ export const canEditActualRoster = (actor: Actor) => can(actor, "ROSTER_ACTUAL_E
 export const canManageSegmentTypes = (actor: Actor) => can(actor, "SEGMENT_TYPE_MANAGE");
 /** Planner view: calculating, settings, names and saving into the draft (4. mérföldkő). */
 export const canPlan = (actor: Actor) => can(actor, "PLANNING");
+/** Qualifications, trainings, records and files (6. mérföldkő). */
+export const canManageTraining = (actor: Actor) => can(actor, "TRAINING_MANAGE");
+export const canViewTraining = (actor: Actor) => can(actor, "TRAINING_VIEW") || can(actor, "TRAINING_MANAGE");
+
+/** One person's training data and files: the coordinator sees everyone, the others by scope. */
+export function canViewTrainingOf(actor: Actor, userId: string): boolean {
+  return can(actor, "TRAINING_MANAGE") || inScope(actor, "TRAINING_VIEW", [userId]);
+}
+
+/** Whose training data the actor may see; null means everyone. */
+export function trainingVisibleUserIds(actor: Actor): string[] | null {
+  if (can(actor, "TRAINING_MANAGE")) return null;
+  const scope = scopeOf(actor, "TRAINING_VIEW");
+  if (!scope) return [];
+  if (scope === "ALL") return null;
+  if (scope === "TEAM") return [actor.id, ...actor.teamMemberIds];
+  return [actor.id];
+}
 /** The plan is read by whoever plans or takes its assignment over onto the tasks. */
 export const canViewPlans = (actor: Actor) => can(actor, "PLANNING") || can(actor, "TASK_ASSIGN");
 export const canManageUsers = (actor: Actor) => can(actor, "USER_MANAGE");
@@ -230,6 +248,11 @@ const ROUTE_PERMISSIONS: [prefix: string, permissions: Permission[]][] = [
   ["/flights", ["FLIGHT_MANAGE"]],
   ["/import", ["SCHEDULE_IMPORT"]],
   ["/planning/settings", ["PLANNING"]],
+  ["/training/qualifications", ["TRAINING_MANAGE"]],
+  ["/training/courses", ["TRAINING_MANAGE"]],
+  ["/training/records", ["TRAINING_MANAGE"]],
+  ["/training/expiring", ["TRAINING_MANAGE", "TRAINING_VIEW"]],
+  ["/training", ["TRAINING_VIEW", "TRAINING_MANAGE"]],
   ["/planning", ["PLANNING", "TASK_ASSIGN"]],
   ["/shifts/types", ["SEGMENT_TYPE_MANAGE"]],
   ["/shifts", ["ROSTER_VIEW", "ROSTER_DRAFT"]],

@@ -39,6 +39,8 @@ model Setting {
   deviationGreenMaxMinutes  Int      @default(0)
   /// Deviation up to this many minutes is yellow, above it red.
   deviationYellowMaxMinutes Int      @default(5)
+  /// A qualification expiring within this many days is "hamarosan lejár" (6. mérföldkő).
+  expiryWarningDays         Int      @default(30)
   updatedAt                 DateTime @updatedAt
 }
 
@@ -72,6 +74,11 @@ model User {
   importUploads      ImportUpload[]
   plansCreated       Plan[]            @relation("PlansCreated")
   planPositions      PlanPosition[]
+  trainingRecords    TrainingRecord[]  @relation("TrainingRecords")
+  recordsCreated     TrainingRecord[]  @relation("TrainingRecordsCreated")
+  recordsUpdated     TrainingRecord[]  @relation("TrainingRecordsUpdated")
+  filesUploaded      TrainingFile[]    @relation("TrainingFilesUploaded")
+  filesRemoved       TrainingFile[]    @relation("TrainingFilesRemoved")
 }
 
 /// A role is a name plus the permissions ticked for it (CLAUDE.md, "Jogosultsági rendszer").
@@ -249,6 +256,9 @@ model AirlineTaskType {
   isPrimary  Boolean            @default(false)
   createdAt  DateTime           @default(now())
   updatedAt  DateTime           @updatedAt
+
+  /// The qualifications its parts need (6. mérföldkő).
+  requirements TaskRequirement[]
 
   @@unique([airlineId, taskTypeId])
 }
@@ -597,4 +607,97 @@ model PlanItem {
 
   @@unique([dayId, taskId, part])
   @@index([positionId])
+}
+
+// 6. mérföldkő: képzések és jogosítások.
+
+/// A qualification ("funkció") an agent gets from a training.
+model Qualification {
+  id             String   @id @default(cuid())
+  name           String   @unique
+  code           String   @unique
+  /// How many months a pass is valid for; null: it does not expire.
+  validityMonths Int?
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  trainings    Training[]
+  requirements TaskRequirement[]
+}
+
+model Training {
+  id              String         @id @default(cuid())
+  name            String         @unique
+  /// The qualification a pass gives; a training may give none.
+  qualificationId String?
+  qualification   Qualification? @relation(fields: [qualificationId], references: [id])
+  hasExam         Boolean        @default(false)
+  /// The pass mark of the exam in percent; set exactly when there is an exam.
+  passPercent     Int?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  records TrainingRecord[]
+}
+
+/// One completion of a training by an agent. Corrected, never deleted.
+model TrainingRecord {
+  id               String    @id @default(cuid())
+  userId           String
+  user             User      @relation("TrainingRecords", fields: [userId], references: [id])
+  trainingId       String
+  training         Training  @relation(fields: [trainingId], references: [id])
+  completedOn      DateTime  @db.Date
+  /// The exam result in percent, when the training has an exam.
+  examPercent      Int?
+  /// From the exam result and the pass mark, or set by the coordinator without an exam.
+  passed           Boolean
+  /// End of validity: the completion day + the qualification's months, unless set by hand. Null: no end.
+  validUntil       DateTime? @db.Date
+  validUntilManual Boolean   @default(false)
+  note             String?
+  createdById      String
+  createdBy        User      @relation("TrainingRecordsCreated", fields: [createdById], references: [id])
+  createdAt        DateTime  @default(now())
+  updatedById      String?
+  updatedBy        User?     @relation("TrainingRecordsUpdated", fields: [updatedById], references: [id])
+  updatedAt        DateTime  @updatedAt
+
+  files TrainingFile[]
+
+  @@index([userId])
+}
+
+/// A file attached to a training record, kept in the upload directory. A
+/// removed file is gone from the disk; its row stays as the log.
+model TrainingFile {
+  id           String         @id @default(cuid())
+  recordId     String
+  record       TrainingRecord @relation(fields: [recordId], references: [id], onDelete: Cascade)
+  fileName     String
+  mimeType     String
+  size         Int
+  /// The file's name in the upload directory; null once removed.
+  storageKey   String?        @unique
+  uploadedById String
+  uploadedBy   User           @relation("TrainingFilesUploaded", fields: [uploadedById], references: [id])
+  uploadedAt   DateTime       @default(now())
+  removedById  String?
+  removedBy    User?          @relation("TrainingFilesRemoved", fields: [removedById], references: [id])
+  removedAt    DateTime?
+
+  @@index([recordId])
+}
+
+/// A qualification one part of an airline's task type needs.
+model TaskRequirement {
+  id                String          @id @default(cuid())
+  airlineTaskTypeId String
+  airlineTaskType   AirlineTaskType @relation(fields: [airlineTaskTypeId], references: [id], onDelete: Cascade)
+  part              MilestonePart
+  qualificationId   String
+  qualification     Qualification   @relation(fields: [qualificationId], references: [id])
+
+  @@unique([airlineTaskTypeId, part, qualificationId])
 }
