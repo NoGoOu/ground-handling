@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { mkdir, readFile, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { prisma } from "@/lib/db";
-import { checkUpload, UPLOAD_TYPES, type UploadProblem } from "@/lib/training";
+import { checkUpload, UPLOAD_TYPES, type UploadProblem, type UploadType } from "@/lib/training";
 
 // Files of the training records (CLAUDE.md, 6. mérföldkő, "Fájlok"): kept in
 // our own storage, a Docker volume in production. A removed file is deleted
@@ -19,6 +19,19 @@ function filePath(storageKey: string): string {
   return path.join(uploadDir(), "training", storageKey);
 }
 
+/** Writes checked bytes under a new name of ours; returns that name (the storage key). */
+export async function storeFile(bytes: Uint8Array, type: UploadType): Promise<string> {
+  const storageKey = `${randomUUID()}.${UPLOAD_TYPES[type].extension}`;
+  await mkdir(path.dirname(filePath(storageKey)), { recursive: true });
+  await writeFile(filePath(storageKey), bytes);
+  return storageKey;
+}
+
+/** Deletes a stored file; one already gone is fine. */
+export async function deleteStoredFile(storageKey: string): Promise<void> {
+  await unlink(filePath(storageKey)).catch(() => undefined);
+}
+
 export async function saveTrainingFile(
   recordId: string,
   file: File,
@@ -28,9 +41,7 @@ export async function saveTrainingFile(
   const checked = checkUpload(bytes);
   if ("problem" in checked) return { ok: false, problem: checked.problem };
 
-  const storageKey = `${randomUUID()}.${UPLOAD_TYPES[checked.type].extension}`;
-  await mkdir(path.dirname(filePath(storageKey)), { recursive: true });
-  await writeFile(filePath(storageKey), bytes);
+  const storageKey = await storeFile(bytes, checked.type);
   await prisma.trainingFile.create({
     data: {
       recordId,
@@ -53,7 +64,7 @@ export async function removeTrainingFile(fileId: string, userId: string): Promis
     where: { id: fileId },
     data: { storageKey: null, removedById: userId, removedAt: new Date() },
   });
-  await unlink(filePath(file.storageKey)).catch(() => undefined);
+  await deleteStoredFile(file.storageKey);
   return true;
 }
 

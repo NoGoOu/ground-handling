@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db";
 import { BASE_TASK_TYPE } from "@/lib/data/task-types";
+import { deleteStoredFile, storeFile } from "@/lib/data/training-files";
 import { DEFAULT_PLANNING_SETTINGS } from "@/lib/planning/settings";
 import { NETLINE_FINGERPRINT, NETLINE_MAPPING, NETLINE_PROFILE_NAME } from "@/lib/import/netline";
 import { DEFAULT_ROLES } from "@/lib/permissions";
@@ -28,6 +29,14 @@ import {
   SEED_SHIFTS,
   segmentTimes,
 } from "./seed-roster";
+import {
+  buildSeedRecords,
+  SEED_COURSES,
+  SEED_FILE_NAME,
+  SEED_QUALIFICATIONS,
+  SEED_REQUIREMENTS,
+  seedCertificatePdf,
+} from "./seed-training";
 
 // Usage: tsx prisma/seed.ts [--if-empty]
 // Replaces all data with the demo data set for today (Europe/Budapest).
@@ -41,6 +50,10 @@ async function main() {
 
   const localDate = toLocalDate(new Date());
   const passwordHash = await bcrypt.hash(DEMO_PASSWORD, 10);
+  // The files of the records the seed replaces go from the disk too.
+  const oldFiles = await prisma.trainingFile.findMany({ where: { storageKey: { not: null } }, select: { storageKey: true } });
+  let certificateRecordId: string | null = null;
+  let coordinatorId: string | null = null;
 
   await prisma.$transaction(async (tx) => {
     // Global settings: the defaults from the schema (decision 7).
@@ -121,7 +134,7 @@ async function main() {
       include: { milestones: true },
     });
     const milestoneId = new Map(template.milestones.map((m) => [m.code, m.id]));
-    await tx.airlineTaskType.create({
+    const baseAirlineType = await tx.airlineTaskType.create({
       data: { airlineId: airline.id, taskTypeId: baseType.id, templateId: template.id, isPrimary: true },
     });
     // A second, placeholder task type, so several tasks per flight can be tried.
@@ -134,9 +147,50 @@ async function main() {
         milestones: { create: SEED_PLACEHOLDER_MILESTONES },
       },
     });
-    await tx.airlineTaskType.create({
+    const placeholderAirlineType = await tx.airlineTaskType.create({
       data: { airlineId: airline.id, taskTypeId: placeholderType.id, templateId: placeholderTemplate.id },
     });
+
+    // Trainings (6. mérföldkő): placeholder qualifications, trainings and
+    // requirements, and records that show every status on the run day.
+    const qualificationIds = new Map<string, string>();
+    for (const qualification of SEED_QUALIFICATIONS) {
+      const created = await tx.qualification.create({ data: qualification });
+      qualificationIds.set(qualification.code, created.id);
+    }
+    const courseIds = new Map<string, string>();
+    for (const { qualification, ...course } of SEED_COURSES) {
+      const created = await tx.training.create({ data: { ...course, qualificationId: qualificationIds.get(qualification)! } });
+      courseIds.set(course.name, created.id);
+    }
+    const airlineTypeIds = new Map([
+      [baseType.code, baseAirlineType.id],
+      [placeholderType.code, placeholderAirlineType.id],
+    ]);
+    for (const requirement of SEED_REQUIREMENTS) {
+      const airlineTaskTypeId = airlineTypeIds.get(requirement.taskType);
+      if (!airlineTaskTypeId) throw new Error(`Unknown seed task type: ${requirement.taskType}`);
+      await tx.taskRequirement.create({
+        data: { airlineTaskTypeId, part: requirement.part, qualificationId: qualificationIds.get(requirement.qualification)! },
+      });
+    }
+    coordinatorId = userId("koordinator")!;
+    for (const record of buildSeedRecords(localDate)) {
+      const created = await tx.trainingRecord.create({
+        data: {
+          userId: userId(record.agent)!,
+          trainingId: courseIds.get(record.course)!,
+          completedOn: new Date(`${record.completedOn}T00:00:00Z`),
+          examPercent: record.examPercent,
+          passed: record.passed,
+          validUntil: record.validUntil ? new Date(`${record.validUntil}T00:00:00Z`) : null,
+          note: record.note,
+          createdById: coordinatorId,
+          updatedById: coordinatorId,
+        },
+      });
+      if (record.withFile) certificateRecordId = created.id;
+    }
 
     // The schedule import sample works right away: Ryanair with a copy of the
     // demo template as its default, and the NetLine profile (README).
@@ -265,6 +319,21 @@ async function main() {
       });
     }
   });
+
+  for (const file of oldFiles) await deleteStoredFile(file.storageKey!);
+  if (certificateRecordId && coordinatorId) {
+    const bytes = seedCertificatePdf();
+    await prisma.trainingFile.create({
+      data: {
+        recordId: certificateRecordId,
+        fileName: SEED_FILE_NAME,
+        mimeType: "application/pdf",
+        size: bytes.byteLength,
+        storageKey: await storeFile(bytes, "application/pdf"),
+        uploadedById: coordinatorId,
+      },
+    });
+  }
 
   console.log(`Seed done for ${localDate}. Users: ${SEED_USERS.map((u) => u.username).join(", ")} (password: ${DEMO_PASSWORD})`);
 }

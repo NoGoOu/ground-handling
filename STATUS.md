@@ -4,24 +4,24 @@
 
 ## Mi készült el
 
-- 6. mérföldkő, 7. lépés: a tervező a követelményekkel számol (`lib/planning/staffing.ts`). Az ablak a saját részének követelményét kapja, a pozícióé a taskjaié együtt. A betölthetőséget párosítás dönti el (pozíció ↔ különböző aktív ügynök, akinél a pozíció minden jogosítása érvényes aznap), nem jogosításonkénti számolás; a 3 PRM / 3 DG / 1 mindkettő eset tesztelve. A mohó lépés lefedő pozíciót keres, és nem bővít úgy, hogy több pozíció maradjon betölthetetlen; a kiegyenlítés sem ronthat rajta. Hiánynál a terv elkészül, és jelzi a betölthetetlen pozíciókat és jogosításonként a „kell / van” számokat; a névadás listája elöl a megfelelő ügynököket mutatja, a többit a hiányzó jogosítással. Követelmények nélkül a számolás változatlan.
-- 6. mérföldkő, 1–6. lépés: adatmodell és migráció; jogosítás-számítás; koordinátori felület; nézetek; követelmények a légitársaság feladattípusainál; figyelmeztetések (napi lista, sávos nézet, „Kiosztás átvétele”, tervezői névadás).
-- 5. mérföldkő (feladattípusok) kész; eltérései elfogadva (További eldöntött szabályok 27–32.).
+- **A 6. mérföldkő (képzések és jogosítások) kész.**
+- 8. lépés: seed – Oktatási koordinátor (`koordinator`, Oktató Olga); helyőrző jogosítások (HA 12 hónap, HB 24 hónap, HC nem jár le) egy-egy képzéssel; helyőrző követelmények a demo légitársaságnál (Alap: érkezés HA, indulás HB; Helyőrző: indulás HC). A rekordok a futtatás napjához igazodnak, így minden állapot látszik: Kiss Péter HA hamarosan lejár (egy későbbi sikertelen próbálkozás nem vette el), HB és HC érvényes, minta PDF-fel; Nagy Eszter HA lejárt, HB érvényes, HC hiányzik. README; tiszta indítás Dockerből (migrációk, seed, `uploads` kötet) rendben.
+- 1–7. lépés: adatmodell; jogosítás-számítás; koordinátori felület; nézetek; követelmények részenként; figyelmeztetések (napi lista, sávos nézet, „Kiosztás átvétele”, névadás); tervező párosítással és hiányjelzéssel (3 PRM / 3 DG / 1 mindkettő tesztelve).
 
 ## Állapot
 
-- Utolsó commit: `5a36498` – feat: warn when an agent lacks a required qualification (a 7. lépés commitja ezt követi)
-- Tesztek: `npm test` → 437 teszt, mind zöld
-- Lint és build: `npm run lint` hibátlan, `npx tsc --noEmit` tiszta
+- Utolsó commit: `0cbe7bf` – feat: plan with the qualifications a day needs (a 8. lépés commitja ezt követi)
+- Tesztek: `npm test` → 447 teszt, mind zöld
+- Lint és build: `npm run lint` hibátlan, `npx tsc --noEmit` tiszta, `npm run build` sikeres
 
 ## Eltérések a CLAUDE.md-től
 
-- nincs
+- Nincs. A tervben jóváhagyott pontosítások, amelyek a CLAUDE.md-be felvehetők: (1) inaktív jogosítás nem választható, az ellenőrzések figyelmen kívül hagyják; (2) a lejáró lista két csoport (hamarosan lejár, lejárt), csak aktív jogosításokkal; (3) gyors fordulón az ablak követelménye a két rész uniója; (4) a követelmény a mostani beállításból jön, a taskon nem fagy be; (5) a rekord az ügynök kivételével javítható, az érvényesség vége alapból számolt, kézzel felülírható; (6) a fájl eltávolítása a lemezről töröl, a naplósor marad; (7) a tervező jelöltjei az aktív ügynökök a beosztástól függetlenül, a hiányjelzés a megtekintéskor a mai jogosításokkal számol; (8) a „hamarosan lejár” napjai globális beállítás (Admin → Beállítások).
 
 ## Kérdések a tervezéshez
 
-- nincs
+- A csatolt fájlok megőrzési ideje továbbra is nyitott; addig nincs automatikus törlés.
 
 ## Következő lépés
 
-- 6. mérföldkő, 8. lépés: seed (oktatási koordinátor, helyőrző jogosítások és képzések, minden állapot a demo ügynököknél), README, STATUS.md, indítás tiszta állapotból.
+- A tervezés döntése szerint; a „Később” szakasz első pontja a 7. mérföldkő (üzenetek).

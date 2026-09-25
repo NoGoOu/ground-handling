@@ -12,6 +12,7 @@ export const SEED_USERS = [
   { username: "tervezo", name: "Tervező Tamás", roles: ["Tervező"], agent: false },
   { username: "ugynok1", name: "Kiss Péter", roles: ["Ügynök"], agent: true },
   { username: "ugynok2", name: "Nagy Eszter", roles: ["Ügynök"], agent: true },
+  { username: "koordinator", name: "Oktató Olga", roles: ["Oktatási koordinátor"], agent: false },
 ] as const;
 
 /** Every agent belongs to a team; the shift lead leads the demo team. */

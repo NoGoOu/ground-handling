@@ -37,7 +37,7 @@ Nyílt forráskódú webalkalmazás repülőtéri földi kiszolgálás (ground h
 
 **4. mérföldkő – tervezői nézet, automatikus kiosztással**
 
-- **Számolás** (`Tervezés` menü, „Tervezés” jogosultsággal: Admin és Tervező): a tervező egy legfeljebb 31 napos időszakot választ, a program naponként névtelen pozíciókat számol a járatok foglaltsági ablakaiból (gyors fordulónál egy, hosszúnál két ablak, a törölt rész kimarad; egy nap feladatai az azon a napon kezdődő ablakok). Jogosítások nélkül, külső AI nélkül.
+- **Számolás** (`Tervezés` menü, „Tervezés” jogosultsággal: Admin és Tervező): a tervező egy legfeljebb 31 napos időszakot választ, a program naponként névtelen pozíciókat számol a járatok foglaltsági ablakaiból (gyors fordulónál egy, hosszúnál két ablak, a törölt rész kimarad; egy nap feladatai az azon a napon kezdődő ablakok). Külső AI nélkül; a 6. mérföldkő óta a jogosításokkal is számol (lent).
 - **Algoritmus** (`lib/planning/`, determinisztikus): 1. időrendben minden ablak egy olyan meglévő pozícióba kerül, ahol a szabályok teljesülnek, új pozíció csak akkor nyílik, ha ilyen nincs (korlátok nélkül ez a legnagyobb egyidejű átfedés); 2. kiegyenlítés áthelyezéssel és cserével a minimum + megengedett létszámtöbblet pozíción belül; 3. döntetlennél a kevesebb munkaidő, majd a kevesebb üresjárat.
 - **Szabályok** (`Tervezés → Tervezési beállítások`): minimális és maximális műszakhossz, szünet a küszöb fölött (a jelölt szünet a műszak közepéhez legközelebbi elég hosszú rés), pihenőidő vagy megengedett átfedés két task között, létszámtöbblet, a mentett műszak résztípusa. A terv napja lemásolja őket.
 - **Áttekintés**: napváltó, mutatók (pozíciószám, munkaidő, üresjárat, a terhelés minimuma, maximuma, különbsége, pozíciónként foglaltság és műszakhossz), sávos nézet pozíciónként a műszakkal és a szünettel. A taskok áthúzhatók másik vagy új pozícióba; ha ez megsért egy szabályt, a rendszer figyelmeztet, de engedi. Az újraszámolás (a nap vagy a teljes terv) megerősítést kér, mert felülírja a kézi módosításokat és a neveket. Ha a nap járatai a számolás óta változtak (import, késés, törlés), a terv „Elavult” jelzést kap.
@@ -53,6 +53,17 @@ Nyílt forráskódú webalkalmazás repülőtéri földi kiszolgálás (ground h
 - **Megjelenítés:** a napi listán járatonként a taskok típussal, ügynökkel és státusszal (a nap és a sorrend az elsődleges task szerint); a task és az ügynök nézetben a feladattípus; a sávos nézet és a terv dobozain a feladattípus kódja.
 - **Különböző emberek:** ha ugyanaz az ember ugyanazon a járaton két feladattípust kapna, a kiosztás és a sávos nézet figyelmeztet (de ment). A tervező ugyanannak a járatnak két különböző taskját nem teszi egy pozícióba.
 - **Migráció:** a korábbi adatok az „Alap” feladattípus alá kerültek, a viselkedésük nem változott.
+
+**6. mérföldkő – képzések és jogosítások**
+
+- **Jogosítások és képzések** (`Képzések` menü, „Képzések kezelése” jogosultsággal: Oktatási koordinátor és Admin): a jogosítás neve, kódja és érvényességi ideje hónapban (üresen nem jár le); a képzés az általa adott jogosítással, dolgozattal és sikerességi határral. Az inaktív jogosítás nem választható, és az ellenőrzések figyelmen kívül hagyják.
+- **Képzési rekordok:** ügynök, képzés, teljesítés napja, dolgozat eredménye (a sikerességet a határ dönti el; dolgozat nélkül a koordinátor jelöli), érvényesség vége (a teljesítés + a jogosítás hónapjai, kézzel felülírható), megjegyzés, ki rögzítette és módosította. A rekord javítható, nem törölhető.
+- **Fájlok:** PDF, JPG vagy PNG, legfeljebb 10 MB, a tartalma alapján ellenőrizve; saját tárhelyen (Dockerben az `uploads` kötet). Az eltávolítás a fájlt törli a lemezről, a naplósor (ki, mikor) megmarad. A letöltés ugyanúgy korlátozott, mint a rekord megtekintése.
+- **Az ügynök jogosításai** a rekordokból számolódnak: jogosításonként a legutolsó sikeres rekord érvényessége számít, egy későbbi sikertelen próbálkozás nem veszi el. Állapot egy adott napon: érvényes, hamarosan lejár (a lejáratig legfeljebb a beállított napok száma, alapból 30; `Admin → Beállítások`), lejárt, hiányzik.
+- **Nézetek** („Képzési adatok megtekintése” hatókörrel): az ügynök a sajátjait látja (telefonon is), a csapatvezető a csapata táblázatát (ember × jogosítás, állapotszínekkel), a koordinátor és az admin mindenkiét. A lejáró jogosítások listája két csoportban: hamarosan lejár, lejárt.
+- **Követelmények** (`Admin → Légitársaságok és sablonok`, a légitársaság feladattípusainál): részenként (érkezés, indulás) a szükséges jogosítások. Egy ablakot végző ügynöknek az ablak kezdőnapján mindegyik érvényes kell legyen; gyors fordulón a két rész követelménye együtt.
+- **Figyelmeztetések:** ha a kiosztott ügynök nem felel meg, a napi lista kiosztása, a sávos nézet (új ütközéstípus), a „Kiosztás átvétele” és a tervezői névadás megnevezi a hiányzó vagy lejárt jogosítást, de semmit nem tilt.
+- **Tervező:** minden ablak a saját részének követelményét kapja, a pozícióé a taskjaié együtt. Hogy egy nap pozíciói betölthetők-e különböző aktív ügynökökkel, akiknél a pozíció minden jogosítása érvényes, azt párosítás dönti el (nem jogosításonkénti számolás). A számolás erre törekszik; ha így sem megy, a terv elkészül, és jelzi a betölthetetlen pozíciókat, jogosításonként a „kell / van” számokkal. A névadás listája elöl a megfelelő ügynököket mutatja, a többit a hiányzó jogosítással.
 
 ## Indítás Docker Compose-zal
 
@@ -81,6 +92,19 @@ A demo beosztás a betöltés napjára és a következő napra publikált és va
 | `tervezo` | Tervező Tamás | Tervező |
 | `ugynok1` | Kiss Péter | Ügynök |
 | `ugynok2` | Nagy Eszter | Ügynök |
+| `koordinator` | Oktató Olga | Oktatási koordinátor |
+
+### A képzések kipróbálása
+
+A seed helyőrző jogosításokat tölt be (a valós GOU- és HDS-követelményeket a projekt gazdája adja meg): „Helyőrző A” (HA, 12 hónap), „Helyőrző B” (HB, 24 hónap) és „Helyőrző C” (HC, nem jár le), mindegyikhez egy képzéssel (A és C dolgozattal). A demo légitársaság „Alap” taskjainak érkezési része HA-t, indulási része HB-t, a „Helyőrző” taskok indulási része HC-t követel. A rekordok a betöltés napjához igazodnak, így minden állapot látszik:
+
+- Kiss Péter: HA hamarosan lejár (egy 5 napja sikertelen megújító próbálkozás nem vette el), HB és HC érvényes, a HB rekordhoz egy minta PDF tartozik.
+- Nagy Eszter: HA lejárt, HB érvényes, HC hiányzik.
+
+1. `koordinator`-ként a `Képzések` menüben rögzíts rekordot, tölts fel hozzá fájlt, és nézd meg a lejáró jogosítások listáját.
+2. `ugynok1`-ként a `Képzések` menüben a saját jogosítások, `vezeto`-ként a csapat táblázata látszik.
+3. `vezeto`-ként a napi listán és a sávos nézetben Nagy Eszter érkezési részeinél figyelmeztetés jelzi a lejárt HA-t.
+4. `tervezo`-ként egy mai terv jelzi, hogy a két demo ügynökkel nem tölthető be minden pozíció, és jogosításonként kiírja a hiányt.
 
 ### A járatrend-import kipróbálása
 
@@ -108,7 +132,7 @@ docker compose down
 # Demo adatok újratöltése a mai napra – FIGYELEM: minden adatot töröl!
 docker compose exec app npx tsx prisma/seed.ts
 
-# Minden adat törlése (adatbázis-kötettel együtt)
+# Minden adat törlése (az adatbázis- és a fájlkötettel együtt)
 docker compose down -v
 ```
 
@@ -117,6 +141,7 @@ docker compose down -v
 - Állíts be saját titkos kulcsot a munkamenetekhez: `AUTH_SECRET=<hosszú véletlen szöveg> docker compose up -d` (generálás: `npx auth secret` vagy `openssl rand -base64 32`).
 - Cseréld le az adatbázis jelszavát a `docker-compose.yml`-ben.
 - Változtasd meg vagy inaktiváld a demo felhasználókat.
+- A képzési rekordok fájljai az `uploads` kötetben vannak; az adatbázissal együtt mentsd. Automatikus törlés nincs.
 
 ## Fejlesztés
 
@@ -130,6 +155,8 @@ npx prisma migrate deploy   # táblák létrehozása
 npm run db:seed             # demo adatok (minden adatot töröl!)
 npm run dev                 # http://localhost:3000
 ```
+
+A feltöltött fájlok fejlesztéskor az `uploads/` mappába kerülnek (`UPLOAD_DIR` környezeti változóval máshová tehetők).
 
 Ha a Docker nem elérhető, a Prisma saját helyi Postgrese is megfelel fejlesztéshez: az `npx prisma dev --detach` kiírja a `postgres://…` kapcsolati címet, ezt írd a `.env` `DATABASE_URL` sorába, és folytasd a `npx prisma migrate deploy` lépéssel.
 
@@ -149,7 +176,8 @@ Ha a Docker nem elérhető, a Prisma saját helyi Postgrese is megfelel fejleszt
 | `lib/board.ts` | A sávos nézet modellje: dobozok, sávok, blokkok, a háromféle ütközés |
 | `lib/roster.ts` | Beosztás-segédfüggvények: publikált napok, a publikált és a valós réteg eltérései |
 | `lib/task-types.ts` | Feladattípusok: egy új járat taskjai a légitársaság aktív feladattípusai szerint, és ugyanannak az embernek két feladattípusa egy járaton |
-| `lib/planning/` | Tervezés: bemenet (napi ablakok), a pozíció szabályai, minimális pozíciószám, kiegyenlítés és mutatók, a terv nézete, mentés a tervezetbe, kiosztás átvétele; tiszta függvények tesztekkel |
+| `lib/planning/` | Tervezés: bemenet (napi ablakok), a pozíció szabályai, minimális pozíciószám, kiegyenlítés és mutatók, betölthetőség párosítással, a terv nézete, mentés a tervezetbe, kiosztás átvétele; tiszta függvények tesztekkel |
+| `lib/qualifications.ts`, `lib/training.ts` | Jogosítások: a rekordokból számolt érvényesség és állapot, a task részeinek követelménye és teljesülése; a rekord szabályai és a fájlok ellenőrzése |
 | `lib/import/` | Járatrend-import: fájlbeolvasás, átalakítások, oszlop-párosítás, fordulók képzése, összevetés a meglévő járatokkal; tiszta függvények, tesztek a mintafájllal |
 | `lib/permissions/` | A jogosultságok katalógusa és a jogosultsági szabályok (a proxy, az oldalak és minden szerverművelet ezt használja) |
 | `lib/time.ts` | Átváltás UTC és Europe/Budapest között |
