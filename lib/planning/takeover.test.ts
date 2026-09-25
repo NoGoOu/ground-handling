@@ -98,3 +98,21 @@ describe("taking the plan's assignment over", () => {
     ]);
   });
 });
+
+describe("taking a whole plan over", () => {
+  it("fills the parts of every day in one go, a night turnaround's two days included", () => {
+    const result = takeOver(
+      [
+        { taskId: "n", part: "ARRIVAL_PART", agentId: "kiss", day: "2026-09-24" },
+        { taskId: "n", part: "DEPARTURE_PART", agentId: "nagy", day: "2026-09-25" },
+        { taskId: "m", part: "ARRIVAL_PART", agentId: "kiss", day: "2026-09-25" },
+      ],
+      tasksOf(task("n"), task("m", { arrivalAgentId: "toth" })),
+      anyone,
+    );
+    expect(result.updates).toEqual([{ taskId: "n", arrivalAgentId: "kiss", departureAgentId: "nagy" }]);
+    expect(result.skipped).toEqual([
+      { taskId: "m", flightLabel: "FRm", part: "ARRIVAL_PART", reason: "assigned", agentId: "toth", day: "2026-09-25" },
+    ]);
+  });
+});

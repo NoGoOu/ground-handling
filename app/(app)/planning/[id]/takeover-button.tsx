@@ -6,8 +6,16 @@ import type { TakeoverState } from "../actions";
 
 const t = messages.planning.takeover;
 
-/** "Kiosztás átvétele" of the day: fills the unassigned parts only, and says what it skipped. */
-export function TakeoverButton({ action }: { action: () => Promise<TakeoverState> }) {
+/** "Kiosztás átvétele" of a day or the whole plan: fills the unassigned parts only, and says what it skipped. */
+export function TakeoverButton({
+  action,
+  label,
+  confirmText,
+}: {
+  action: () => Promise<TakeoverState>;
+  label: string;
+  confirmText: string;
+}) {
   const [state, formAction, pending] = useActionState(action, {});
   return (
     <form action={formAction} className="flex flex-col gap-2">
@@ -17,10 +25,10 @@ export function TakeoverButton({ action }: { action: () => Promise<TakeoverState
           disabled={pending}
           className="btn btn-primary"
           onClick={(event) => {
-            if (!window.confirm(t.confirm)) event.preventDefault();
+            if (!window.confirm(confirmText)) event.preventDefault();
           }}
         >
-          {pending ? messages.form.saving : t.button}
+          {pending ? messages.form.saving : label}
         </button>
       </div>
       {state.error && (

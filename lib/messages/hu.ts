@@ -787,7 +787,10 @@ export const hu = {
     takeover: {
       title: "Kiosztás átvétele",
       button: "A nap kiosztásának átvétele",
-      hint: "A terv szerinti ügynök kerül a taskokra, csak a még kiosztatlan részekre; a már kiosztottakat kihagyja és listázza. Gyors fordulónál mindkét rész ugyanahhoz az ügynökhöz kerül.",
+      planButton: "A teljes terv kiosztásának átvétele",
+      planConfirm: "A terv szerint kiosztod a terv minden napjának még kiosztatlan részeit. Folytatod?",
+      onDay: "{day}: {line}",
+      hint: "A terv szerinti ügynök kerül a taskokra, csak a még kiosztatlan részekre; a már kiosztottakat kihagyja és listázza. Gyors fordulónál mindkét rész ugyanahhoz az ügynökhöz kerül. A megnyitott napra vagy a teljes tervre kérhető.",
       confirm: "A terv szerint kiosztod a nap még kiosztatlan részeit. Folytatod?",
       done: "Kiosztva: {count} rész.",
       nothing: "Nem volt kiosztatlan rész, amit a terv alapján ki lehetett osztani.",

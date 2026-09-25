@@ -11,6 +11,8 @@ import type { WindowPart } from "./input";
 export interface TakeoverItem {
   taskId: string;
   part: WindowPart;
+  /** The plan day of the window; a whole plan is taken over in one go. */
+  day?: string;
   /** The agent named for the item's position. */
   agentId: string | null;
 }
@@ -31,7 +33,14 @@ export type SkipReason = "assigned" | "unnamed" | "notWorked" | "gone" | "outOfS
 export interface TakeoverResult {
   updates: { taskId: string; arrivalAgentId: string | null; departureAgentId: string | null }[];
   assigned: { taskId: string; flightLabel: string; part: Part | "WHOLE"; agentId: string }[];
-  skipped: { taskId: string; flightLabel: string; part: WindowPart; reason: SkipReason; agentId: string | null }[];
+  skipped: {
+    taskId: string;
+    flightLabel: string;
+    part: WindowPart;
+    reason: SkipReason;
+    agentId: string | null;
+    day?: string;
+  }[];
 }
 
 const PART_ORDER: Record<WindowPart, number> = { WHOLE: 0, ARRIVAL_PART: 1, DEPARTURE_PART: 2 };
@@ -51,7 +60,14 @@ export function takeOver(
   for (const item of sorted) {
     const task = tasks.get(item.taskId);
     const skip = (reason: SkipReason, part: WindowPart = item.part, agentId: string | null = item.agentId) =>
-      result.skipped.push({ taskId: item.taskId, flightLabel: task?.flightLabel ?? "?", part, reason, agentId });
+      result.skipped.push({
+        taskId: item.taskId,
+        flightLabel: task?.flightLabel ?? "?",
+        part,
+        reason,
+        agentId,
+        ...(item.day ? { day: item.day } : {}),
+      });
     if (!task) {
       skip("gone");
       continue;

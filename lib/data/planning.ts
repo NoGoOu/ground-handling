@@ -332,14 +332,27 @@ export async function saveDraftShifts(planId: string, note: (day: string, number
   return { ok: true, saved: draft.shifts.length, publishedDays: draft.publishedDays, unnamed: draft.unnamed.length };
 }
 
-/** What "Kiosztás átvétele" needs of a plan day: its items with the named agents, and the tasks now. */
-export async function loadTakeover(planId: string, day: string): Promise<{ items: TakeoverItem[]; tasks: Map<string, TakeoverTask> } | null> {
-  const planDay = await prisma.planDay.findUnique({
-    where: { planId_date: { planId, date: dateValue(day) } },
-    select: { items: { select: { taskId: true, part: true, position: { select: { userId: true } } } } },
+/**
+ * What "Kiosztás átvétele" needs of some days of a plan (one day, or all of
+ * them): the items with the named agents and their day, and the tasks now.
+ */
+export async function loadTakeover(
+  planId: string,
+  days: readonly string[],
+): Promise<{ items: TakeoverItem[]; tasks: Map<string, TakeoverTask> }> {
+  const planDays = await prisma.planDay.findMany({
+    where: { planId, date: { in: days.map(dateValue) } },
+    select: { date: true, items: { select: { taskId: true, part: true, position: { select: { userId: true } } } } },
+    orderBy: { date: "asc" },
   });
-  if (!planDay) return null;
-  const items = planDay.items.map((item) => ({ taskId: item.taskId, part: item.part, agentId: item.position.userId }));
+  const items = planDays.flatMap((planDay) =>
+    planDay.items.map((item) => ({
+      taskId: item.taskId,
+      part: item.part,
+      agentId: item.position.userId,
+      day: dayText(planDay.date),
+    })),
+  );
   const tasks = new Map<string, TakeoverTask>();
   for (const taskId of new Set(items.map((item) => item.taskId))) {
     const view = await getTaskView(taskId);

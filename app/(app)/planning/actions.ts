@@ -160,15 +160,18 @@ export interface TakeoverState {
 }
 
 /**
- * "Kiosztás átvétele" for one plan day (CLAUDE.md, 4. mérföldkő): the plan's
- * agents onto the still unassigned parts, within the actor's scope. Conflicts
- * warn as on the band view, they never block.
+ * "Kiosztás átvétele" for one plan day, or for the whole plan with day null
+ * (CLAUDE.md, 4. mérföldkő and its follow-up): the plan's agents onto the
+ * still unassigned parts, within the actor's scope. Conflicts warn as on the
+ * band view, they never block.
  */
-export async function takeOverAssignment(planId: string, day: string): Promise<TakeoverState> {
+export async function takeOverAssignment(planId: string, day: string | null): Promise<TakeoverState> {
   const actor = await getCurrentUser();
   if (!actor || !canAssignTasks(actor)) return { error: messages.errors.forbidden };
-  const input = await loadTakeover(planId, day);
-  if (!input) return { error: messages.errors.notFound };
+  const plan = await getPlan(planId);
+  if (!plan || (day !== null && !plan.days.includes(day))) return { error: messages.errors.notFound };
+  const days = day === null ? plan.days : [day];
+  const input = await loadTakeover(planId, days);
 
   const t = messages.planning.takeover;
   const result = takeOver(
@@ -182,22 +185,33 @@ export async function takeOverAssignment(planId: string, day: string): Promise<T
   const names = new Map(
     (await listRosterAgents(null)).map((agent) => [agent.id, agent.name] as const),
   );
-  const skipped = result.skipped.map((s) =>
-    fmt(t.skipped, {
-      flight: `${s.flightLabel} ${t.parts[s.part]}`,
-      reason: fmt(t.reasons[s.reason], { name: (s.agentId && names.get(s.agentId)) || "?" }),
-    }),
-  );
+  const skipped = [...result.skipped]
+    .sort((a, b) => (a.day ?? "").localeCompare(b.day ?? ""))
+    .map((s) => {
+      const line = fmt(t.skipped, {
+        flight: `${s.flightLabel} ${t.parts[s.part]}`,
+        reason: fmt(t.reasons[s.reason], { name: (s.agentId && names.get(s.agentId)) || "?" }),
+      });
+      // A whole plan names the day of each line.
+      return day === null && s.day ? fmt(t.onDay, { day: s.day, line }) : line;
+    });
 
   // The usual warnings of the band view, for the tasks just assigned.
   const assignedTasks = new Set(result.assigned.map((a) => a.taskId));
-  const board = await getBoardForDay(day);
-  const conflicts = board.lanes
-    .flatMap((lane) => lane.boxes)
-    .filter((box) => assignedTasks.has(box.taskId) && box.conflicts.length > 0)
-    .map((box) =>
-      fmt(t.conflict, { flight: box.flightLabel, reasons: box.conflicts.map((kind) => messages.board.conflicts[kind]).join(", ") }),
-    );
+  const conflicts: string[] = [];
+  if (assignedTasks.size > 0) {
+    for (const boardDay of days) {
+      const board = await getBoardForDay(boardDay);
+      for (const box of board.lanes.flatMap((lane) => lane.boxes)) {
+        if (!assignedTasks.has(box.taskId) || box.conflicts.length === 0) continue;
+        const line = fmt(t.conflict, {
+          flight: box.flightLabel,
+          reasons: box.conflicts.map((kind) => messages.board.conflicts[kind]).join(", "),
+        });
+        conflicts.push(day === null ? fmt(t.onDay, { day: boardDay, line }) : line);
+      }
+    }
+  }
 
   return {
     notice: result.assigned.length ? fmt(t.done, { count: result.assigned.length }) : t.nothing,

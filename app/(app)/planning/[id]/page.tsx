@@ -160,7 +160,18 @@ export default async function PlanPage(props: PageProps<"/planning/[id]">) {
                   <h2 className="font-semibold">{t.takeover.title}</h2>
                   <p className="text-sm text-neutral-600">{t.takeover.hint}</p>
                   {view.stale && <p className="text-sm text-amber-900">{t.takeover.stale}</p>}
-                  <TakeoverButton action={takeOverAssignment.bind(null, id, day)} />
+                  <div className="flex flex-col gap-3 lg:flex-row lg:items-start">
+                    <TakeoverButton
+                      action={takeOverAssignment.bind(null, id, day)}
+                      label={t.takeover.button}
+                      confirmText={t.takeover.confirm}
+                    />
+                    <TakeoverButton
+                      action={takeOverAssignment.bind(null, id, null)}
+                      label={t.takeover.planButton}
+                      confirmText={t.takeover.planConfirm}
+                    />
+                  </div>
                 </section>
               )}
 
