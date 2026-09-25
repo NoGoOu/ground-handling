@@ -1,6 +1,6 @@
 # Ground Handling App – projektleírás
 
-*Verzió: 25 · 2026. szeptember 24.*
+*Verzió: 26 · 2026. szeptember 25.*
 
 Nyílt forráskódú webalkalmazás repülőtéri földi kiszolgálás (ground handling) szervezésére. Minden járatfordulóhoz feladattípusonként egy task tartozik, benne mérföldkövekkel, amelyeknek van tervezett és tényleges időpontja. A mérföldkövek légitársaságonként testreszabható sablonokból jönnek. A hozzáférés szerepkör alapú.
 
@@ -64,7 +64,7 @@ Az alábbi táblázat az alapértelmezett szerepköröket írja le. A 2. mérfö
   - `minBreakMinutes` (hosszú fordulónál a két foglaltsági ablak között legalább ennyi szabad időnek kell lennie, különben a forduló gyors, összekapcsolt taskként számít; nem lehet negatív): 15
 - **MilestoneDefinition:** template, order, code, name, anchor (ARRIVAL | DEPARTURE), offsetMinutes, required, part (ARRIVAL_PART | DEPARTURE_PART)
   - Az `ATA` és az `ATD` kódú mérföldkő (az 5. mérföldkőtől: az `ATA`, ha a sablonnak van érkezési része, az `ATD`, ha indulási része) minden sablonban megvan, kötelező és nem törölhető, a kódja nem módosítható, mert ezekhez kapcsolódik a külső rendszerből érkező érték. Ezt szerveroldalon is ellenőrizni kell.
-- **Flight:** airline, template, stand, valamint
+- **Flight:** airline, stand (a sablon az 5. mérföldkőtől a task tulajdonsága), valamint
   - érkezési rész: inboundFlightNumber, sta, eta (opcionális), ata (opcionális, külső rendszerből)
   - indulási rész: outboundFlightNumber, std, etd (opcionális), atd (opcionális, külső rendszerből)
   - A két rész külön-külön opcionális, de legalább az egyiknek meg kell lennie (2. mérföldkő, 9. lépés; addig mindkettő kötelező). Ha csak az érkezési rész van, a gép itt marad (csak érkező járat); ha csak az indulási, a gép már itt van (csak induló járat). Lásd a 11. időszámítási szabályt.
@@ -305,7 +305,7 @@ Műszakvezetői, tervezői és admin nézet, asztali gépre. Telefonon ne törj�
 
 ## 4. mérföldkő – tervezői nézet, automatikus kiosztással
 
-**Kész** (2026. szeptember 24.); a lenti utómunka az 5. mérföldkő előtt készül el. Jogosítások nélkül: a jogosítás-feltételek a 6. mérföldkővel kerülnek bele. Algoritmus, külső AI nélkül.
+**Kész** (2026. szeptember 24.); az utómunkával együtt. Jogosítások nélkül: a jogosítás-feltételek a 6. mérföldkővel kerülnek bele. Algoritmus, külső AI nélkül.
 
 ### Folyamat
 
@@ -380,7 +380,7 @@ Globális beállítás, a Tervező és az Admin szerkeszti. Számoláskor a terv
 
 ## 5. mérföldkő – feladattípusok (több task járatonként)
 
-**Ezt építjük most**, a 4. mérföldkő utómunkája után. Ez az eddigi legnagyobb modellváltozás: az „egy járatforduló = egy task” helyett egy járathoz feladattípusonként egy task tartozik (pl. GOU és HDS). Ezeket különböző emberek végzik, külön időablakkal. A már megépített működés nem változhat: a meglévő adatok egy „Alap” feladattípus alá kerülnek, és a meglévő tesztek zöldek maradnak.
+**Kész** (2026. szeptember 25.). Ez az eddigi legnagyobb modellváltozás: az „egy járatforduló = egy task” helyett egy járathoz feladattípusonként egy task tartozik (pl. GOU és HDS). Ezeket különböző emberek végzik, külön időablakkal. A már megépített működés nem változhat: a meglévő adatok egy „Alap” feladattípus alá kerülnek, és a meglévő tesztek zöldek maradnak.
 
 ### Szabályok
 
@@ -409,6 +409,63 @@ Globális beállítás, a Tervező és az Admin szerkeszti. Számoláskor a terv
 6. Sávos nézet és kiosztás taskonként; figyelmeztetés, ha ugyanazon a járaton két feladattípust ugyanaz az ember kapna
 7. Tervező és kiosztás átvétele taskonként; ugyanannak a járatnak különböző feladattípusú taskjai nem kerülhetnek egy pozícióba
 8. Seed (második, helyőrző feladattípus), README, STATUS.md
+
+## 6. mérföldkő – képzések és jogosítások
+
+**Ezt építjük most.** A képzési nyilvántartásból adódnak az ügynökök jogosításai, a feladatok pedig jogosításokat követelnek meg. Hiány esetén a rendszer mindenhol figyelmeztet, de nem tilt; a tervező pedig azt is ellenőrzi, hogy a pozíciók betölthetők-e valódi, érvényes jogosítású emberekkel.
+
+### Fogalmak
+
+- **Jogosítás (funkció):** név, kód, alapértelmezett érvényességi idő hónapban (üresen hagyva nem jár le), aktív jelölés. Egy jogosítás több légitársaság feladatához is kellhet (pl. az Altéa az A3 és a PC járatokhoz); ez a követelményekből adódik, külön lista nem kell.
+- **Képzés:** név, az általa adott jogosítás (opcionális), van-e dolgozat, és ha van, a sikeresség határa százalékban.
+- **Képzési rekord:** ügynök, képzés, teljesítés dátuma, a dolgozat eredménye százalékban (ha van dolgozat), sikeres-e, az érvényesség vége, megjegyzés, csatolt fájlok, ki és mikor rögzítette és módosította.
+  - Dolgozatos képzésnél a sikeresség az eredményből és a határból számolódik; dolgozat nélkül a koordinátor jelöli.
+  - Az érvényesség vége a teljesítés dátuma + a jogosítás érvényességi ideje; felülírható.
+  - A rekord javítható, de nem törölhető (a rögzítések szabályához hasonlóan). A csatolt fájl eltávolítható, mert tévesen feltöltött dokumentum személyes adatot tartalmazhat; az eltávolítás naplózott.
+- **Az ügynök jogosításai** a rekordokból számolódnak: jogosításonként a legutolsó sikeres rekord érvényessége számít. Egy későbbi sikertelen próbálkozás nem veszi el a még érvényes jogosítást. Külön, kézzel karbantartott lista nincs.
+- **Érvényesség egy adott napon:** a jogosítás érvényes, ha az érvényesség vége nem korábbi az adott napnál (Europe/Budapest). A feladatoknál a task ablakának kezdőnapja számít.
+- **Állapot:** érvényes; hamarosan lejár (a lejáratig legfeljebb a beállított napok száma van hátra, helyőrző: 30 nap, globális beállítás); lejárt; hiányzik.
+
+### Követelmények
+
+- A légitársaság feladattípusainál részenként (érkezés, indulás) megadható, milyen jogosítás vagy jogosítások kellenek. Az érkezéshez és az induláshoz jellemzően két külön jogosítás tartozik. Az admin kezeli.
+- A task egy részének követelménye a légitársaság adott feladattípusának az adott részre megadott jogosításai. Az ügynök akkor felel meg, ha mindegyik érvényes nála a task ablakának kezdőnapján.
+
+### Figyelmeztetések
+
+- Ha a kiosztott ügynök nem felel meg a követelménynek, a rendszer figyelmeztet, de engedi: a napi lista kiosztásánál, a sávos nézetben (új ütközéstípusként), a „Kiosztás átvételénél” és a tervezői névadásnál. A figyelmeztetés megnevezi a hiányzó vagy lejárt jogosítást.
+
+### Tervező
+
+- A számolás bemenetében minden ablak megkapja a saját részének követelményét. Egy pozíció követelménye a taskjai követelményeinek uniója.
+- Jelöltek: az aktív ügynökök. Egy nap pozíciói akkor tölthetők be, ha minden pozícióhoz rendelhető egy-egy különböző ügynök, akinél a pozíció minden követelménye érvényes aznap. Ezt párosítással kell ellenőrizni: nem elég jogosításonként megszámolni (pl. 3 PRM-es és 3 DG-s ember mellett, ha csak egynek van mindkettő, legfeljebb egy pozíció igényelheti mindkettőt).
+- A számolás a betölthetőségre törekszik: egy ablakot lehetőleg olyan pozícióba tesz, amelynek követelménye már lefedi az ablakét, és nem bővít úgy egy pozíciót, hogy a nap betölthetetlenné váljon. A kiegyenlítés sem ronthatja el a betölthetőséget. A cél sorrendje egyébként változatlan.
+- Ha a nap így sem tölthető be, a terv elkészül, de jelzi a hiányt: a be nem tölthető pozíciókat, és jogosításonként, hány pozíció igényli és hány ember rendelkezik vele (pl. „PRM: kell 4, van 3”).
+- Névadásnál a lista elöl a megfelelő ügynököket mutatja; a többi választható, figyelmeztetéssel.
+
+### Nézetek és jogosultságok
+
+- **Oktatási koordinátor** (új alapértelmezett szerepkör): jogosítások, képzések és rekordok kezelése, fájlfeltöltés, a lejáró jogosítások listája; mindenkire.
+- **Ügynök:** a saját képzései, jogosításai és azok állapota, telefonon is jól olvashatóan.
+- **Csapatvezető:** a csapata tagjainak táblázata (ember × jogosítás, állapotszínekkel) és a csapata lejáró jogosításai.
+- Új jogosultságok: „képzések kezelése” (Oktatási koordinátor, Admin) és „képzési adatok megtekintése” hatókörrel (Ügynök: saját; Műszakvezető: csapat; Oktatási koordinátor és Admin: összes). A követelmények beállítása az admin légitársaság-kezelésének része.
+
+### Fájlok
+
+- Saját tárhely (Docker-kötet), a rekordhoz csatolva. Megengedett típusok: PDF, JPG, PNG; legfeljebb 10 MB fájlonként (helyőrző).
+- A fájl letöltése ugyanahhoz a jogosultsághoz és hatókörhöz kötött, mint a rekord megtekintése.
+- Automatikus törlés nincs; a megőrzési idő még nyitott kérdés.
+
+### Lépésterv
+
+1. Adatmodell és migráció: jogosítás, képzés, képzési rekord, csatolmány; követelmények a légitársaság feladattípusainál, részenként; „hamarosan lejár” beállítás; új jogosultságok és az Oktatási koordinátor alapértelmezett szerepkör
+2. Jogosítás-számítás tiszta függvényekként: az ügynök érvényes jogosításai egy adott napon, az állapot, a task részének követelménye és annak teljesülése; tesztek (legutolsó sikeres rekord, későbbi sikertelen próbálkozás, lejárat napja, nem lejáró jogosítás)
+3. Koordinátori felület: jogosítások, képzések, rekordok rögzítése és javítása, a dolgozat eredménye, fájlfeltöltés és -eltávolítás, a lejáró jogosítások listája
+4. Nézetek: ügynök (saját), csapatvezető (csapat-táblázat), koordinátor és admin (mindenki)
+5. Admin: követelmények a légitársaság feladattípusainál, részenként
+6. Figyelmeztetések: napi lista, sávos nézet, „Kiosztás átvétele”, tervezői névadás
+7. Tervező: a követelmények a számolásban, betölthetőség párosítással, hiányjelzés, a névadás sorrendje; tesztek (köztük a 3 PRM / 3 DG / 1 mindkettő eset)
+8. Seed (egy oktatási koordinátor felhasználó; jogosítások és képzések; a demo ügynököknél érvényes, hamarosan lejáró, lejárt és hiányzó jogosítás is, hogy minden állapot kipróbálható legyen), README, STATUS.md
 
 ## További eldöntött szabályok
 
@@ -440,6 +497,12 @@ Ezeket a kérdéseket a megrendelő 2026. szeptember 22-én jóváhagyta; a kód
 24. **Pozíció foglaltsága:** az ablakai uniója.
 25. **Terv hossza:** legfeljebb 31 nap. A „Mentés a tervezetbe” a teljes tervre szól.
 26. **Szünet a tervben:** a műszak közepéhez legközelebbi, elég hosszú rés jelölődik (a teljes rés); a minimumig kitolt műszak üres vége is résnek számít.
+27. **Sablon a taskon:** a járat űrlapján légitársaság választható, a sablon a task tulajdonsága.
+28. **A járat légitársasága** csak akkor módosítható, ha még nincs rögzítés; ilyenkor a taskok újra létrejönnek.
+29. **Elsődleges jelölés:** a taskon is tárolódik.
+30. **Járatszintű megjelenítés** (napszűrés, sorrend, „Késik”, késés): az elsődleges task szerint.
+31. **Közös rész nélküli task:** „nincs teendő” állapotú.
+32. **Sablon és feladattípus:** a sablon részei a létrehozásakor dőlnek el; feladattípus nem törölhető.
 
 ## Később (most ne építsd)
 
@@ -453,17 +516,8 @@ Ezeket a kérdéseket a megrendelő 2026. szeptember 22-én jóváhagyta; a kód
 - Járat-infografika: a feldolgozott üzenetekből összegzett nézet (total pax, compartment-terheltség, speciális utasok és információk), a forrásüzenet idejével.
 - Személyre szabható elrendezés: az ügynök drag and droppal állítja be, mit lát és hogyan, felhasználónként mentve. Csak azután, hogy a fix elrendezés bevált.
 - A lezárt taskok utólagos javításának jogosultsága
-- **6. mérföldkő – képzések és jogosítások:**
-  - Jogosítás: név, kód, alapértelmezett érvényességi idő. Képzés: név, az általa adott jogosítás (opcionális), van-e dolgozat, és ha igen, milyen eredménnyel sikeres.
-  - Képzési rekord: ügynök, képzés, teljesítés dátuma, a dolgozat eredménye, sikeres-e, az érvényesség vége (a dátumból számolva, felülírható), csatolt fájlok.
-  - Az ügynök jogosításai a rekordokból származnak: mindig a legutolsó sikeres rekord érvényessége számít, külön kézi lista nincs.
-  - Új alapértelmezett szerepkör: Oktatási koordinátor, a képzési jogosultságokkal; ő rögzít és szerkeszt. Az ügynök a saját adatait látja, a csapatvezető a csapata tagjaiét (hatókör, lásd Szerepkörök). A csapatok már a 2. mérföldkőben létrejönnek.
-  - Követelmények: légitársaságonként és feladattípusonként, részenként külön (érkezés, indulás) adható meg, milyen jogosítás kell; az érkezéshez és az induláshoz jellemzően két külön jogosítás tartozik. Egy jogosítás (funkció) több légitársaság feladatához is kellhet, pl. az Altéa az A3 és a PC járatokhoz; ez a követelményekből adódik, külön lista nem kell.
-  - Ha a kiosztott ügynöknek nincs érvényes jogosítása, a rendszer figyelmeztet, de nem tiltja (kiosztás, sávos nézet, tervezői névadás).
-  - Tervező: figyelembe veszi, hány érvényes jogosítású ember van. Egy pozíció követelménye a taskjai követelményeinek uniója, és a pozícióknak betölthetőnek kell lenniük különböző, érvényes jogosítású emberekkel (párosítással ellenőrizve; nem elég jogosításonként megszámolni). Ha nem tölthetők be, a terv elkészül, de jelzi a hiányt (pl. „PRM: kell 4, van 3”).
-  - Lista a hamarosan lejáró jogosításokról a koordinátornak és a csapatvezetőnek (helyőrző: 30 nappal a lejárat előtt).
-  - Fájlfeltöltés saját tárhelyre (Docker-kötet), méret- és típuskorláttal. A képzési adatok és a fájlok munkavállalói személyes adatok; a megőrzési idejüket tisztázni kell.
 - Ügynöki beosztásnézet: az ügynök lássa a saját publikált és valós beosztását.
+- A beosztás TRN részének összekötése egy konkrét képzéssel
 - Létszámigény: számítás (egy adott időpontban az átfedő foglaltsági ablakok száma, 15 perces sávokra bontva; a sávon belüli számolás módja még nyitott) és külön nézet (idősávos táblázat vagy grafikon). A sávos idősoros nézeten nem jelenik meg: a tervezés más logika szerint működik.
 - Járatinfó: a sablonban definiált egyedi mezők taskonként (pl. utaslétszám, különleges igények)
 - Szolgáltatások rögzítése taskonként, időpontokkal
