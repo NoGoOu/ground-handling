@@ -1,8 +1,8 @@
 # Ground Handling App – projektleírás
 
-*Verzió: 24 · 2026. szeptember 24.*
+*Verzió: 25 · 2026. szeptember 24.*
 
-Nyílt forráskódú webalkalmazás repülőtéri földi kiszolgálás (ground handling) szervezésére. Minden járatfordulóhoz egy task tartozik, benne mérföldkövekkel, amelyeknek van tervezett és tényleges időpontja. A mérföldkövek légitársaságonként testreszabható sablonokból jönnek. A hozzáférés szerepkör alapú.
+Nyílt forráskódú webalkalmazás repülőtéri földi kiszolgálás (ground handling) szervezésére. Minden járatfordulóhoz feladattípusonként egy task tartozik, benne mérföldkövekkel, amelyeknek van tervezett és tényleges időpontja. A mérföldkövek légitársaságonként testreszabható sablonokból jönnek. A hozzáférés szerepkör alapú.
 
 Ez a fájl a projekt fő leírása. Ha a domain logika nem egyértelmű, kérdezz, ne találj ki új üzleti szabályt. A korábban nyitott kérdések eldöntve a fájl végén, a „További eldöntött szabályok” részben vannak.
 
@@ -19,7 +19,7 @@ Ez a fájl a projekt fő leírása. Ha a domain logika nem egyértelmű, kérdez
 
 ## Fogalmak
 
-- **Forduló (turnaround):** a gép megérkezik, kiszolgálják, majd újra elindul. Egy fordulóhoz egy task tartozik.
+- **Forduló (turnaround):** a gép megérkezik, kiszolgálják, majd újra elindul. Egy fordulóhoz feladattípusonként egy task tartozik (az 5. mérföldkőtől; addig egy).
 - **STA / ETA / ATA:** tervezett / várható / tényleges érkezés (ATA = on-block).
 - **STD / ETD:** tervezett / várható indulás.
 - **ATD / off-block:** tényleges indulás, amikor a gép elhagyja az állóhelyet.
@@ -54,6 +54,7 @@ Az alábbi táblázat az alapértelmezett szerepköröket írja le. A 2. mérfö
 ## Adatmodell
 
 - **User:** name, username, passwordHash, roles (egy vagy több szerepkör, 2. mérföldkő), egyéni jogosultságok (2. mérföldkő), team (opcionális, 2. mérföldkő), active
+- **TaskType** (5. mérföldkő): name, code. **AirlineTaskType** (5. mérföldkő): airline, taskType, template, active, primary. A sablon feladattípushoz tartozik.
 - **Airline:** name, iataCode, defaultTemplate (3. mérföldkő)
 - **TurnaroundTemplate:** airline, name, és a paraméterek:
   - `minTurnaroundMinutes` (gyors forduló ATA-tól off-blockig): 25
@@ -62,13 +63,13 @@ Az alábbi táblázat az alapértelmezett szerepköröket írja le. A 2. mérfö
   - `departureReportMinutes` (hosszú fordulónál ennyivel az indulás előtt kint kell lenni): 40
   - `minBreakMinutes` (hosszú fordulónál a két foglaltsági ablak között legalább ennyi szabad időnek kell lennie, különben a forduló gyors, összekapcsolt taskként számít; nem lehet negatív): 15
 - **MilestoneDefinition:** template, order, code, name, anchor (ARRIVAL | DEPARTURE), offsetMinutes, required, part (ARRIVAL_PART | DEPARTURE_PART)
-  - Az `ATA` és az `ATD` kódú mérföldkő minden sablonban megvan, kötelező és nem törölhető, a kódja nem módosítható, mert ezekhez kapcsolódik a külső rendszerből érkező érték. Ezt szerveroldalon is ellenőrizni kell.
+  - Az `ATA` és az `ATD` kódú mérföldkő (az 5. mérföldkőtől: az `ATA`, ha a sablonnak van érkezési része, az `ATD`, ha indulási része) minden sablonban megvan, kötelező és nem törölhető, a kódja nem módosítható, mert ezekhez kapcsolódik a külső rendszerből érkező érték. Ezt szerveroldalon is ellenőrizni kell.
 - **Flight:** airline, template, stand, valamint
   - érkezési rész: inboundFlightNumber, sta, eta (opcionális), ata (opcionális, külső rendszerből)
   - indulási rész: outboundFlightNumber, std, etd (opcionális), atd (opcionális, külső rendszerből)
   - A két rész külön-külön opcionális, de legalább az egyiknek meg kell lennie (2. mérföldkő, 9. lépés; addig mindkettő kötelező). Ha csak az érkezési rész van, a gép itt marad (csak érkező járat); ha csak az indulási, a gép már itt van (csak induló járat). Lásd a 11. időszámítási szabályt.
   - Részenként: cancelled (igen/nem), cancelledBy, cancelledAt. Az ETA-hoz és az ETD-hez: forrás (kézi | üzenet), megjegyzés (opcionális), ki és mikor rögzítette. (2. mérföldkő, 10. lépés; lásd a „Késés és törlés” szakaszt.)
-- **Task:** flight (1:1, a járat létrehozásakor automatikusan létrejön), status (PLANNED | IN_PROGRESS | COMPLETED), arrivalAgent (opcionális), departureAgent (opcionális). A két ügynök lehet ugyanaz a személy. Csak érkező járatnál csak érkezési, csak induló járatnál csak indulási ügynök van.
+- **Task:** flight (a járat létrehozásakor automatikusan létrejön; az 5. mérföldkőig 1:1, utána feladattípusonként egy, saját sablonnal), status (PLANNED | IN_PROGRESS | COMPLETED), arrivalAgent (opcionális), departureAgent (opcionális). A két ügynök lehet ugyanaz a személy. Csak érkező járatnál csak érkezési, csak induló járatnál csak indulási ügynök van.
 - **MilestoneRecord:** task, milestoneDefinition, actualTime, recordedBy, recordedAt, updatedBy, updatedAt. Taskonként és mérföldkövenként legfeljebb egy rekord.
 - **Setting** (globális beállítások, egyetlen sor): az eltérés színküszöbei percben (alapérték: zöld legfeljebb 0, sárga legfeljebb 5). Az admin szerkeszti.
 - **Role** (2. mérföldkő): name, builtIn, a hozzá tartozó jogosultságok hatókörrel. Alapértelmezett szerepkörök: Admin (beépített, zárolt), Tervező, Műszakvezető, Ügynök.
@@ -270,7 +271,7 @@ Műszakvezetői, tervezői és admin nézet, asztali gépre. Telefonon ne törj�
 
 ## 3. mérföldkő – járatrend-import
 
-**Kész** (2026. szeptember 24.); a lenti utómunka a 4. mérföldkő előtt készül el. A részletes leírás, a mintafájl tanulságai és a tesztadat várt eredményei: `docs/schedule-import.md`. A tesztadat: `ryanair-netline-bud-sample.xlsx` (a projekt tesztadatai közé, pl. `tests/fixtures/schedule/`).
+**Kész** (2026. szeptember 24.); az utómunkával együtt. A részletes leírás, a mintafájl tanulságai és a tesztadat várt eredményei: `docs/schedule-import.md`. A tesztadat: `ryanair-netline-bud-sample.xlsx` (a projekt tesztadatai közé, pl. `tests/fixtures/schedule/`).
 
 ### Szabályok
 
@@ -304,7 +305,7 @@ Műszakvezetői, tervezői és admin nézet, asztali gépre. Telefonon ne törj�
 
 ## 4. mérföldkő – tervezői nézet, automatikus kiosztással
 
-**Ezt építjük most**, a 3. mérföldkő utómunkája után. Jogosítások nélkül: a jogosítás-feltételek az 5. mérföldkővel kerülnek bele. Algoritmus, külső AI nélkül.
+**Kész** (2026. szeptember 24.); a lenti utómunka az 5. mérföldkő előtt készül el. Jogosítások nélkül: a jogosítás-feltételek a 6. mérföldkővel kerülnek bele. Algoritmus, külső AI nélkül.
 
 ### Folyamat
 
@@ -373,6 +374,42 @@ Globális beállítás, a Tervező és az Admin szerkeszti. Számoláskor a terv
 8. Kiosztás átvétele gomb
 9. README és STATUS.md frissítése
 
+### Utómunka (az 5. mérföldkő előtt)
+
+1. „Kiosztás átvétele” a teljes tervre is, a megnyitott nap mellett; továbbra is csak a kiosztatlan részekre.
+
+## 5. mérföldkő – feladattípusok (több task járatonként)
+
+**Ezt építjük most**, a 4. mérföldkő utómunkája után. Ez az eddigi legnagyobb modellváltozás: az „egy járatforduló = egy task” helyett egy járathoz feladattípusonként egy task tartozik (pl. GOU és HDS). Ezeket különböző emberek végzik, külön időablakkal. A már megépített működés nem változhat: a meglévő adatok egy „Alap” feladattípus alá kerülnek, és a meglévő tesztek zöldek maradnak.
+
+### Szabályok
+
+- **Feladattípus:** név és rövid kód (pl. GOU, HDS), az admin kezeli.
+- **A légitársaság feladattípusai:** légitársaságonként megadható, milyen feladattípusok kellenek a járataihoz, típusonként a használt sablonnal, aktív jelöléssel. Ez váltja a légitársaság alapértelmezett sablonját. A jogosítás-követelmények is ide kerülnek, a 6. mérföldkőben.
+- **Elsődleges feladattípus:** légitársaságonként egy. Ha nincs rendszerből kapott ATA/ATD, az elsődleges task `ATA`/`ATD` rögzítése a járat hatályos értéke. A többi taskban az ATA és az ATD sora a járat hatályos értékét mutatja; saját rögzítés ott is lehet, de az nem hatályos.
+- **Sablon:** feladattípushoz tartozik, és állhat érkezési részből, indulási részből vagy mindkettőből. Az `ATA` mérföldkő akkor kötelező, ha van érkezési rész, az `ATD` akkor, ha van indulási rész.
+- **Taskok létrehozása:** a járat létrehozásakor (kézzel vagy importtal) a légitársaság minden aktív feladattípusához létrejön egy task. A feladattípusok későbbi módosítása csak az új járatokat érinti.
+- **A task részei:** azok a részek, amelyek a sablonban és a járat meglévő, nem törölt részei között is megvannak.
+- **Taskonként önálló:** mérföldkövek és rögzítések, státusz, érkezési és indulási ügynök, forduló típusa (a saját sablonja paramétereivel), foglaltsági ablakok.
+- **Járatszintű, közös:** menetrendi, várható és tényleges idők, késés, törlés, állóhely, járatnapló, később az üzenetek.
+- **Különböző emberek:** ugyanazon a járaton a különböző feladattípusokat különböző emberek végzik. Ha ugyanaz az ember kapná, a rendszer figyelmeztet, de engedi (kiosztás, sávos nézet).
+- **Megjelenítés:** a napi listán járatonként a taskok, típussal, ügynökkel és státusszal; a task és az ügynök nézetben a feladattípus; a sávos nézet dobozain a feladattípus kódja.
+- **Tervező:** minden task ablaka bemenet. Egy pozícióba több feladattípus is kerülhet, de ugyanannak a járatnak két különböző feladattípusú taskja nem. A kiosztás átvétele taskonként történik.
+- **Import:** a járathoz a légitársaság aktív feladattípusai szerinti taskok jönnek létre; az újraimportálás a taskokat nem érinti.
+- **Migráció:** létrejön az „Alap” feladattípus. Minden meglévő sablon ehhez kerül; minden légitársaságnál az „Alap” lesz az egyetlen, elsődleges feladattípus a mostani alapértelmezett sablonjával; a meglévő taskok „Alap” típusúak. A viselkedés nem változik.
+- **Seed:** a demo légitársaságnál egy második, helyőrző feladattípus is, egy egyszerű, csak indulási részből álló helyőrző sablonnal, hogy a több task kipróbálható legyen. A valós GOU- és HDS-sablonokat a projekt gazdája adja meg.
+
+### Lépésterv
+
+1. Adatmodell és migráció: feladattípus; a légitársaság feladattípusai (sablon, aktív, elsődleges); sablon–feladattípus; a járathoz több task, a task saját sablonnal; a meglévő adatok az „Alap” típus alá. A viselkedés változatlan, a meglévő tesztek zöldek
+2. Időszámítás és foglaltság taskonként (a task sablonjával és részeivel), az elsődleges task ATA/ATD-szabálya, tesztekkel
+3. Járat létrehozása és import: a taskok a légitársaság aktív feladattípusai szerint
+4. Admin: feladattípusok, a légitársaság feladattípusai (sablon, aktív, elsődleges), a sablonszerkesztő egy- és kétrészes sablonokkal
+5. Napi lista, task nézet, ügynök nézet több taskkal járatonként
+6. Sávos nézet és kiosztás taskonként; figyelmeztetés, ha ugyanazon a járaton két feladattípust ugyanaz az ember kapna
+7. Tervező és kiosztás átvétele taskonként; ugyanannak a járatnak különböző feladattípusú taskjai nem kerülhetnek egy pozícióba
+8. Seed (második, helyőrző feladattípus), README, STATUS.md
+
 ## További eldöntött szabályok
 
 Ezeket a kérdéseket a megrendelő 2026. szeptember 22-én jóváhagyta; a kód is ezekre a számokra hivatkozik.
@@ -397,10 +434,16 @@ Ezeket a kérdéseket a megrendelő 2026. szeptember 22-én jóváhagyta; a kód
 18. **ETA/ETD módosítása:** csak a „Késés rögzítése” művelettel; minden változás a járatnaplóba kerül.
 19. **Állóhely:** nem kötelező; az importált járatnak nincs, a műszakvezető tölti ki.
 20. **Menetrendi dátum:** a járat üzemnapja, vagyis az indulás napja az indulóállomáson. Ez azonosítja a két részt, és ez szerepel az üzenetek fejlécében is.
+21. **Újraszámolás:** a kézi módosítások mellett a neveket is törli. A tervezetbe már mentett műszakok megmaradnak, a nap következő mentése cseréli őket.
+22. **Elavult terv:** menthető, és a kiosztás átvehető, figyelmeztetéssel; az átvétel a taskok mostani alakja szerint dolgozik.
+23. **A terv olvasása:** a kiosztási jogosultsággal is lehet (a Műszakvezetőnek az átvételhez kell); módosítani csak „Tervezés” jogosultsággal lehet.
+24. **Pozíció foglaltsága:** az ablakai uniója.
+25. **Terv hossza:** legfeljebb 31 nap. A „Mentés a tervezetbe” a teljes tervre szól.
+26. **Szünet a tervben:** a műszak közepéhez legközelebbi, elég hosszú rés jelölődik (a teljes rés); a minimumig kitolt műszak üres vége is résnek számít.
 
 ## Később (most ne építsd)
 
-- **6. mérföldkő – üzenetek** (MVT, LDM, CPM, UCM, később PTM és PSM). A formátumok, a kódok, az ellenőrzések és a valós minták leírása: `docs/messages.md`.
+- **7. mérföldkő – üzenetek** (MVT, LDM, CPM, UCM, később PTM és PSM). A formátumok, a kódok, az ellenőrzések és a valós minták leírása: `docs/messages.md`.
   - Fogadás és feldolgozás: a nyers szöveg és a feldolgozott adat tárolása járatonként, verziózva (a javított üzenet nem írja felül a korábbit, de mindig a legfrissebb érvényes látszik). Hibatűrő feldolgozó; az ellenőrzések eltérésnél figyelmeztetnek. A minták tesztadatok.
   - Járatonként egy fül, amit az ügynök is lát.
   - Az ATA és az ATD forrása az MVT (on-block, illetve off-block). A BUD-ra érkező járat ETA-ja az indulási állomás MVT-jéből jön.
@@ -410,13 +453,15 @@ Ezeket a kérdéseket a megrendelő 2026. szeptember 22-én jóváhagyta; a kód
 - Járat-infografika: a feldolgozott üzenetekből összegzett nézet (total pax, compartment-terheltség, speciális utasok és információk), a forrásüzenet idejével.
 - Személyre szabható elrendezés: az ügynök drag and droppal állítja be, mit lát és hogyan, felhasználónként mentve. Csak azután, hogy a fix elrendezés bevált.
 - A lezárt taskok utólagos javításának jogosultsága
-- **5. mérföldkő – képzések és jogosítások:**
+- **6. mérföldkő – képzések és jogosítások:**
   - Jogosítás: név, kód, alapértelmezett érvényességi idő. Képzés: név, az általa adott jogosítás (opcionális), van-e dolgozat, és ha igen, milyen eredménnyel sikeres.
   - Képzési rekord: ügynök, képzés, teljesítés dátuma, a dolgozat eredménye, sikeres-e, az érvényesség vége (a dátumból számolva, felülírható), csatolt fájlok.
   - Az ügynök jogosításai a rekordokból származnak: mindig a legutolsó sikeres rekord érvényessége számít, külön kézi lista nincs.
   - Új alapértelmezett szerepkör: Oktatási koordinátor, a képzési jogosultságokkal; ő rögzít és szerkeszt. Az ügynök a saját adatait látja, a csapatvezető a csapata tagjaiét (hatókör, lásd Szerepkörök). A csapatok már a 2. mérföldkőben létrejönnek.
-  - A feladatok jogosításokat követelhetnek meg (pl. légitársaságonként vagy sablononként). Ha a kiosztott ügynöknek nincs érvényes jogosítása, a rendszer figyelmeztet, de nem tiltja.
-  - Lista a hamarosan lejáró jogosításokról a koordinátornak és a csapatvezetőnek.
+  - Követelmények: légitársaságonként és feladattípusonként, részenként külön (érkezés, indulás) adható meg, milyen jogosítás kell; az érkezéshez és az induláshoz jellemzően két külön jogosítás tartozik. Egy jogosítás (funkció) több légitársaság feladatához is kellhet, pl. az Altéa az A3 és a PC járatokhoz; ez a követelményekből adódik, külön lista nem kell.
+  - Ha a kiosztott ügynöknek nincs érvényes jogosítása, a rendszer figyelmeztet, de nem tiltja (kiosztás, sávos nézet, tervezői névadás).
+  - Tervező: figyelembe veszi, hány érvényes jogosítású ember van. Egy pozíció követelménye a taskjai követelményeinek uniója, és a pozícióknak betölthetőnek kell lenniük különböző, érvényes jogosítású emberekkel (párosítással ellenőrizve; nem elég jogosításonként megszámolni). Ha nem tölthetők be, a terv elkészül, de jelzi a hiányt (pl. „PRM: kell 4, van 3”).
+  - Lista a hamarosan lejáró jogosításokról a koordinátornak és a csapatvezetőnek (helyőrző: 30 nappal a lejárat előtt).
   - Fájlfeltöltés saját tárhelyre (Docker-kötet), méret- és típuskorláttal. A képzési adatok és a fájlok munkavállalói személyes adatok; a megőrzési idejüket tisztázni kell.
 - Ügynöki beosztásnézet: az ügynök lássa a saját publikált és valós beosztását.
 - Létszámigény: számítás (egy adott időpontban az átfedő foglaltsági ablakok száma, 15 perces sávokra bontva; a sávon belüli számolás módja még nyitott) és külön nézet (idősávos táblázat vagy grafikon). A sávos idősoros nézeten nem jelenik meg: a tervezés más logika szerint működik.
@@ -424,7 +469,7 @@ Ezeket a kérdéseket a megrendelő 2026. szeptember 22-én jóváhagyta; a kód
 - Szolgáltatások rögzítése taskonként, időpontokkal
 - Késéskód rögzítése, ha van késés (az MVT DL sorába kerül)
 - Kimutatások légitársaságonként (kiszállítás és beszállítás hossza, földi idő, késések)
-- Üzenetek küldése a külső rendszer felé (az előállítás a 6. mérföldkő része; a küldés csatornája még nyitott)
+- Üzenetek küldése a külső rendszer felé (az előállítás a 7. mérföldkő része; a küldés csatornája még nyitott)
 - Több nyelv támogatása
 
 ## Állapotjelentés (`STATUS.md`)

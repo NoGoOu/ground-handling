@@ -1,8 +1,8 @@
 # Üzenetformátumok – Ground Handling App
 
-*Verzió: 2 · 2026. szeptember 24.*
+*Verzió: 3 · 2026. szeptember 24.*
 
-Referencia a 6. mérföldkőhöz (üzenetek fogadása, feldolgozása és előállítása). **Még nem építjük**, a CLAUDE.md „Később” szakasza hivatkozik rá. A formátumok a projekt gazdájának gyakorlatából és valós mintákból származnak. Ha a gyakorlatban új változat bukkan fel, ide kerül, és a mintájából tesztadat lesz.
+Referencia a 7. mérföldkőhöz (üzenetek fogadása, feldolgozása és előállítása). **Még nem építjük**, a CLAUDE.md „Később” szakasza hivatkozik rá. A formátumok a projekt gazdájának gyakorlatából és valós mintákból származnak. Ha a gyakorlatban új változat bukkan fel, ide kerül, és a mintájából tesztadat lesz.
 
 ## Általános szabályok
 
