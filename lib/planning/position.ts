@@ -14,10 +14,12 @@ import type { PlanningSettings } from "./settings";
 // - A shift longer than the break threshold needs a task-free gap of at least
 //   the break length; that gap is marked as the break. Free time at the end of
 //   a shift pushed out to its minimum length counts as such a gap.
+// - Two tasks of one flight (different task types) are for different people,
+//   so they never share a position (5. mérföldkő).
 
 const MINUTE_MS = 60_000;
 
-export type Violation = "REST" | "OVERLAP" | "MAX_SHIFT" | "BREAK";
+export type Violation = "REST" | "OVERLAP" | "MAX_SHIFT" | "BREAK" | "SAME_FLIGHT";
 
 const minutes = (ms: number) => ms / MINUTE_MS;
 
@@ -111,7 +113,14 @@ export function violations(windows: readonly PlanWindow[], settings: PlanningSet
   }
   if (shiftMinutes(windows, settings) > settings.maxShiftMinutes) found.add("MAX_SHIFT");
   if (needsBreak(windows, settings) && !breakOf(windows, settings)) found.add("BREAK");
-  return (["REST", "OVERLAP", "MAX_SHIFT", "BREAK"] as const).filter((v) => found.has(v));
+  const taskOfFlight = new Map<string, string>();
+  for (const window of windows) {
+    if (!window.flightId) continue;
+    const other = taskOfFlight.get(window.flightId);
+    if (other && other !== window.taskId) found.add("SAME_FLIGHT");
+    taskOfFlight.set(window.flightId, window.taskId);
+  }
+  return (["REST", "OVERLAP", "MAX_SHIFT", "BREAK", "SAME_FLIGHT"] as const).filter((v) => found.has(v));
 }
 
 export function fits(windows: readonly PlanWindow[], settings: PlanningSettings): boolean {

@@ -14,11 +14,17 @@ export interface PlanWindow extends TimeWindow {
   id: string;
   taskId: string;
   part: WindowPart;
+  /**
+   * The task's flight: two tasks of one flight (different task types) never
+   * share a position (5. mérföldkő). Without it the rule is not checked.
+   */
+  flightId?: string;
 }
 
 /** What the input needs of a task: its occupancy windows (lib/turnaround). */
 export interface PlanningTask {
   id: string;
+  flightId?: string;
   windows: readonly OccupancyWindow[];
 }
 
@@ -41,7 +47,14 @@ export function windowsOfDay(tasks: readonly PlanningTask[], localDate: string):
     for (const window of task.windows) {
       if (!startsIn(window, day)) continue;
       const id = windowId(task.id, window.part);
-      byId.set(id, { id, taskId: task.id, part: window.part, start: window.start, end: window.end });
+      byId.set(id, {
+        id,
+        taskId: task.id,
+        part: window.part,
+        start: window.start,
+        end: window.end,
+        ...(task.flightId ? { flightId: task.flightId } : {}),
+      });
     }
   }
   return [...byId.values()].sort(compareWindows);

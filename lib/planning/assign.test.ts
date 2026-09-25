@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { maxConcurrent, minimalPositions } from "@/lib/planning/assign";
+import { planDay } from "@/lib/planning/balance";
 import type { PlanWindow } from "@/lib/planning/input";
 import { breakOf, freeGaps, shiftOf, violations } from "@/lib/planning/position";
 import { DEFAULT_PLANNING_SETTINGS, type PlanningSettings } from "@/lib/planning/settings";
@@ -167,6 +168,31 @@ describe("with the default settings", () => {
       const positions = minimalPositions(windows, DEFAULT_PLANNING_SETTINGS);
       expect(positions.flat().map((x) => x.id).sort()).toEqual(windows.map((x) => x.id).sort());
       for (const position of positions) expect(violations(position, DEFAULT_PLANNING_SETTINGS)).toEqual([]);
+    }
+  });
+});
+
+describe("two task types of one flight (5. mérföldkő)", () => {
+  // GOU and HDS of flight f1 follow each other; a free position could take both.
+  const gou: PlanWindow = { ...w("gou", 0, 45), flightId: "f1" };
+  const hds: PlanWindow = { ...w("hds", 60, 100), flightId: "f1" };
+
+  it("never share a position", () => {
+    expect(violations([gou, hds], FREE)).toEqual(["SAME_FLIGHT"]);
+    expect(ids(minimalPositions([gou, hds], FREE))).toEqual([["gou"], ["hds"]]);
+  });
+
+  it("while the two windows of one task still may", () => {
+    const arrival: PlanWindow = { ...w("a", 0, 30), id: "t:ARRIVAL_PART", taskId: "t", flightId: "f2" };
+    const departure: PlanWindow = { ...w("d", 120, 180), id: "t:DEPARTURE_PART", taskId: "t", flightId: "f2" };
+    expect(violations([arrival, departure], FREE)).toEqual([]);
+    expect(minimalPositions([arrival, departure], FREE)).toHaveLength(1);
+  });
+
+  it("stay apart after balancing too", () => {
+    const other: PlanWindow = { ...w("x", 200, 245), flightId: "f3" };
+    for (const position of planDay([gou, hds, other], FREE)) {
+      expect(violations(position, FREE)).not.toContain("SAME_FLIGHT");
     }
   });
 });

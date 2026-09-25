@@ -59,7 +59,10 @@ function Box({
         broken ? "border-2 border-red-500 bg-red-50 text-red-900" : "border-sky-400 bg-sky-100 text-sky-900 hover:bg-sky-200"
       }`}
     >
-      <span className="truncate font-semibold">{box.flightLabel}</span>
+      <span className="truncate font-semibold">
+        {box.taskTypeCode && <span className="mr-1 font-mono text-[10px] text-violet-800">{box.taskTypeCode}</span>}
+        {box.flightLabel}
+      </span>
       <span className="truncate text-[11px] text-neutral-600">
         {box.stand} · {formatTimeOnDay(box.start, day)}
       </span>

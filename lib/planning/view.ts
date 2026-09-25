@@ -20,6 +20,8 @@ export interface StoredItem {
   id: string;
   positionId: string;
   taskId: string;
+  /** The task's flight, for the rule on two task types of a flight (5. mérföldkő). */
+  flightId?: string;
   part: WindowPart;
   start: Date;
   end: Date;
@@ -30,6 +32,8 @@ export interface StoredItem {
 export interface TaskLabel {
   flightLabel: string;
   stand: string;
+  /** The task type code (5. mérföldkő). */
+  taskTypeCode?: string;
 }
 
 export interface PlanBox extends TimeWindow {
@@ -40,6 +44,8 @@ export interface PlanBox extends TimeWindow {
   part: WindowPart;
   flightLabel: string;
   stand: string;
+  taskTypeCode: string | null;
+  flightId?: string;
   manual: boolean;
 }
 
@@ -64,7 +70,14 @@ export interface PlanDayView {
 }
 
 export function itemWindow(item: StoredItem): PlanWindow {
-  return { id: windowId(item.taskId, item.part), taskId: item.taskId, part: item.part, start: item.start, end: item.end };
+  return {
+    id: windowId(item.taskId, item.part),
+    taskId: item.taskId,
+    part: item.part,
+    start: item.start,
+    end: item.end,
+    ...(item.flightId ? { flightId: item.flightId } : {}),
+  };
 }
 
 export function planDayView({
@@ -98,6 +111,8 @@ export function planDayView({
           end: item.end,
           flightLabel: label?.flightLabel ?? "?",
           stand: label?.stand ?? "–",
+          taskTypeCode: label?.taskTypeCode ?? null,
+          flightId: item.flightId,
           manual: item.manual,
         };
       })

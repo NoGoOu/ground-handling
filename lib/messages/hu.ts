@@ -808,6 +808,7 @@ export const hu = {
         OVERLAP: "két task a megengedettnél jobban átfed",
         MAX_SHIFT: "hosszabb a maximális műszakhossznál",
         BREAK: "nincs elég hosszú szünet",
+        SAME_FLIGHT: "ugyanannak a járatnak két feladattípusa van benne",
       },
     },
     names: {

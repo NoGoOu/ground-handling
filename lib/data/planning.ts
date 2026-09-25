@@ -45,7 +45,7 @@ export async function listPlanningTasks(start: string, end: string): Promise<Tas
 
 /** The input of each day of the period (CLAUDE.md, "Folyamat" 2). */
 export function windowsByDay(tasks: readonly TaskView[], days: readonly string[]): Map<string, PlanWindow[]> {
-  const planning = tasks.map((task) => ({ id: task.id, windows: task.timeline.shape.windows }));
+  const planning = tasks.map((task) => ({ id: task.id, flightId: task.flight.id, windows: task.timeline.shape.windows }));
   return new Map(days.map((day) => [day, windowsOfDay(planning, day)]));
 }
 
@@ -162,16 +162,25 @@ export async function getPlanDayView(planId: string, day: string): Promise<(Plan
     listPlanningTasks(day, day),
     prisma.task.findMany({
       where: { id: { in: [...new Set(stored.items.map((item) => item.taskId))] } },
-      select: { id: true, flight: { select: { inboundFlightNumber: true, outboundFlightNumber: true, stand: true } } },
+      select: {
+        id: true,
+        flightId: true,
+        taskType: { select: { code: true } },
+        flight: { select: { inboundFlightNumber: true, outboundFlightNumber: true, stand: true } },
+      },
     }),
   ]);
   const current = windowsByDay(tasks, [day]).get(day) ?? [];
   const labels = new Map(
-    labelled.map((task) => [task.id, { flightLabel: flightLabel(task.flight), stand: task.flight.stand ?? messages.flightForm.none }]),
+    labelled.map((task) => [
+      task.id,
+      { flightLabel: flightLabel(task.flight), stand: task.flight.stand ?? messages.flightForm.none, taskTypeCode: task.taskType.code },
+    ]),
   );
+  const flightOf = new Map(labelled.map((task) => [task.id, task.flightId]));
   const view = planDayView({
     positions: stored.positions.map((p) => ({ id: p.id, number: p.number, userId: p.userId, userName: p.user?.name ?? null })),
-    items: stored.items,
+    items: stored.items.map((item) => ({ ...item, flightId: flightOf.get(item.taskId) })),
     settings,
     labels,
     current,
@@ -210,8 +219,11 @@ export async function movePlanItem(
       const left = await tx.planItem.count({ where: { positionId: item.positionId } });
       if (left === 0) await tx.planPosition.delete({ where: { id: item.positionId } });
     }
-    const items = await tx.planItem.findMany({ where: { positionId } });
-    return { windows: items.map(itemWindow), settings: settingsFromJson(planDay.settings) };
+    const items = await tx.planItem.findMany({ where: { positionId }, include: { task: { select: { flightId: true } } } });
+    return {
+      windows: items.map((item) => itemWindow({ ...item, flightId: item.task.flightId })),
+      settings: settingsFromJson(planDay.settings),
+    };
   });
 }
 
