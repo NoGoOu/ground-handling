@@ -4,7 +4,7 @@ import Link from "next/link";
 import { startTransition, useActionState, useState, type DragEvent } from "react";
 import { ActionFeedback } from "@/components/action-feedback";
 import type { ActionResult } from "@/lib/action";
-import type { Board, BoardBlock, BoardBox, ConflictKind } from "@/lib/board";
+import type { Board, BoardBlock, BoardBox } from "@/lib/board";
 import { messages } from "@/lib/messages";
 import { fmt } from "@/lib/messages/format";
 import { formatTime, formatTimeOnDay } from "@/lib/time";
@@ -19,8 +19,14 @@ const UNASSIGNED = "";
 
 type Action = (state: ActionResult | null, formData: FormData) => Promise<ActionResult>;
 
-function conflictTitle(conflicts: readonly ConflictKind[]): string {
-  return conflicts.map((kind) => t.conflicts[kind]).join(" · ");
+function conflictTitle(box: Pick<BoardBox, "conflicts" | "qualificationGaps">): string {
+  return box.conflicts
+    .map((kind) =>
+      kind === "QUALIFICATION" && box.qualificationGaps
+        ? fmt(t.qualificationConflict, { list: box.qualificationGaps })
+        : t.conflicts[kind],
+    )
+    .join(" · ");
 }
 
 function TaskBox({
@@ -42,7 +48,7 @@ function TaskBox({
     stand: box.stand,
     from: formatTimeOnDay(box.start, day),
     to: formatTimeOnDay(box.end, day),
-  })}${box.late ? ` · ${box.late}` : ""}${conflicted ? ` · ${conflictTitle(box.conflicts)}` : ""}`;
+  })}${box.late ? ` · ${box.late}` : ""}${conflicted ? ` · ${conflictTitle(box)}` : ""}`;
 
   return (
     <Link

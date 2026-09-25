@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { ActionError, actionUser, runAction, type ActionResult } from "@/lib/action";
 import { newFlightTasksByAirline } from "@/lib/data/task-types";
 import { getTaskView, listFlightTasks, taskAssignment } from "@/lib/data/tasks";
+import { loadQualificationContext, taskQualificationWarnings } from "@/lib/data/training";
 import { findAssignableAgent } from "@/lib/data/users";
 import { prisma } from "@/lib/db";
 import { messages } from "@/lib/messages";
@@ -189,12 +190,19 @@ export async function assignAgents(
     await prisma.task.update({ where: { id: taskId }, data: { arrivalAgentId, departureAgentId } });
     refresh();
 
-    // Different people do the task types of a flight: a warning, not a block (5. mérföldkő).
+    // Warnings, never blocks: different people for the task types of a flight
+    // (5. mérföldkő), and the qualifications the task needs (6. mérföldkő).
     const shared = agentsOnOtherTasks(
       { id: taskId, arrivalAgentId, departureAgentId },
       await listFlightTasks(task.flight.id),
     );
-    return { ok: true, warning: shared.length > 0 ? messages.board.conflicts.SAME_FLIGHT : undefined };
+    const updated = await getTaskView(taskId);
+    const agentIds = [arrivalAgentId, departureAgentId].filter((id): id is string => !!id);
+    const qualification = updated && agentIds.length > 0
+      ? taskQualificationWarnings(updated, await loadQualificationContext(agentIds))
+      : [];
+    const warnings = [...(shared.length > 0 ? [messages.board.conflicts.SAME_FLIGHT] : []), ...qualification];
+    return { ok: true, warning: warnings.length > 0 ? warnings.join(" · ") : undefined };
   });
 }
 

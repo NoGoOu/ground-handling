@@ -1,10 +1,12 @@
-import { buildBoard, type Board, type BoardTask } from "@/lib/board";
+import { buildBoard, type Board, type BoardBox, type BoardTask } from "@/lib/board";
 import { listShiftsForDay } from "@/lib/data/shifts";
 import { listTaskViewsForDay, type TaskView } from "@/lib/data/tasks";
+import { describeShortfalls, loadQualificationContext } from "@/lib/data/training";
 import { listAgentOptions } from "@/lib/data/users";
 import { flightLabel } from "@/lib/flight";
 import { messages } from "@/lib/messages";
 import { fmt } from "@/lib/messages/format";
+import { shortfalls, windowRequirement } from "@/lib/qualifications";
 import { formatDayShort, formatTime, toLocalDate } from "@/lib/time";
 
 function toBoardTask(task: TaskView): BoardTask {
@@ -35,9 +37,21 @@ export async function getBoardForDay(localDate: string): Promise<Board> {
     ...shifts.map((shift) => shift.user.id),
   ]);
 
+  // The qualifications each box needs, against its lane's agent (6. mérföldkő).
+  const context = await loadQualificationContext(agents.map((agent) => agent.id));
+  const byId = new Map(tasks.map((task) => [task.id, task]));
+  const qualificationGaps = (box: BoardBox, agentId: string) => {
+    const task = byId.get(box.taskId);
+    if (!task) return null;
+    const required = windowRequirement(context.requirementsOf(task.flight.airlineId, task.taskType.id), box.part);
+    const missing = shortfalls(required, context.recordsOf(agentId), toLocalDate(box.start));
+    return missing.length > 0 ? describeShortfalls(missing, context.codeOf) : null;
+  };
+
   // Lanes come from the actual roster: operative segments are working time,
   // non-operative ones may cast a block.
   return buildBoard({
+    qualificationGaps,
     tasks: tasks.map(toBoardTask),
     segments: shifts.flatMap((shift) =>
       shift.segments.map((segment) => ({
@@ -56,4 +70,15 @@ export async function getBoardForDay(localDate: string): Promise<Board> {
     ),
     agents,
   });
+}
+
+/** The conflicts of a box as one line; a missing qualification is named (6. mérföldkő). */
+export function describeBoxConflicts(box: Pick<BoardBox, "conflicts" | "qualificationGaps">): string {
+  return box.conflicts
+    .map((kind) =>
+      kind === "QUALIFICATION" && box.qualificationGaps
+        ? fmt(messages.board.qualificationConflict, { list: box.qualificationGaps })
+        : messages.board.conflicts[kind],
+    )
+    .join(", ");
 }

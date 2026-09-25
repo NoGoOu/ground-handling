@@ -89,6 +89,8 @@ export interface TaskView {
   templateParts: TemplateParts;
   flight: {
     id: string;
+    /** With the task type, it gives the qualifications the task needs (6. mérföldkő). */
+    airlineId: string;
     /** The arrival part; null on a departure-only flight (rule 11). */
     inboundFlightNumber: string | null;
     /** The departure part; null on an arrival-only flight (rule 11). */
@@ -192,6 +194,7 @@ function toTaskView(task: TaskWithRelations, thresholds: DeviationThresholds): T
     templateParts: parts,
     flight: {
       id: flight.id,
+      airlineId: flight.airlineId,
       inboundFlightNumber: flight.inboundFlightNumber,
       outboundFlightNumber: flight.outboundFlightNumber,
       stand: flight.stand,

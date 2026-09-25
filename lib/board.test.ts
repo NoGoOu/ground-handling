@@ -311,3 +311,28 @@ describe("two task types of one flight (5. mérföldkő)", () => {
     expect(conflicts).not.toContain("SAME_FLIGHT");
   });
 });
+
+describe("a missing qualification (6. mérföldkő)", () => {
+  it("marks the box and names what is missing, for the lane's agent", () => {
+    const board = buildBoard({
+      tasks: [task()],
+      segments: [segment("anna", "06:00", "14:00")],
+      agents,
+      qualificationGaps: (box, agentId) => (agentId === "anna" && box.part === "WHOLE" ? "PRM (lejárt)" : null),
+    });
+    const [box] = board.lanes[0].boxes;
+    expect(box.conflicts).toEqual(["QUALIFICATION"]);
+    expect(box.qualificationGaps).toBe("PRM (lejárt)");
+  });
+
+  it("leaves the box alone when nothing is missing", () => {
+    const board = buildBoard({
+      tasks: [task()],
+      segments: [segment("anna", "06:00", "14:00")],
+      agents,
+      qualificationGaps: () => null,
+    });
+    expect(board.lanes[0].boxes[0].conflicts).toEqual([]);
+    expect(board.lanes[0].boxes[0].qualificationGaps).toBeUndefined();
+  });
+});

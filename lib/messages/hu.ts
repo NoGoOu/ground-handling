@@ -45,7 +45,9 @@ export const hu = {
       BLOCK: "Ütközik egy blokkal",
       OUTSIDE_SHIFT: "A műszakon kívülre esik",
       SAME_FLIGHT: "Ugyanez az ember a járat egy másik feladattípusát is végzi",
+      QUALIFICATION: "Hiányzó vagy lejárt jogosítás",
     },
+    qualificationConflict: "Hiányzó vagy lejárt jogosítás: {list}",
     legend:
       "A műszak ideje kiemelt, a mintázott doboz nem operatív blokk (utazási idővel együtt), a piros szegély ütközést jelez. A dobozok a hatályos időkből számolnak.",
     dragHint: "A dobozt húzd egy ügynök sávjára a kiosztáshoz, a „Kiosztatlan” sávra a kiosztás törléséhez.",
@@ -745,6 +747,7 @@ export const hu = {
     },
     back: "Vissza a képzésekhez",
     status: { VALID: "érvényes", EXPIRING: "hamarosan lejár", EXPIRED: "lejárt", MISSING: "hiányzik" },
+    warning: "{name}: hiányzó vagy lejárt jogosítás: {list}",
     validUntil: "Érvényes: {day}-ig",
     noExpiry: "nem jár le",
     none: "–",
@@ -984,6 +987,7 @@ export const hu = {
       save: "Nevek mentése",
       saved: "Nevek mentve.",
       invalid: "Ismeretlen ügynök vagy pozíció.",
+      qualificationWarning: "{number}. pozíció – {name}: hiányzó vagy lejárt jogosítás: {list}",
     },
     draft: {
       save: "Mentés a tervezetbe",

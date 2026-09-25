@@ -160,3 +160,38 @@ export function shortfalls(
     return isUsable(status) ? [] : [{ qualificationId, status: status as "EXPIRED" | "MISSING" }];
   });
 }
+
+export interface TaskWindowCheck {
+  part: "WHOLE" | "ARRIVAL_PART" | "DEPARTURE_PART";
+  start: Date;
+}
+
+export interface AgentShortfall {
+  agentId: string;
+  part: TaskWindowCheck["part"];
+  /** The Budapest day of the window's start: the day the qualifications must be valid on. */
+  day: string;
+  shortfalls: Shortfall[];
+}
+
+/**
+ * What the agents of a task lack for its windows (CLAUDE.md, 6. mérföldkő,
+ * "Követelmények"): each window is done by the agent of its part (a quick
+ * turnaround's by the arrival agent), who needs the window's qualifications on
+ * the day the window starts. Only the windows with something missing.
+ */
+export function taskShortfalls(
+  windows: readonly TaskWindowCheck[],
+  agents: { arrivalAgentId: string | null; departureAgentId: string | null },
+  requirements: readonly PartRequirement[],
+  recordsOf: (agentId: string) => readonly QualificationRecord[],
+  dayOf: (instant: Date) => string,
+): AgentShortfall[] {
+  return windows.flatMap((window) => {
+    const agentId = window.part === "DEPARTURE_PART" ? agents.departureAgentId : agents.arrivalAgentId;
+    if (!agentId) return [];
+    const day = dayOf(window.start);
+    const missing = shortfalls(windowRequirement(requirements, window.part), recordsOf(agentId), day);
+    return missing.length > 0 ? [{ agentId, part: window.part, day, shortfalls: missing }] : [];
+  });
+}

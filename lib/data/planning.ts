@@ -2,6 +2,7 @@ import type { Prisma } from "@/generated/prisma/client";
 import { listPublicationsInRange } from "@/lib/data/publications";
 import { listRosterAgents } from "@/lib/data/shifts";
 import { getTaskView, listTaskViewsForDay, type TaskView } from "@/lib/data/tasks";
+import type { QualificationContext } from "@/lib/data/training";
 import { prisma } from "@/lib/db";
 import { flightLabel } from "@/lib/flight";
 import { messages } from "@/lib/messages";
@@ -16,6 +17,7 @@ import {
 } from "@/lib/planning/settings";
 import type { TakeoverItem, TakeoverResult, TakeoverTask } from "@/lib/planning/takeover";
 import { itemWindow, planDayView, type PlanDayView } from "@/lib/planning/view";
+import { windowRequirement } from "@/lib/qualifications";
 import { SETTINGS_ID } from "@/lib/settings";
 import { addDays, localDayRange } from "@/lib/time";
 import { hasPart } from "@/lib/turnaround";
@@ -391,4 +393,39 @@ export async function applyTakeover(updates: TakeoverResult["updates"]) {
       }),
     ),
   );
+}
+
+/**
+ * The qualifications each position of a plan day needs (6. mérföldkő): the
+ * union of its windows' requirements, with the agent named for it.
+ */
+export async function positionRequirements(planId: string, day: string, context: QualificationContext) {
+  const planDay = await prisma.planDay.findUnique({
+    where: { planId_date: { planId, date: dateValue(day) } },
+    select: {
+      positions: {
+        select: {
+          id: true,
+          number: true,
+          userId: true,
+          user: { select: { name: true } },
+          items: { select: { part: true, task: { select: { taskTypeId: true, flight: { select: { airlineId: true } } } } } },
+        },
+        orderBy: { number: "asc" },
+      },
+    },
+  });
+  return (planDay?.positions ?? []).map((position) => ({
+    id: position.id,
+    number: position.number,
+    userId: position.userId,
+    userName: position.user?.name ?? null,
+    required: [
+      ...new Set(
+        position.items.flatMap((item) =>
+          windowRequirement(context.requirementsOf(item.task.flight.airlineId, item.task.taskTypeId), item.part),
+        ),
+      ),
+    ].sort(),
+  }));
 }

@@ -2,8 +2,8 @@
 
 import { refresh } from "next/cache";
 import { ActionError, actionUser, runAction, type ActionResult } from "@/lib/action";
-import { assignmentUpdate, type ConflictKind } from "@/lib/board";
-import { getBoardForDay } from "@/lib/data/board";
+import { assignmentUpdate } from "@/lib/board";
+import { describeBoxConflicts, getBoardForDay } from "@/lib/data/board";
 import { getTaskView } from "@/lib/data/tasks";
 import { findAssignableAgent } from "@/lib/data/users";
 import { prisma } from "@/lib/db";
@@ -26,7 +26,7 @@ async function conflictWarning(localDate: string, boxId: string): Promise<string
   const board = await getBoardForDay(localDate);
   const box = board.lanes.flatMap((lane) => lane.boxes).find((candidate) => candidate.id === boxId);
   if (!box || box.conflicts.length === 0) return undefined;
-  const reasons = box.conflicts.map((kind: ConflictKind) => t.conflicts[kind]).join(", ");
+  const reasons = describeBoxConflicts(box);
   return fmt(t.conflictWarning, { reasons });
 }
 

@@ -3,7 +3,7 @@
 import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import { ActionError, actionUser, runAction, type ActionResult } from "@/lib/action";
-import { getBoardForDay } from "@/lib/data/board";
+import { describeBoxConflicts, getBoardForDay } from "@/lib/data/board";
 import {
   applyTakeover,
   calculatePlanDays,
@@ -11,14 +11,17 @@ import {
   getPlan,
   loadTakeover,
   movePlanItem,
+  positionRequirements,
   saveDraftShifts,
   setPositionNames,
 } from "@/lib/data/planning";
 import { listRosterAgents } from "@/lib/data/shifts";
+import { describeShortfalls, loadQualificationContext } from "@/lib/data/training";
 import { messages } from "@/lib/messages";
 import { fmt } from "@/lib/messages/format";
 import { canAssignTask, canAssignTasks, canAssignToAgent, canPlan } from "@/lib/permissions";
 import { violations } from "@/lib/planning/position";
+import { shortfalls } from "@/lib/qualifications";
 import { takeOver } from "@/lib/planning/takeover";
 import { getCurrentUser } from "@/lib/session";
 import { formatDateTime } from "@/lib/time";
@@ -106,6 +109,25 @@ export async function savePositionNames(
     }
     if (!(await setPositionNames(planId, day, names))) throw new ActionError(messages.planning.names.invalid);
     refresh();
+
+    // A named agent without a qualification the position needs: a warning (6. mérföldkő).
+    const agentIds = [...names.values()].filter((id): id is string => !!id);
+    if (agentIds.length === 0) return;
+    const context = await loadQualificationContext(agentIds);
+    const lines = (await positionRequirements(planId, day, context)).flatMap((position) => {
+      if (!position.userId) return [];
+      const missing = shortfalls(position.required, context.recordsOf(position.userId), day);
+      return missing.length > 0
+        ? [
+            fmt(messages.planning.names.qualificationWarning, {
+              number: position.number,
+              name: position.userName ?? "?",
+              list: describeShortfalls(missing, context.codeOf),
+            }),
+          ]
+        : [];
+    });
+    return { ok: true, warning: lines.length > 0 ? lines.join(" · ") : undefined };
   });
 }
 
@@ -206,7 +228,7 @@ export async function takeOverAssignment(planId: string, day: string | null): Pr
         if (!assignedTasks.has(box.taskId) || box.conflicts.length === 0) continue;
         const line = fmt(t.conflict, {
           flight: box.flightLabel,
-          reasons: box.conflicts.map((kind) => messages.board.conflicts[kind]).join(", "),
+          reasons: describeBoxConflicts(box),
         });
         conflicts.push(day === null ? fmt(t.onDay, { day: boardDay, line }) : line);
       }

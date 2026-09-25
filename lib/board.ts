@@ -9,9 +9,10 @@ import { windowsOverlap, type OccupancyWindow, type Part, type TimeWindow, type 
  * occupancy windows of the same agent overlap, an occupancy window runs into a
  * non-operative block, or it is not inside the agent's operative segments.
  * Since the task types (5. mérföldkő) also: the agent works another task type
- * of the same flight, which different people should do.
+ * of the same flight, which different people should do; and since the
+ * qualifications (6. mérföldkő): the agent lacks one the window needs.
  */
-export type ConflictKind = "OVERLAP" | "BLOCK" | "OUTSIDE_SHIFT" | "SAME_FLIGHT";
+export type ConflictKind = "OVERLAP" | "BLOCK" | "OUTSIDE_SHIFT" | "SAME_FLIGHT" | "QUALIFICATION";
 
 /** What the view needs from a task; the data layer maps a TaskView onto this. */
 export interface BoardTask {
@@ -92,6 +93,8 @@ export interface BoardBox extends TimeWindow {
   late: string | null;
   agentId: string | null;
   conflicts: ConflictKind[];
+  /** The missing or expired qualifications, named, with a QUALIFICATION conflict. */
+  qualificationGaps?: string;
 }
 
 export interface BoardLane {
@@ -225,10 +228,13 @@ export function buildBoard({
   tasks,
   segments,
   agents,
+  qualificationGaps,
 }: {
   tasks: readonly BoardTask[];
   segments: readonly BoardSegment[];
   agents: readonly { id: string; name: string }[];
+  /** What the agent lacks for the box, named; null when nothing (6. mérföldkő). */
+  qualificationGaps?: (box: BoardBox, agentId: string) => string | null;
 }): Board {
   const boxes = tasks.flatMap(taskBoxes);
   const byId = new Map(agents.map((agent) => [agent.id, agent]));
@@ -251,7 +257,13 @@ export function buildBoard({
         blocks: agentBlocks,
         hasShift: agentShifts.length > 0,
         boxes: laneBoxes
-          .map((box) => ({ ...box, conflicts: conflicts.get(box.id) ?? [] }))
+          .map((box) => {
+            const gaps = qualificationGaps?.(box, id) ?? null;
+            const kinds = conflicts.get(box.id) ?? [];
+            return gaps
+              ? { ...box, conflicts: [...kinds, "QUALIFICATION" as const], qualificationGaps: gaps }
+              : { ...box, conflicts: kinds };
+          })
           .sort((a, b) => a.start.getTime() - b.start.getTime()),
       };
     })

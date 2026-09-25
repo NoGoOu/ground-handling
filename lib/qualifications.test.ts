@@ -7,6 +7,7 @@ import {
   latestPassed,
   shortfalls,
   statusOn,
+  taskShortfalls,
   usableOn,
   windowRequirement,
   type QualificationInfo,
@@ -141,5 +142,54 @@ describe("what a task needs", () => {
       { qualificationId: "dg", status: "MISSING" },
     ]);
     expect(shortfalls(["prm"], records, "2026-08-31")).toEqual([]);
+  });
+});
+
+describe("what the agents of a task lack", () => {
+  const requirements = [
+    { part: "ARRIVAL_PART" as const, qualificationId: "prm", active: true },
+    { part: "DEPARTURE_PART" as const, qualificationId: "dg", active: true },
+  ];
+  const records: Record<string, QualificationRecord[]> = {
+    anna: [record({ qualificationId: "prm", validUntil: "2026-12-31" })],
+    bela: [record({ qualificationId: "dg", validUntil: "2026-09-24" })],
+  };
+  const dayOf = (instant: Date) => instant.toISOString().slice(0, 10);
+  const at = (day: string) => new Date(`${day}T08:00:00Z`);
+
+  it("checks each window against the agent of its part, on the window's day", () => {
+    const result = taskShortfalls(
+      [
+        { part: "ARRIVAL_PART", start: at("2026-09-25") },
+        { part: "DEPARTURE_PART", start: at("2026-09-25") },
+      ],
+      { arrivalAgentId: "anna", departureAgentId: "bela" },
+      requirements,
+      (id) => records[id] ?? [],
+      dayOf,
+    );
+    // Anna has PRM; Béla's DG ended the day before.
+    expect(result).toEqual([
+      { agentId: "bela", part: "DEPARTURE_PART", day: "2026-09-25", shortfalls: [{ qualificationId: "dg", status: "EXPIRED" }] },
+    ]);
+  });
+
+  it("gives a quick turnaround's window to the arrival agent, who needs both parts'", () => {
+    const result = taskShortfalls(
+      [{ part: "WHOLE", start: at("2026-09-25") }],
+      { arrivalAgentId: "anna", departureAgentId: "anna" },
+      requirements,
+      (id) => records[id] ?? [],
+      dayOf,
+    );
+    expect(result).toEqual([
+      { agentId: "anna", part: "WHOLE", day: "2026-09-25", shortfalls: [{ qualificationId: "dg", status: "MISSING" }] },
+    ]);
+  });
+
+  it("finds nothing for an unassigned part", () => {
+    expect(
+      taskShortfalls([{ part: "ARRIVAL_PART", start: at("2026-09-25") }], { arrivalAgentId: null, departureAgentId: null }, requirements, () => [], dayOf),
+    ).toEqual([]);
   });
 });
