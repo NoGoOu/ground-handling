@@ -103,6 +103,7 @@ export function AssignmentForm({
         </button>
       </noscript>
       {state && !state.ok && <span className="text-sm text-red-700">{state.error}</span>}
+      {state?.ok && state.warning && <span className="text-sm text-orange-700">⚠ {state.warning}</span>}
     </form>
   );
 }

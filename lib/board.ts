@@ -5,15 +5,21 @@ import { windowsOverlap, type OccupancyWindow, type Part, type TimeWindow, type 
 // the data layer passes in tasks and shifts, and gets lanes and boxes back.
 
 /**
- * The three conflicts of the band view (CLAUDE.md, "Kiosztás és ütközés"): two
+ * The conflicts of the band view (CLAUDE.md, "Kiosztás és ütközés"): two
  * occupancy windows of the same agent overlap, an occupancy window runs into a
  * non-operative block, or it is not inside the agent's operative segments.
+ * Since the task types (5. mérföldkő) also: the agent works another task type
+ * of the same flight, which different people should do.
  */
-export type ConflictKind = "OVERLAP" | "BLOCK" | "OUTSIDE_SHIFT";
+export type ConflictKind = "OVERLAP" | "BLOCK" | "OUTSIDE_SHIFT" | "SAME_FLIGHT";
 
 /** What the view needs from a task; the data layer maps a TaskView onto this. */
 export interface BoardTask {
   id: string;
+  /** The flight, to tell two task types of it given to one agent (5. mérföldkő). */
+  flightId?: string;
+  /** Shown on the box (5. mérföldkő). */
+  taskTypeCode?: string;
   flightLabel: string;
   stand: string;
   status: TaskStatus;
@@ -78,6 +84,8 @@ export interface BoardBox extends TimeWindow {
   id: string;
   taskId: string;
   part: Part | "WHOLE";
+  flightId?: string;
+  taskTypeCode?: string;
   flightLabel: string;
   stand: string;
   status: TaskStatus;
@@ -107,6 +115,8 @@ export function taskBoxes(task: BoardTask): BoardBox[] {
     id: `${task.id}:${window.part}`,
     taskId: task.id,
     part: window.part,
+    flightId: task.flightId,
+    taskTypeCode: task.taskTypeCode,
     start: window.start,
     end: window.end,
     flightLabel: task.flightLabel,
@@ -159,6 +169,8 @@ export function conflictsFor(
     if (!isCovered(box, stretches)) add(box.id, "OUTSIDE_SHIFT");
     for (const other of boxes) {
       if (other.id !== box.id && windowsOverlap(box, other)) add(box.id, "OVERLAP");
+      // Two task types of one flight: different people should do them (5. mérföldkő).
+      if (box.flightId && other.flightId === box.flightId && other.taskId !== box.taskId) add(box.id, "SAME_FLIGHT");
     }
     if (blocks.some((block) => windowsOverlap(box, block))) add(box.id, "BLOCK");
   }

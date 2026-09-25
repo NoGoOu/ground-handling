@@ -32,3 +32,21 @@ export function tasksForNewFlight(types: readonly AirlineTaskTypeSpec[]): TaskSp
     isPrimary: type === primary,
   }));
 }
+
+/** The agents of a task, as stored: the arrival agent and the departure agent. */
+export interface TaskAgents {
+  id: string;
+  arrivalAgentId: string | null;
+  departureAgentId: string | null;
+}
+
+/**
+ * The agents of a task who also work another task of the same flight: the
+ * task types of a flight are for different people, so this only warns
+ * (CLAUDE.md, 5. mérföldkő).
+ */
+export function agentsOnOtherTasks(task: TaskAgents, flightTasks: readonly TaskAgents[]): string[] {
+  const agentsOf = (t: TaskAgents) => [t.arrivalAgentId, t.departureAgentId].filter((id): id is string => !!id);
+  const others = new Set(flightTasks.filter((t) => t.id !== task.id).flatMap(agentsOf));
+  return [...new Set(agentsOf(task))].filter((id) => others.has(id));
+}

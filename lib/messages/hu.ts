@@ -43,6 +43,7 @@ export const hu = {
       OVERLAP: "Átfedés egy másik taskkal",
       BLOCK: "Ütközik egy blokkal",
       OUTSIDE_SHIFT: "A műszakon kívülre esik",
+      SAME_FLIGHT: "Ugyanez az ember a járat egy másik feladattípusát is végzi",
     },
     legend:
       "A műszak ideje kiemelt, a mintázott doboz nem operatív blokk (utazási idővel együtt), a piros szegély ütközést jelez. A dobozok a hatályos időkből számolnak.",

@@ -37,7 +37,7 @@ function TaskBox({
   onDragStart: (event: DragEvent<HTMLAnchorElement>, box: BoardBox) => void;
 }) {
   const conflicted = box.conflicts.length > 0;
-  const title = `${fmt(t.boxTitle, {
+  const title = `${box.taskTypeCode ? `${box.taskTypeCode} · ` : ""}${fmt(t.boxTitle, {
     flight: box.flightLabel,
     stand: box.stand,
     from: formatTimeOnDay(box.start, day),
@@ -62,6 +62,7 @@ function TaskBox({
     >
       <span className="truncate font-semibold">
         {box.late && <span className="mr-1 text-orange-700">⏱</span>}
+        {box.taskTypeCode && <span className="mr-1 font-mono text-[10px] text-violet-800">{box.taskTypeCode}</span>}
         {box.flightLabel}
       </span>
       <span className="truncate text-[11px] text-neutral-600">

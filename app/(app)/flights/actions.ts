@@ -4,12 +4,13 @@ import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import { ActionError, actionUser, runAction, type ActionResult } from "@/lib/action";
 import { newFlightTasksByAirline } from "@/lib/data/task-types";
-import { getTaskView, taskAssignment } from "@/lib/data/tasks";
+import { getTaskView, listFlightTasks, taskAssignment } from "@/lib/data/tasks";
 import { findAssignableAgent } from "@/lib/data/users";
 import { prisma } from "@/lib/db";
 import { messages } from "@/lib/messages";
 import { canAssignTask, canAssignTasks, canAssignToAgent, canManageFlights } from "@/lib/permissions";
 import { getCurrentUser } from "@/lib/session";
+import { agentsOnOtherTasks } from "@/lib/task-types";
 import { toLocalDate } from "@/lib/time";
 import type { Part } from "@/lib/turnaround";
 import { DELAY_FIELDS, delayPartErrors, delaySchema, type DelayFormInput } from "@/lib/validation/delay";
@@ -187,6 +188,13 @@ export async function assignAgents(
 
     await prisma.task.update({ where: { id: taskId }, data: { arrivalAgentId, departureAgentId } });
     refresh();
+
+    // Different people do the task types of a flight: a warning, not a block (5. mérföldkő).
+    const shared = agentsOnOtherTasks(
+      { id: taskId, arrivalAgentId, departureAgentId },
+      await listFlightTasks(task.flight.id),
+    );
+    return { ok: true, warning: shared.length > 0 ? messages.board.conflicts.SAME_FLIGHT : undefined };
   });
 }
 

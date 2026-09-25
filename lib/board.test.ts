@@ -281,3 +281,33 @@ describe("blocks", () => {
     expect(lane.blocks).toHaveLength(1);
   });
 });
+
+describe("two task types of one flight (5. mérföldkő)", () => {
+  const gou = task({ id: "gou", flightId: "f1", taskTypeCode: "GOU" });
+  const hds = task({
+    id: "hds",
+    flightId: "f1",
+    taskTypeCode: "HDS",
+    windows: [{ part: "WHOLE", start: at("09:00"), end: at("09:30") }],
+  });
+
+  it("warns when the same agent gets both, even without an overlap", () => {
+    const board = buildBoard({ tasks: [gou, hds], segments: [segment("anna", "06:00", "14:00")], agents });
+    const boxes = board.lanes.find((lane) => lane.agent.id === "anna")!.boxes;
+    expect(boxes.map((box) => [box.taskTypeCode, box.conflicts])).toEqual([
+      ["GOU", ["SAME_FLIGHT"]],
+      ["HDS", ["SAME_FLIGHT"]],
+    ]);
+  });
+
+  it("lets different agents do them, and one agent do both parts of one task", () => {
+    const other = { ...hds, arrivalAgentId: "bela", departureAgentId: "bela" };
+    const board = buildBoard({
+      tasks: [gou, other, { ...longTask, flightId: "f2", arrivalAgentId: "anna", departureAgentId: "anna" }],
+      segments: [segment("anna", "06:00", "14:00"), segment("bela", "06:00", "14:00")],
+      agents,
+    });
+    const conflicts = board.lanes.flatMap((lane) => lane.boxes.flatMap((box) => box.conflicts));
+    expect(conflicts).not.toContain("SAME_FLIGHT");
+  });
+});

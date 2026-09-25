@@ -10,6 +10,8 @@ import { formatDayShort, formatTime, toLocalDate } from "@/lib/time";
 function toBoardTask(task: TaskView): BoardTask {
   return {
     id: task.id,
+    flightId: task.flight.id,
+    taskTypeCode: task.taskType.code,
     flightLabel: flightLabel(task.flight),
     stand: task.flight.stand ?? messages.flightForm.none,
     status: task.status,
