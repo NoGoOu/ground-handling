@@ -10,7 +10,10 @@ const t = messages.airlineForm;
 export default async function AirlinesPage() {
   await requireCapability(canManageAirlines);
   const airlines = await prisma.airline.findMany({
-    include: { _count: { select: { templates: true } }, defaultTemplate: { select: { name: true } } },
+    include: {
+      _count: { select: { templates: true } },
+      taskTypes: { where: { isPrimary: true, active: true }, select: { template: { select: { name: true } } } },
+    },
     orderBy: { name: "asc" },
   });
 
@@ -48,7 +51,7 @@ export default async function AirlinesPage() {
                   </td>
                   <td className="px-3 py-2 font-mono">{airline.iataCode}</td>
                   <td className="px-3 py-2">{fmt(t.templateCount, { count: airline._count.templates })}</td>
-                  <td className="px-3 py-2">{airline.defaultTemplate?.name ?? t.noDefaultTemplate}</td>
+                  <td className="px-3 py-2">{airline.taskTypes[0]?.template.name ?? t.noDefaultTemplate}</td>
                 </tr>
               ))}
             </tbody>

@@ -1,4 +1,6 @@
+import { randomUUID } from "node:crypto";
 import type { Prisma } from "@/generated/prisma/client";
+import { primaryTemplateIds } from "@/lib/data/task-types";
 import { prisma } from "@/lib/db";
 import type { AirlineInfo, ExistingFlight, ImportDiff } from "@/lib/import/diff";
 import type { ImportMapping } from "@/lib/import/mapping";
@@ -93,7 +95,7 @@ export async function loadExistingFlights(window: { start: Date; end: Date }): P
       importProfileId: true,
       source: true,
       _count: { select: { events: true } },
-      task: { select: { arrivalAgentId: true, departureAgentId: true, _count: { select: { records: true } } } },
+      tasks: { select: { arrivalAgentId: true, departureAgentId: true, _count: { select: { records: true } } } },
     },
   });
   return flights.map((flight) => ({
@@ -116,15 +118,16 @@ export async function loadExistingFlights(window: { start: Date; end: Date }): P
       !!(flight.eta || flight.etd || flight.ata || flight.atd) ||
       flight.arrivalCancelled ||
       flight.departureCancelled ||
-      !!flight.task?.arrivalAgentId ||
-      !!flight.task?.departureAgentId ||
-      (flight.task?._count.records ?? 0) > 0,
+      flight.tasks.some((task) => !!task.arrivalAgentId || !!task.departureAgentId || task._count.records > 0),
   }));
 }
 
 export async function loadAirlines(): Promise<AirlineInfo[]> {
-  const airlines = await prisma.airline.findMany({ select: { id: true, iataCode: true, defaultTemplateId: true } });
-  return airlines.map((a) => ({ id: a.id, code: a.iataCode, defaultTemplateId: a.defaultTemplateId }));
+  const [airlines, templates] = await Promise.all([
+    prisma.airline.findMany({ select: { id: true, iataCode: true } }),
+    primaryTemplateIds(),
+  ]);
+  return airlines.map((a) => ({ id: a.id, code: a.iataCode, defaultTemplateId: templates.get(a.id) ?? null }));
 }
 
 const flightDate = (date: string) => new Date(`${date}T00:00:00Z`);
@@ -232,14 +235,33 @@ export async function applyImport({
       }
 
       // 3. New flights, each with its task (one task per flight, CLAUDE.md).
+      // The ids are made here, so each task finds its flight without relying
+      // on the order the database returns the rows in.
       const created = diff.entries.flatMap((e) =>
-        e.kind === "new"
-          ? [{ airlineId: e.airlineId, templateId: e.templateId, ...scheduleData(e.turnaround), ...imported }]
-          : [],
+        e.kind === "new" ? [{ id: randomUUID(), entry: e }] : [],
       );
       if (created.length > 0) {
-        const flights = await tx.flight.createManyAndReturn({ data: created, select: { id: true } });
-        await tx.task.createMany({ data: flights.map((flight) => ({ flightId: flight.id })) });
+        await tx.flight.createMany({
+          data: created.map(({ id, entry }) => ({
+            id,
+            airlineId: entry.airlineId,
+            ...scheduleData(entry.turnaround),
+            ...imported,
+          })),
+        });
+        const templates = await tx.turnaroundTemplate.findMany({
+          where: { id: { in: [...new Set(created.map(({ entry }) => entry.templateId))] } },
+          select: { id: true, taskTypeId: true },
+        });
+        const taskTypeOf = new Map(templates.map((t) => [t.id, t.taskTypeId]));
+        await tx.task.createMany({
+          data: created.map(({ id, entry }) => ({
+            flightId: id,
+            templateId: entry.templateId,
+            taskTypeId: taskTypeOf.get(entry.templateId)!,
+            isPrimary: true,
+          })),
+        });
       }
 
       // 4. "Az utolsó importból hiányzik": marked, never deleted or cancelled.

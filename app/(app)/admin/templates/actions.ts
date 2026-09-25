@@ -4,6 +4,7 @@ import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import { Prisma } from "@/generated/prisma/client";
 import { ActionError, actionUser, runAction, type ActionResult } from "@/lib/action";
+import { baseTaskTypeId } from "@/lib/data/task-types";
 import { prisma } from "@/lib/db";
 import { DEMO_MILESTONES, DEMO_TEMPLATE_PARAMS } from "@/lib/demo-template";
 import { messages } from "@/lib/messages";
@@ -60,6 +61,7 @@ export async function createTemplate(
     const template = await prisma.turnaroundTemplate.create({
       data: {
         airlineId,
+        taskTypeId: await baseTaskTypeId(),
         name: name.data,
         ...DEMO_TEMPLATE_PARAMS,
         milestones: { create: systemMilestones },

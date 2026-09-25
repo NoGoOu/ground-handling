@@ -20,10 +20,10 @@ import {
 const personSelect = { select: { id: true, name: true } } as const;
 
 const taskInclude = {
+  template: { include: { milestones: true } },
   flight: {
     include: {
       airline: true,
-      template: { include: { milestones: true } },
       etaRecordedBy: personSelect,
       etdRecordedBy: personSelect,
       arrivalCancelledBy: personSelect,
@@ -111,7 +111,7 @@ export interface TaskView {
 function templateFor(task: TaskWithRelations): { params: TemplateParams; milestones: MilestoneDef[]; frozen: boolean } {
   const snapshot = task.status === "COMPLETED" ? parseTemplateSnapshot(task.templateSnapshot) : null;
   if (snapshot) return { ...snapshot, frozen: true };
-  const { template } = task.flight;
+  const { template } = task;
   return {
     params: template,
     milestones: template.milestones,
@@ -162,7 +162,7 @@ function toTaskView(task: TaskWithRelations, thresholds: DeviationThresholds): T
       ata: flight.ata,
       atd: flight.atd,
       airline: { name: flight.airline.name, iataCode: flight.airline.iataCode },
-      templateName: flight.template.name,
+      templateName: task.template.name,
       etaInfo: flight.eta
         ? { source: flight.etaSource, note: flight.etaNote, by: flight.etaRecordedBy, at: flight.etaRecordedAt }
         : null,

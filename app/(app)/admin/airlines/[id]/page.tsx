@@ -17,7 +17,10 @@ export default async function AirlinePage(props: PageProps<"/admin/airlines/[id]
   const { id } = await props.params;
   const airline = await prisma.airline.findUnique({
     where: { id },
-    include: { templates: { orderBy: { name: "asc" } } },
+    include: {
+      templates: { orderBy: { name: "asc" } },
+      taskTypes: { where: { isPrimary: true, active: true }, select: { templateId: true } },
+    },
   });
   if (!airline) notFound();
 
@@ -43,7 +46,7 @@ export default async function AirlinePage(props: PageProps<"/admin/airlines/[id]
           <DefaultTemplateForm
             action={setDefaultTemplate.bind(null, airline.id)}
             templates={airline.templates.map(({ id, name }) => ({ id, name }))}
-            current={airline.defaultTemplateId}
+            current={airline.taskTypes[0]?.templateId ?? null}
           />
         )}
         <TemplateCreateForm action={createTemplate.bind(null, airline.id)} />

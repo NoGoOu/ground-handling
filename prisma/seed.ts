@@ -2,6 +2,7 @@ import "dotenv/config";
 import bcrypt from "bcryptjs";
 import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db";
+import { BASE_TASK_TYPE } from "@/lib/data/task-types";
 import { DEFAULT_PLANNING_SETTINGS } from "@/lib/planning/settings";
 import { NETLINE_FINGERPRINT, NETLINE_MAPPING, NETLINE_PROFILE_NAME } from "@/lib/import/netline";
 import { DEFAULT_ROLES } from "@/lib/permissions";
@@ -52,9 +53,11 @@ async function main() {
     await tx.importRun.deleteMany();
     await tx.importProfile.deleteMany();
     await tx.importUpload.deleteMany();
+    await tx.airlineTaskType.deleteMany();
     await tx.milestoneDefinition.deleteMany();
     await tx.turnaroundTemplate.deleteMany();
     await tx.airline.deleteMany();
+    await tx.taskType.deleteMany();
     await tx.team.deleteMany();
     await tx.user.deleteMany();
     await tx.role.deleteMany();
@@ -97,25 +100,37 @@ async function main() {
       data: { teamId: team.id },
     });
 
+    // Everything made before the task types (5. mérföldkő) is "Alap".
+    const baseType = await tx.taskType.create({ data: BASE_TASK_TYPE });
     const airline = await tx.airline.create({ data: SEED_AIRLINE });
     const template = await tx.turnaroundTemplate.create({
       data: {
         ...SEED_TEMPLATE,
         airlineId: airline.id,
+        taskTypeId: baseType.id,
         milestones: { create: SEED_MILESTONES },
       },
       include: { milestones: true },
     });
     const milestoneId = new Map(template.milestones.map((m) => [m.code, m.id]));
-    await tx.airline.update({ where: { id: airline.id }, data: { defaultTemplateId: template.id } });
+    await tx.airlineTaskType.create({
+      data: { airlineId: airline.id, taskTypeId: baseType.id, templateId: template.id, isPrimary: true },
+    });
 
     // The schedule import sample works right away: Ryanair with a copy of the
     // demo template as its default, and the NetLine profile (README).
     const importAirline = await tx.airline.create({ data: SEED_IMPORT_AIRLINE });
     const importTemplate = await tx.turnaroundTemplate.create({
-      data: { ...SEED_TEMPLATE, airlineId: importAirline.id, milestones: { create: SEED_MILESTONES } },
+      data: {
+        ...SEED_TEMPLATE,
+        airlineId: importAirline.id,
+        taskTypeId: baseType.id,
+        milestones: { create: SEED_MILESTONES },
+      },
     });
-    await tx.airline.update({ where: { id: importAirline.id }, data: { defaultTemplateId: importTemplate.id } });
+    await tx.airlineTaskType.create({
+      data: { airlineId: importAirline.id, taskTypeId: baseType.id, templateId: importTemplate.id, isPrimary: true },
+    });
     await tx.importProfile.create({
       data: {
         name: NETLINE_PROFILE_NAME,
@@ -203,9 +218,11 @@ async function main() {
                 }
               : undefined,
           airlineId: airline.id,
-          templateId: template.id,
-          task: {
+          tasks: {
             create: {
+              taskTypeId: baseType.id,
+              templateId: template.id,
+              isPrimary: true,
               status,
               arrivalAgentId: userId(arrivalAgent),
               departureAgentId: userId(departureAgent),

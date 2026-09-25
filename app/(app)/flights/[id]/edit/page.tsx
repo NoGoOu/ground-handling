@@ -28,6 +28,8 @@ export default async function EditFlightPage(props: PageProps<"/flights/[id]/edi
         etdRecordedBy: person,
         arrivalCancelledBy: person,
         departureCancelledBy: person,
+        // The form sets the template of the primary task (5. mérföldkő).
+        tasks: { select: { templateId: true, isPrimary: true } },
       },
     }),
     listTemplateOptions(),
@@ -87,7 +89,7 @@ export default async function EditFlightPage(props: PageProps<"/flights/[id]/edi
         templates={templates}
         submitLabel={messages.form.save}
         initial={{
-          templateId: flight.templateId,
+          templateId: (flight.tasks.find((task) => task.isPrimary) ?? flight.tasks[0])?.templateId ?? "",
           inboundFlightNumber: flight.inboundFlightNumber ?? "",
           outboundFlightNumber: flight.outboundFlightNumber ?? "",
           stand: flight.stand ?? "",

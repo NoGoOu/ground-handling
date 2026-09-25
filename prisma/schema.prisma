@@ -211,20 +211,58 @@ model ShiftSegment {
 }
 
 model Airline {
-  id                String               @id @default(cuid())
-  name              String
-  iataCode          String               @unique
-  /// The template an imported flight of this airline gets (3. mérföldkő).
-  defaultTemplateId String?
-  defaultTemplate   TurnaroundTemplate?  @relation("AirlineDefaultTemplate", fields: [defaultTemplateId], references: [id])
-  templates         TurnaroundTemplate[] @relation("AirlineTemplates")
-  flights           Flight[]
+  id        String               @id @default(cuid())
+  name      String
+  iataCode  String               @unique
+  templates TurnaroundTemplate[] @relation("AirlineTemplates")
+  flights   Flight[]
+  /// The task types its flights get (5. mérföldkő); replaces the default template.
+  taskTypes AirlineTaskType[]
+}
+
+/// A kind of work on a flight, e.g. GOU or HDS (5. mérföldkő). Every flight has
+/// one task per task type of its airline.
+model TaskType {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  code      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  templates TurnaroundTemplate[]
+  airlines  AirlineTaskType[]
+  tasks     Task[]
+}
+
+/// The task types an airline's flights need, each with its template. One of
+/// them is primary: its ATA/ATD records are the flight's when the external
+/// system has none. Changes only reach new flights.
+model AirlineTaskType {
+  id         String             @id @default(cuid())
+  airlineId  String
+  airline    Airline            @relation(fields: [airlineId], references: [id], onDelete: Cascade)
+  taskTypeId String
+  taskType   TaskType           @relation(fields: [taskTypeId], references: [id])
+  templateId String
+  template   TurnaroundTemplate @relation(fields: [templateId], references: [id])
+  active     Boolean            @default(true)
+  isPrimary  Boolean            @default(false)
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
+
+  @@unique([airlineId, taskTypeId])
 }
 
 model TurnaroundTemplate {
-  id                     String  @id @default(cuid())
+  id                     String   @id @default(cuid())
   airlineId              String
-  airline                Airline @relation("AirlineTemplates", fields: [airlineId], references: [id])
+  airline                Airline  @relation("AirlineTemplates", fields: [airlineId], references: [id])
+  /// The task type the template is for (5. mérföldkő).
+  taskTypeId             String
+  taskType               TaskType @relation(fields: [taskTypeId], references: [id])
+  /// The parts the template has; at least one (5. mérföldkő).
+  arrivalPart            Boolean  @default(true)
+  departurePart          Boolean  @default(true)
   name                   String
   minTurnaroundMinutes   Int
   travelMinutes          Int
@@ -233,8 +271,8 @@ model TurnaroundTemplate {
   minBreakMinutes        Int
 
   milestones MilestoneDefinition[]
-  flights    Flight[]
-  defaultFor Airline[]             @relation("AirlineDefaultTemplate")
+  tasks      Task[]
+  usedBy     AirlineTaskType[]
 
   @@unique([airlineId, name])
 }
@@ -257,11 +295,9 @@ model MilestoneDefinition {
 }
 
 model Flight {
-  id                   String             @id @default(cuid())
+  id                   String    @id @default(cuid())
   airlineId            String
-  airline              Airline            @relation(fields: [airlineId], references: [id])
-  templateId           String
-  template             TurnaroundTemplate @relation(fields: [templateId], references: [id])
+  airline              Airline   @relation(fields: [airlineId], references: [id])
   /// The arrival part (flight number, STA, ETA, ATA) and the departure part
   /// (flight number, STD, ETD, ATD) are each optional, but one must exist
   /// (rule 11). Check constraints in the migration keep each part whole.
@@ -321,7 +357,8 @@ model Flight {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  task   Task?
+  /// One task per task type of the airline (5. mérföldkő; until then one).
+  tasks  Task[]
   events FlightEvent[]
 
   @@unique([airlineId, inboundFlightNumber, arrivalFlightDate, origin])
@@ -331,21 +368,33 @@ model Flight {
 }
 
 model Task {
-  id               String     @id @default(cuid())
-  flightId         String     @unique
-  flight           Flight     @relation(fields: [flightId], references: [id], onDelete: Cascade)
-  status           TaskStatus @default(PLANNED)
+  id               String             @id @default(cuid())
+  flightId         String
+  flight           Flight             @relation(fields: [flightId], references: [id], onDelete: Cascade)
+  /// One task per task type on a flight (5. mérföldkő).
+  taskTypeId       String
+  taskType         TaskType           @relation(fields: [taskTypeId], references: [id])
+  /// The task's own template: the one of its task type when the flight was made.
+  templateId       String
+  template         TurnaroundTemplate @relation(fields: [templateId], references: [id])
+  /// The primary task's ATA/ATD records are the flight's when the external
+  /// system has none. Fixed when the task is made.
+  isPrimary        Boolean            @default(false)
+  status           TaskStatus         @default(PLANNED)
   arrivalAgentId   String?
-  arrivalAgent     User?      @relation("ArrivalAgent", fields: [arrivalAgentId], references: [id])
+  arrivalAgent     User?              @relation("ArrivalAgent", fields: [arrivalAgentId], references: [id])
   departureAgentId String?
-  departureAgent   User?      @relation("DepartureAgent", fields: [departureAgentId], references: [id])
+  departureAgent   User?              @relation("DepartureAgent", fields: [departureAgentId], references: [id])
   /// Template parameters and milestone definitions frozen when the task is completed.
   templateSnapshot Json?
-  createdAt        DateTime   @default(now())
-  updatedAt        DateTime   @updatedAt
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
 
   records   MilestoneRecord[]
   planItems PlanItem[]
+
+  @@unique([flightId, taskTypeId])
+  @@index([flightId])
 }
 
 model MilestoneRecord {

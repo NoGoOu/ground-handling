@@ -31,10 +31,12 @@ async function parse(formData: FormData) {
   if (!parsed.success) return { values, state: { errors: fieldErrors(parsed.error), values } };
   const template = await prisma.turnaroundTemplate.findUnique({
     where: { id: parsed.data.templateId },
-    select: { airlineId: true },
+    select: { airlineId: true, taskTypeId: true },
   });
   if (!template) return { values, state: { errors: { templateId: e.template }, values } };
-  return { values, data: { ...parsed.data, airlineId: template.airlineId } };
+  const { templateId, ...flight } = parsed.data;
+  // The template is the task's (5. mérföldkő); the flight gets the airline.
+  return { values, data: { ...flight, airlineId: template.airlineId }, task: { templateId, taskTypeId: template.taskTypeId } };
 }
 
 /** What a dropped part takes with it: its estimate and its cancellation. */
@@ -64,14 +66,14 @@ function listDay(flight: { sta: Date | null; std: Date | null }): string {
   return toLocalDate((flight.sta ?? flight.std)!);
 }
 
-/** Creates the flight together with its task (CLAUDE.md: one task per flight, created automatically). */
+/** Creates the flight together with its task (CLAUDE.md: created automatically). */
 export async function createFlight(_previous: FlightFormState, formData: FormData): Promise<FlightFormState> {
   if (!(await isAllowed())) return { message: messages.errors.forbidden };
   const result = await parse(formData);
   if (!result.data) return result.state;
 
   const flight = await prisma.flight.create({
-    data: { ...result.data, task: { create: {} } },
+    data: { ...result.data, tasks: { create: { ...result.task, isPrimary: true } } },
   });
   redirect(`/flights?date=${listDay(flight)}`);
 }
@@ -85,12 +87,18 @@ export async function updateFlight(
   const existing = await prisma.flight.findUnique({
     where: { id: flightId },
     select: {
-      templateId: true,
       sta: true,
       std: true,
       ata: true,
       atd: true,
-      task: { select: { id: true, records: { select: { milestoneDefinition: { select: { part: true } } } } } },
+      tasks: {
+        select: {
+          id: true,
+          templateId: true,
+          isPrimary: true,
+          records: { select: { milestoneDefinition: { select: { part: true } } } },
+        },
+      },
     },
   });
   if (!existing) return { message: messages.errors.notFound };
@@ -98,11 +106,14 @@ export async function updateFlight(
   const result = await parse(formData);
   if (!result.data) return result.state;
 
+  // The form sets the template of the primary task (the only one until the
+  // task types of the 5. mérföldkő reach the form).
+  const primary = existing.tasks.find((task) => task.isPrimary) ?? existing.tasks[0];
   // Decision 6 (CLAUDE.md): records point at the template's milestones.
-  const records = existing.task?.records ?? [];
-  if (records.length > 0 && result.data.templateId !== existing.templateId) {
+  if (primary && primary.records.length > 0 && result.task.templateId !== primary.templateId) {
     return { errors: { templateId: e.templateLocked }, values: result.values };
   }
+  const records = existing.tasks.flatMap((task) => task.records);
 
   // A part that has already happened (a record, or a time from the external
   // system) cannot be dropped: its milestones would silently disappear.
@@ -125,10 +136,13 @@ export async function updateFlight(
         ...(dropsDeparture ? DROPPED_DEPARTURE : {}),
       },
     });
+    if (primary && primary.templateId !== result.task.templateId) {
+      await tx.task.update({ where: { id: primary.id }, data: result.task });
+    }
     // A dropped part takes its agent with it (a one-sided task has one agent).
-    if (existing.task && (dropsArrival || dropsDeparture)) {
-      await tx.task.update({
-        where: { id: existing.task.id },
+    if (dropsArrival || dropsDeparture) {
+      await tx.task.updateMany({
+        where: { flightId },
         data: {
           ...(dropsArrival ? { arrivalAgentId: null } : {}),
           ...(dropsDeparture ? { departureAgentId: null } : {}),

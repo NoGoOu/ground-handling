@@ -47,7 +47,11 @@ export async function updateAirline(
   return save(airlineId, formData);
 }
 
-/** The template imported flights of this airline get (3. mérföldkő); empty clears it. */
+/**
+ * The template imported flights of this airline get (3. mérföldkő); empty
+ * clears it. Since the task types (5. mérföldkő) this is the template of the
+ * airline's primary task type.
+ */
 export async function setDefaultTemplate(
   airlineId: string,
   _previous: ActionResult | null,
@@ -65,7 +69,25 @@ export async function setDefaultTemplate(
     }
     const airline = await prisma.airline.findUnique({ where: { id: airlineId }, select: { id: true } });
     if (!airline) throw new ActionError(messages.errors.notFound);
-    await prisma.airline.update({ where: { id: airlineId }, data: { defaultTemplateId: templateId || null } });
+    await prisma.$transaction(async (tx) => {
+      if (!templateId) {
+        await tx.airlineTaskType.deleteMany({ where: { airlineId, isPrimary: true } });
+        return;
+      }
+      const { taskTypeId } = await tx.turnaroundTemplate.findUniqueOrThrow({
+        where: { id: templateId },
+        select: { taskTypeId: true },
+      });
+      await tx.airlineTaskType.updateMany({
+        where: { airlineId, isPrimary: true, NOT: { taskTypeId } },
+        data: { isPrimary: false },
+      });
+      await tx.airlineTaskType.upsert({
+        where: { airlineId_taskTypeId: { airlineId, taskTypeId } },
+        create: { airlineId, taskTypeId, templateId, active: true, isPrimary: true },
+        update: { templateId, active: true, isPrimary: true },
+      });
+    });
     refresh();
   });
 }
