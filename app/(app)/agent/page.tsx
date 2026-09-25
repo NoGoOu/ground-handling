@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Fragment } from "react";
-import { CancelBadges, DelayBadge, LateBadge, StatusBadge, TypeBadge } from "@/components/badges";
+import { CancelBadges, DelayBadge, LateBadge, StatusBadge, TaskTypeBadge, TypeBadge } from "@/components/badges";
 import { DateNav } from "@/components/date-nav";
 import { TimeStack } from "@/components/time-stack";
 import type { BoardBlock } from "@/lib/board";
@@ -31,6 +31,7 @@ function TaskCard({ task, user, day }: { task: TaskView; user: CurrentUser; day:
       >
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-xl font-bold">{flightLabel(task.flight)}</span>
+          <TaskTypeBadge taskType={task.taskType} />
           <StatusBadge status={task.status} />
           <TypeBadge type={task.timeline.shape.type} kind={task.timeline.activeKind ?? task.timeline.kind} />
           <LateBadge late={task.late} />
@@ -101,7 +102,7 @@ export default async function AgentPage(props: PageProps<"/agent">) {
   const { date: dateValue } = await props.searchParams;
   const date = dateParam(dateValue);
   const [taskViews, blocks] = await Promise.all([
-    listTaskViewsForDay(date, { OR: [{ arrivalAgentId: user.id }, { departureAgentId: user.id }] }),
+    listTaskViewsForDay(date, (view) => view.arrivalAgent?.id === user.id || view.departureAgent?.id === user.id),
     listAgentBlocks(user.id, date),
   ]);
   const tasks = taskViews.filter((task) => canViewTask(user, taskAssignment(task)));

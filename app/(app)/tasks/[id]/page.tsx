@@ -7,11 +7,12 @@ import {
   LateBadge,
   MissingBadge,
   StatusBadge,
+  TaskTypeBadge,
   TypeBadge,
 } from "@/components/badges";
 import { EstimateNote } from "@/components/estimate-note";
 import { TimeStack } from "@/components/time-stack";
-import { getTaskView, taskAssignment, type TaskView } from "@/lib/data/tasks";
+import { getTaskView, listFlightTasks, taskAssignment, type TaskView } from "@/lib/data/tasks";
 import { flightLabel } from "@/lib/flight";
 import { dayAnchors } from "@/lib/flight-day";
 import { messages } from "@/lib/messages";
@@ -41,7 +42,16 @@ interface ViewContext {
   now: Date;
 }
 
-function Header({ task, day }: { task: TaskView; day: string }) {
+function Header({
+  task,
+  day,
+  siblings,
+}: {
+  task: TaskView;
+  day: string;
+  /** The flight's other tasks the user may open (5. mérföldkő). */
+  siblings: { id: string; isPrimary: boolean; taskType: { name: string; code: string } }[];
+}) {
   const { flight, timeline } = task;
   // Rule 11: a one-sided flight shows only the part it has.
   const hasArrival = hasPart(timeline.kind, "ARRIVAL_PART");
@@ -54,6 +64,7 @@ function Header({ task, day }: { task: TaskView; day: string }) {
     <section className="flex flex-col gap-3 rounded-xl border border-neutral-200 bg-white p-4">
       <div className="flex flex-wrap items-center gap-2">
         <h1 className="text-2xl font-bold">{flightLabel(flight)}</h1>
+        <TaskTypeBadge taskType={task.taskType} />
         <StatusBadge status={task.status} />
         <TypeBadge type={timeline.shape.type} kind={timeline.activeKind ?? timeline.kind} />
         <LateBadge late={task.late} />
@@ -62,8 +73,21 @@ function Header({ task, day }: { task: TaskView; day: string }) {
         <DelayBadge minutes={timeline.delayMinutes} />
       </div>
       <p className="text-neutral-600">
-        {flight.airline.name} · {fmt(t.stand, { stand: flight.stand ?? messages.flightForm.none })}
+        {flight.airline.name} · {fmt(t.stand, { stand: flight.stand ?? messages.flightForm.none })} ·{" "}
+        {fmt(t.taskType, { name: task.taskType.name })}
+        {task.isPrimary && siblings.length > 0 && ` (${t.primaryMark})`}
       </p>
+      {siblings.length > 0 && (
+        <p className="flex flex-wrap items-center gap-2 text-sm text-neutral-600">
+          {t.otherTasks}
+          {siblings.map((sibling) => (
+            <Link key={sibling.id} href={`/tasks/${sibling.id}`} className="inline-flex items-center gap-1 hover:underline">
+              <TaskTypeBadge taskType={sibling.taskType} />
+              {sibling.isPrimary && <span className="text-xs">{t.primaryMark}</span>}
+            </Link>
+          ))}
+        </p>
+      )}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {hasArrival && (
           <div className={flight.arrivalCancelled ? "line-through opacity-60" : ""}>
@@ -111,16 +135,26 @@ function ActualTimes({ row, day }: { row: TimelineRow; day: string }) {
   if (!isSystemRow) {
     return <span className="font-semibold tabular-nums">{row.actual ? formatTimeOnDay(row.actual, day) : "–"}</span>;
   }
-  // ATA / ATD: the external system's value and the agent's own record side by side.
+  // ATA / ATD: the external system's value and the agent's own record side by
+  // side; on a task that is not the primary one also the primary task's record,
+  // which is the flight's when the system has none (5. mérföldkő).
   return (
-    <span className="flex flex-wrap gap-x-3 tabular-nums">
+    <span className="flex flex-wrap gap-x-3 tabular-nums" title={row.fromFlight ? t.fromFlightNote : undefined}>
       <span>
         <span className="mr-1 text-xs text-neutral-500">{t.system}</span>
         <span className="font-semibold">{row.systemValue ? formatTimeOnDay(row.systemValue, day) : "–"}</span>
       </span>
+      {row.fromFlight && (
+        <span>
+          <span className="mr-1 text-xs text-neutral-500">{t.primaryTask}</span>
+          <span className={row.systemValue ? "" : "font-semibold"}>
+            {row.primaryValue ? formatTimeOnDay(row.primaryValue, day) : "–"}
+          </span>
+        </span>
+      )}
       <span>
         <span className="mr-1 text-xs text-neutral-500">{t.agentOwn}</span>
-        <span className={row.systemValue ? "" : "font-semibold"}>
+        <span className={row.systemValue || row.fromFlight ? "text-neutral-500" : "font-semibold"}>
           {row.recorded ? formatTimeOnDay(row.recorded, day) : "–"}
         </span>
       </span>
@@ -240,6 +274,12 @@ export default async function TaskPage(props: PageProps<"/tasks/[id]">) {
   const { id } = await props.params;
   const task = await getTaskView(id);
   if (!task || !canViewTask(user, taskAssignment(task))) notFound();
+  const siblings = (await listFlightTasks(task.flight.id)).filter(
+    (sibling) =>
+      sibling.id !== task.id &&
+      // The permission rules on the stored agents; a quick turnaround's departure follows the arrival one.
+      canViewTask(user, { arrivalAgentId: sibling.arrivalAgentId, departureAgentId: sibling.departureAgentId, type: null }),
+  );
 
   // The day of the list the task sits in: its arrival, or its departure when it has no arrival.
   const day = toLocalDate(dayAnchors(task.timeline).order);
@@ -258,7 +298,7 @@ export default async function TaskPage(props: PageProps<"/tasks/[id]">) {
           </Link>
         )}
       </div>
-      <Header task={task} day={ctx.day} />
+      <Header task={task} day={ctx.day} siblings={siblings} />
       {canChangeTaskStatus(user, taskAssignment(task)) && (
         <section className="flex flex-col gap-2 rounded-xl border border-neutral-200 bg-white p-4">
           <h2 className="font-semibold">{t.statusTitle}</h2>

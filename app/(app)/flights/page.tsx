@@ -1,8 +1,16 @@
 import Link from "next/link";
-import { CancelBadges, DelayBadge, LateBadge, MissingBadge, StatusBadge, TypeBadge } from "@/components/badges";
+import {
+  CancelBadges,
+  DelayBadge,
+  LateBadge,
+  MissingBadge,
+  StatusBadge,
+  TaskTypeBadge,
+  TypeBadge,
+} from "@/components/badges";
 import { DateNav } from "@/components/date-nav";
 import { TimeStack } from "@/components/time-stack";
-import { listTaskViewsForDay, type TaskView } from "@/lib/data/tasks";
+import { groupByFlight, listTaskViewsForDay, type TaskView } from "@/lib/data/tasks";
 import { listAgentOptions } from "@/lib/data/users";
 import { flightLabel } from "@/lib/flight";
 import { messages } from "@/lib/messages";
@@ -38,6 +46,8 @@ export default async function FlightsPage(props: PageProps<"/flights">) {
   const { date: dateValue } = await props.searchParams;
   const date = dateParam(dateValue);
   const tasks = await listTaskViewsForDay(date);
+  // The list is per flight; its tasks come together, the primary one first (5. mérföldkő).
+  const flights = groupByFlight(tasks);
   const agents = await listAgentOptions(tasks.flatMap((task) => [task.arrivalAgent?.id ?? null, task.departureAgent?.id ?? null]));
 
   return (
@@ -45,7 +55,7 @@ export default async function FlightsPage(props: PageProps<"/flights">) {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">{messages.pages.flights}</h1>
-          <p className="text-sm text-neutral-600">{fmt(t.count, { count: tasks.length })}</p>
+          <p className="text-sm text-neutral-600">{fmt(t.count, { count: flights.length })}</p>
         </div>
         <Link href="/flights/new" className="btn btn-primary">
           {t.newFlight}
@@ -53,7 +63,7 @@ export default async function FlightsPage(props: PageProps<"/flights">) {
       </div>
       <DateNav basePath="/flights" date={date} today={toLocalDate(new Date())} />
 
-      {tasks.length === 0 ? (
+      {flights.length === 0 ? (
         <p className="rounded-lg border border-dashed border-neutral-300 p-8 text-center text-neutral-600">
           {t.empty}
         </p>
@@ -66,68 +76,72 @@ export default async function FlightsPage(props: PageProps<"/flights">) {
                 <th className="px-3 py-2">{t.columns.stand}</th>
                 <th className="px-3 py-2">{t.columns.arrival}</th>
                 <th className="px-3 py-2">{t.columns.departure}</th>
-                <th className="px-3 py-2">{t.columns.type}</th>
-                <th className="px-3 py-2">{t.columns.status}</th>
-                <th className="px-3 py-2">{t.columns.agents}</th>
+                <th className="px-3 py-2">{t.columns.tasks}</th>
                 <th className="px-3 py-2">
                   <span className="sr-only">{t.edit}</span>
                 </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-100">
-              {tasks.map((task) => (
-                <tr key={task.id} className="align-top">
+              {flights.map(({ primary, tasks: flightTasks }) => (
+                <tr key={primary.flight.id} className="align-top">
                   <td className="px-3 py-2">
                     <Link
-                      href={`/tasks/${task.id}`}
+                      href={`/tasks/${primary.id}`}
                       className={`font-semibold text-sky-700 hover:underline ${
-                        task.timeline.activeKind === null ? "line-through" : ""
+                        primary.flight.arrivalCancelled && primary.flight.departureCancelled ? "line-through" : ""
                       }`}
                     >
-                      {flightLabel(task.flight)}
+                      {flightLabel(primary.flight)}
                     </Link>
-                    <div className="text-xs text-neutral-500">{task.flight.airline.name}</div>
+                    <div className="text-xs text-neutral-500">{primary.flight.airline.name}</div>
                     <div className="mt-1 flex flex-wrap gap-1">
-                      <LateBadge late={task.late} />
-                      <CancelBadges arrival={task.flight.arrivalCancelled} departure={task.flight.departureCancelled} />
-                      <MissingBadge arrival={task.flight.arrivalMissing} departure={task.flight.departureMissing} />
+                      <LateBadge late={primary.late} />
+                      <CancelBadges arrival={primary.flight.arrivalCancelled} departure={primary.flight.departureCancelled} />
+                      <MissingBadge arrival={primary.flight.arrivalMissing} departure={primary.flight.departureMissing} />
                     </div>
                   </td>
-                  <td className="px-3 py-2 font-medium">{task.flight.stand ?? t.noStand}</td>
-                  <td className={`px-3 py-2 ${task.flight.arrivalCancelled ? "line-through opacity-60" : ""}`}>
+                  <td className="px-3 py-2 font-medium">{primary.flight.stand ?? t.noStand}</td>
+                  <td className={`px-3 py-2 ${primary.flight.arrivalCancelled ? "line-through opacity-60" : ""}`}>
                     <TimeStack
                       day={date}
                       entries={[
-                        { label: tt.sta, time: task.flight.sta },
-                        { label: tt.eta, time: task.flight.eta },
-                        { label: tt.ata, time: task.timeline.effectiveAta, emphasis: true },
+                        { label: tt.sta, time: primary.flight.sta },
+                        { label: tt.eta, time: primary.flight.eta },
+                        { label: tt.ata, time: primary.timeline.effectiveAta, emphasis: true },
                       ]}
                     />
                   </td>
-                  <td className={`px-3 py-2 ${task.flight.departureCancelled ? "line-through opacity-60" : ""}`}>
+                  <td className={`px-3 py-2 ${primary.flight.departureCancelled ? "line-through opacity-60" : ""}`}>
                     <TimeStack
                       day={date}
                       entries={[
-                        { label: tt.std, time: task.flight.std },
-                        { label: tt.etd, time: task.flight.etd },
-                        { label: tt.atd, time: task.timeline.effectiveAtd, emphasis: true },
+                        { label: tt.std, time: primary.flight.std },
+                        { label: tt.etd, time: primary.flight.etd },
+                        { label: tt.atd, time: primary.timeline.effectiveAtd, emphasis: true },
                       ]}
                     />
                     <div className="mt-1">
-                      <DelayBadge minutes={task.timeline.delayMinutes} />
+                      <DelayBadge minutes={primary.timeline.delayMinutes} />
                     </div>
                   </td>
                   <td className="px-3 py-2">
-                    <TypeBadge type={task.timeline.shape.type} kind={task.timeline.activeKind ?? task.timeline.kind} />
-                  </td>
-                  <td className="px-3 py-2">
-                    <StatusBadge status={task.status} />
-                  </td>
-                  <td className="px-3 py-2">
-                    <AgentsCell task={task} agents={agents} />
+                    {/* One line per task (5. mérföldkő): type, turnaround type, status, agents. */}
+                    <ul className="flex flex-col gap-2">
+                      {flightTasks.map((task) => (
+                        <li key={task.id} className="flex flex-wrap items-start gap-2">
+                          <Link href={`/tasks/${task.id}`} title={t.openTask} className="flex flex-wrap items-center gap-1">
+                            <TaskTypeBadge taskType={task.taskType} />
+                            <TypeBadge type={task.timeline.shape.type} kind={task.timeline.activeKind ?? task.timeline.kind} />
+                            <StatusBadge status={task.status} />
+                          </Link>
+                          <AgentsCell task={task} agents={agents} />
+                        </li>
+                      ))}
+                    </ul>
                   </td>
                   <td className="px-3 py-2 text-right">
-                    <Link href={`/flights/${task.flight.id}/edit`} className="text-sky-700 hover:underline">
+                    <Link href={`/flights/${primary.flight.id}/edit`} className="text-sky-700 hover:underline">
                       {t.edit}
                     </Link>
                   </td>

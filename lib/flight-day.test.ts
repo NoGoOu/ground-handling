@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DEMO_MILESTONES, DEMO_TEMPLATE_PARAMS } from "@/lib/demo-template";
-import { candidateWindow, dayAnchors, forDay, showsOnDay, type DayAnchors } from "@/lib/flight-day";
+import { candidateWindow, dayAnchors, forDay, showsOnDay, tasksForDay, type DayAnchors } from "@/lib/flight-day";
 import { localDayRange, parseLocalDateTime } from "@/lib/time";
 import { computeTimeline, MAX_TEMPLATE_MINUTES, type FlightTimes, type MilestoneDef } from "@/lib/turnaround";
 
@@ -139,5 +139,39 @@ describe("the database window", () => {
     const today = day("2026-09-24");
     expect(showsOnDay(anchors, today)).toBe(true);
     expect(flight.sta.getTime()).toBeGreaterThanOrEqual(candidateWindow(today).start.getTime());
+  });
+});
+
+describe("the day of a flight with several tasks (5. mérföldkő)", () => {
+  const day = { start: new Date("2026-09-24T22:00:00Z"), end: new Date("2026-09-25T22:00:00Z") };
+  const anchors = (arrival: string, departure: string) => ({
+    arrival: new Date(arrival),
+    departure: new Date(departure),
+    order: new Date(arrival),
+  });
+  const task = (flightId: string, code: string, isPrimary: boolean, arrival: string, departure: string) => ({
+    id: `${flightId}-${code}`,
+    key: { flightId, isPrimary, sortKey: code },
+    anchors: anchors(arrival, departure),
+  });
+  const ids = (list: { id: string }[]) => list.map((t) => t.id);
+
+  it("follows the primary task and keeps a flight's tasks together, the primary one first", () => {
+    const tasks = [
+      task("b", "HDS", false, "2026-09-25T06:00:00Z", "2026-09-25T07:00:00Z"),
+      task("a", "ALAP", true, "2026-09-25T08:00:00Z", "2026-09-25T09:00:00Z"),
+      task("b", "GOU", true, "2026-09-25T06:00:00Z", "2026-09-25T06:30:00Z"),
+      task("a", "BAG", false, "2026-09-25T08:00:00Z", "2026-09-25T09:10:00Z"),
+    ];
+    expect(ids(tasksForDay(tasks, (t) => t.key, (t) => t.anchors, day))).toEqual(["b-GOU", "b-HDS", "a-ALAP", "a-BAG"]);
+  });
+
+  it("shows no task of a flight whose primary task is on another day", () => {
+    // The other task's departure alone would fall on the day: the flight does not.
+    const tasks = [
+      task("c", "GOU", true, "2026-09-24T18:00:00Z", "2026-09-24T19:00:00Z"),
+      task("c", "HDS", false, "2026-09-24T18:00:00Z", "2026-09-24T22:30:00Z"),
+    ];
+    expect(tasksForDay(tasks, (t) => t.key, (t) => t.anchors, day)).toEqual([]);
   });
 });

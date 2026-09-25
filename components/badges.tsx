@@ -86,3 +86,12 @@ export function MissingBadge({ arrival, departure }: { arrival: boolean; departu
     </span>
   );
 }
+
+/** The task type of a task (5. mérföldkő): its short code, the name on hover. */
+export function TaskTypeBadge({ taskType }: { taskType: { name: string; code: string } }) {
+  return (
+    <span className={`${base} bg-violet-100 font-mono text-violet-900`} title={taskType.name}>
+      {taskType.code}
+    </span>
+  );
+}

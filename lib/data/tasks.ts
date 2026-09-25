@@ -2,7 +2,7 @@ import type { Prisma } from "@/generated/prisma/client";
 import type { EstimateSource, TaskStatus } from "@/generated/prisma/enums";
 import { prisma } from "@/lib/db";
 import { lateness, type Lateness } from "@/lib/flight";
-import { candidateWindow, dayAnchors, forDay } from "@/lib/flight-day";
+import { candidateWindow, dayAnchors, tasksForDay } from "@/lib/flight-day";
 import { parseTemplateSnapshot } from "@/lib/snapshot";
 import { getSettings } from "@/lib/settings";
 import { localDayRange } from "@/lib/time";
@@ -253,11 +253,15 @@ export async function getTaskView(id: string): Promise<TaskView | null> {
 /**
  * Turnarounds that show on the given Budapest day (decision 1): the day their
  * arrival anchor or effective departure falls on, ordered by the arrival anchor.
- * The database fetches a wider set by the stored times; forDay decides.
+ * With several tasks per flight (5. mérföldkő) the day and the order are the
+ * flight's, from its primary task, and a flight's tasks come together. The
+ * database fetches a wider set by the stored times; tasksForDay decides.
+ * `keep` narrows the result after the day is decided, so a flight still counts
+ * by its primary task when that is not among the ones kept.
  */
 export async function listTaskViewsForDay(
   localDate: string,
-  extraWhere: Prisma.TaskWhereInput = {},
+  keep: (view: TaskView) => boolean = () => true,
 ): Promise<TaskView[]> {
   const day = localDayRange(localDate);
   const window = candidateWindow(day);
@@ -266,33 +270,67 @@ export async function listTaskViewsForDay(
   const tasks = await prisma.task.findMany({
     where: {
       AND: [
-        extraWhere,
         {
-          OR: [
-            {
-              flight: {
-                OR: [
-                  { sta: inWindow },
-                  { eta: inWindow },
-                  { ata: inWindow },
-                  { std: inWindow },
-                  { etd: inWindow },
-                  { atd: inWindow },
-                ],
+          // Every task of a flight comes along: the day is the flight's.
+          flight: {
+            OR: [
+              { sta: inWindow },
+              { eta: inWindow },
+              { ata: inWindow },
+              { std: inWindow },
+              { etd: inWindow },
+              { atd: inWindow },
+              // An agent's ATA or ATD record can be the effective actual (rule 9).
+              {
+                tasks: {
+                  some: {
+                    records: {
+                      some: { actualTime: inWindow, milestoneDefinition: { code: { in: [ATA_CODE, ATD_CODE] } } },
+                    },
+                  },
+                },
               },
-            },
-            // An agent's ATA or ATD record can be the effective actual (rule 9).
-            {
-              records: {
-                some: { actualTime: inWindow, milestoneDefinition: { code: { in: [ATA_CODE, ATD_CODE] } } },
-              },
-            },
-          ],
+            ],
+          },
         },
       ],
     },
     include: taskInclude,
   });
   const views = tasks.map((task) => toTaskView(task, settings.deviationThresholds));
-  return forDay(views, (view) => dayAnchors(view.timeline), day);
+  return tasksForDay(
+    views,
+    (view) => ({ flightId: view.flight.id, isPrimary: view.isPrimary, sortKey: view.taskType.code }),
+    (view) => dayAnchors(view.timeline),
+    day,
+  ).filter(keep);
+}
+
+/** The other tasks of a flight (5. mérföldkő), with what the permission rules need. */
+export async function listFlightTasks(flightId: string) {
+  const tasks = await prisma.task.findMany({
+    where: { flightId },
+    select: {
+      id: true,
+      isPrimary: true,
+      arrivalAgentId: true,
+      departureAgentId: true,
+      taskType: { select: { name: true, code: true } },
+    },
+  });
+  return tasks.sort((a, b) => Number(b.isPrimary) - Number(a.isPrimary) || a.taskType.code.localeCompare(b.taskType.code));
+}
+
+/**
+ * The day's tasks per flight, in list order (5. mérföldkő). listTaskViewsForDay
+ * keeps a flight's tasks together with the primary one first, so it leads.
+ */
+export function groupByFlight(tasks: readonly TaskView[]): { primary: TaskView; tasks: TaskView[] }[] {
+  const groups: { primary: TaskView; tasks: TaskView[] }[] = [];
+  for (const task of tasks) {
+    const last = groups.at(-1);
+    if (last && last.primary.flight.id === task.flight.id) last.tasks.push(task);
+    else groups.push({ primary: task, tasks: [task] });
+  }
+  return groups;
 }

@@ -56,3 +56,39 @@ export function forDay<T>(items: readonly T[], anchorsOf: (item: T) => DayAnchor
 export function candidateWindow(day: TimeWindow): TimeWindow {
   return { start: addMinutes(day.start, -MAX_TEMPLATE_MINUTES), end: day.end };
 }
+
+/** What the flight-level day filter needs of a task (5. mérföldkő). */
+export interface FlightTaskKey {
+  flightId: string;
+  isPrimary: boolean;
+  /** Orders the tasks of one flight after the primary one, e.g. the task type code. */
+  sortKey: string;
+}
+
+/**
+ * Several tasks per flight (5. mérföldkő): the day and the order are the
+ * flight's, taken from its primary task, and all the tasks of a flight show
+ * together, the primary one first. A flight without a primary task leads with
+ * its first task by sort key.
+ */
+export function tasksForDay<T>(
+  tasks: readonly T[],
+  keyOf: (task: T) => FlightTaskKey,
+  anchorsOf: (task: T) => DayAnchors,
+  day: TimeWindow,
+): T[] {
+  const byFlight = new Map<string, T[]>();
+  for (const task of tasks) {
+    const list = byFlight.get(keyOf(task).flightId) ?? [];
+    list.push(task);
+    byFlight.set(keyOf(task).flightId, list);
+  }
+  const ordered = [...byFlight.values()].map((list) =>
+    [...list].sort((a, b) => {
+      const [ka, kb] = [keyOf(a), keyOf(b)];
+      if (ka.isPrimary !== kb.isPrimary) return ka.isPrimary ? -1 : 1;
+      return ka.sortKey < kb.sortKey ? -1 : ka.sortKey > kb.sortKey ? 1 : 0;
+    }),
+  );
+  return forDay(ordered, (list) => anchorsOf(list[0]), day).flat();
+}
