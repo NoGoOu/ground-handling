@@ -4,23 +4,27 @@
 
 ## Mi készült el
 
-- 5. mérföldkő, 7. lépés: tervező taskonként. Minden task ablaka bemenet, az ablak ismeri a járatát; új szabály (`SAME_FLIGHT`): ugyanannak a járatnak két különböző taskja nem kerül egy pozícióba (egy task két ablaka igen). Az algoritmus ezt mindig betartja (mohó lépés és kiegyenlítés), kézi áthúzásnál figyelmeztetés; a terv dobozain a feladattípus kódja. A kiosztás átvétele taskonként történik, és a sávos nézet új figyelmeztetése utána is megjelenik. Tesztekkel; próba: két feladattípussal a 2024. 09. 10-i terv 4 pozíciójában egyik járat két taskja sem került együvé.
-- 5. mérföldkő, 6. lépés: sávos nézet és kiosztás taskonként. A dobozokon a feladattípus kódja; új ütközés-figyelmeztetés, ha ugyanaz az ügynök ugyanannak a járatnak két különböző feladattípusát kapja (egy task két része ugyanannál az ügynöknél rendben van). A napi lista kiosztása is figyelmeztet erre; mindkettő csak figyelmeztet, a mentés megtörténik (`lib/board.ts`, `lib/task-types.ts`, tesztekkel).
-- 5. mérföldkő, 5. lépés: napi lista, task nézet, ügynök nézet több taskkal (`67198c0`). A napszűrés járatszintű: a nap és a sorrend az elsődleges task szerint, a járat taskjai együtt, az elsődleges elöl (`tasksForDay`, tesztekkel). A napi lista járatonként egy sor, benne taskonként a feladattípus, a forduló típusa, a státusz és a kiosztás. A task nézetben a feladattípus, az elsődleges jelölés, a járat többi taskja (amit a felhasználó láthat), és a nem elsődleges task ATA/ATD sorában a rendszerérték, az elsődleges task rögzítése és a saját (nem hatályos) rögzítés. Az ügynök nézet kártyáin a feladattípus.
-- 5. mérföldkő, 1–4. lépés: adatmodell és migráció („Alap” típus, a sablon a taskon), taskonkénti időszámítás és az elsődleges task ATA/ATD-szabálya, taskok a légitársaság aktív feladattípusai szerint (űrlap és import), admin (feladattípusok, a légitársaság feladattípusai, egy- és kétrészes sablonok).
-- 4. mérföldkő, utómunka: „Kiosztás átvétele” a teljes tervre is.
+- **5. mérföldkő (feladattípusok, több task járatonként): kész, mind a 8 lépés.**
+- 1. lépés: `TaskType`, `AirlineTaskType` (sablon, aktív, elsődleges), sablon–feladattípus és a sablon részei, a task saját típussal, sablonnal és elsődleges jelöléssel. A migráció mindent az „Alap” típus alá tett, a viselkedés nem változott.
+- 2. lépés: időszámítás taskonként (a task részei a sablon és a járat közös részei, a horgonyok a járatból); a járat ATA/ATD-je a rendszerérték, különben az elsődleges task rögzítése.
+- 3–4. lépés: új járat (űrlap és import) a légitársaság minden aktív típusához kap taskot; admin: feladattípusok, a légitársaság feladattípusai, egy- és kétrészes sablonok.
+- 5–7. lépés: napi lista járatonként a taskokkal, task és ügynök nézet a típussal; sávos nézet a típus kódjával és figyelmeztetéssel, ha egy ember egy járat két típusát kapja; tervező: egy járat két különböző taskja nem kerül egy pozícióba.
+- 8. lépés: seed – a demo légitársaságnál egy második, helyőrző feladattípus (HLY, csak indulási helyőrző sablonnal); README.
+- 4. mérföldkő utómunkája: „Kiosztás átvétele” a teljes tervre is.
 
 ## Állapot
 
-- Utolsó commit: `a25db39` – feat: warn when one agent gets two task types of a flight (a 7. lépés commitja ezt követi)
+- Utolsó commit: `cc421f4` – feat: plan every task and keep a flight's task types apart (a 8. lépés commitja ezt követi)
 - Tesztek: `npm test` → 395 teszt, mind zöld
-- **Módosított meglévő teszt:** `lib/validation/flight.test.ts` két sora (3. lépés) — a járat űrlapjának mezője a jóváhagyott terv szerint sablon helyett légitársaság lett (`templateId` → `airlineId`); a teszt ugyanazt ellenőrzi az új mezővel. Más meglévő teszt nem változott.
+- **Módosított meglévő teszt:** `lib/validation/flight.test.ts` két sora (3. lépés): a járat űrlapjának mezője a jóváhagyott terv szerint sablon helyett légitársaság lett (`templateId` → `airlineId`), a teszt ugyanazt ellenőrzi az új mezővel. Más meglévő teszt nem változott; az 1. lépés migrációja után minden meglévő teszt változtatás nélkül zöld volt.
 - Lint és build: `npm run lint` hibátlan, `npx tsc --noEmit` tiszta, `npm run build` sikeres
-- Próbák az adatbázison: a migráció után mind az 56 task a járata sablonját kapta, séma-eltérés nincs; két feladattípussal az import 50 járatot és 100 taskot hozott létre, az újraimport a taskokhoz nem nyúlt; az űrlap szerint felvett járat mindkét taskja együtt jelenik meg, a csak indulási task a járat ATA-ját az elsődleges task rögzítéséből mutatja. A felületet a böngészőben nem néztem meg (bejelentkezés kellene).
+- Tiszta indítás (`docker compose down -v`, `up --build`): mind a 11 migráció lefut, a seed 6 járatot hoz létre 12 taskkal (6 elsődleges „Alap”, 6 „Helyőrző”).
+- Próbák az adatbázison: a migráció után mind az 56 task a járata sablonját kapta, séma-eltérés nincs. Két feladattípussal az import 50 járatot és 100 taskot hoz létre, az újraimport a taskokhoz nem nyúl. A napi lista, az elsődleges ATA-szabály és a terv (egy pozícióban sincs egy járat két taskja) működik. A felületet a böngészőben nem néztem meg (bejelentkezés kellene).
 
 ## Eltérések a CLAUDE.md-től
 
-- A CLAUDE.md adatmodellje a Flightnál még „template”-et említ; a jóváhagyott terv szerint a sablon a taskra költözött.
+- A CLAUDE.md adatmodellje a Flightnál még „template”-et említ; a jóváhagyott terv szerint a sablon a taskra költözött (`Flight.templateId` megszűnt), és a járat űrlapján légitársaságot választunk.
+- A jóváhagyott tervben elfogadott értelmezések: a légitársaság csak rögzítés nélkül módosítható, ilyenkor a taskok újra létrejönnek; az elsődleges jelölés a taskon is tárolódik; a járatszintű megjelenítés (napszűrés, sorrend, „Késik”, késés) az elsődleges task szerint; a közös rész nélküli task „nincs teendő”; a sablon részei a létrehozáskor dőlnek el; feladattípus nem törölhető.
 
 ## Kérdések a tervezéshez
 
@@ -28,4 +32,4 @@
 
 ## Következő lépés
 
-- 5. mérföldkő, 8. lépés: seed (második, helyőrző feladattípus), README, STATUS.md.
+- Az 5. mérföldkő kész. A következő (6.: képzések és jogosítások, vagy 7.: üzenetek) sorrendjét és lépéstervét a tervezés adja. A valós GOU- és HDS-sablonok felvétele a projekt gazdájánál van.

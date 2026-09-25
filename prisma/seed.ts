@@ -15,6 +15,9 @@ import {
   SEED_AIRLINE,
   SEED_IMPORT_AIRLINE,
   SEED_MILESTONES,
+  SEED_PLACEHOLDER_MILESTONES,
+  SEED_PLACEHOLDER_TASK_TYPE,
+  SEED_PLACEHOLDER_TEMPLATE,
   SEED_TEMPLATE,
   SEED_TEAM,
   SEED_USERS,
@@ -115,6 +118,19 @@ async function main() {
     const milestoneId = new Map(template.milestones.map((m) => [m.code, m.id]));
     await tx.airlineTaskType.create({
       data: { airlineId: airline.id, taskTypeId: baseType.id, templateId: template.id, isPrimary: true },
+    });
+    // A second, placeholder task type, so several tasks per flight can be tried.
+    const placeholderType = await tx.taskType.create({ data: SEED_PLACEHOLDER_TASK_TYPE });
+    const placeholderTemplate = await tx.turnaroundTemplate.create({
+      data: {
+        ...SEED_PLACEHOLDER_TEMPLATE,
+        airlineId: airline.id,
+        taskTypeId: placeholderType.id,
+        milestones: { create: SEED_PLACEHOLDER_MILESTONES },
+      },
+    });
+    await tx.airlineTaskType.create({
+      data: { airlineId: airline.id, taskTypeId: placeholderType.id, templateId: placeholderTemplate.id },
     });
 
     // The schedule import sample works right away: Ryanair with a copy of the
@@ -219,22 +235,26 @@ async function main() {
               : undefined,
           airlineId: airline.id,
           tasks: {
-            create: {
-              taskTypeId: baseType.id,
-              templateId: template.id,
-              isPrimary: true,
-              status,
-              arrivalAgentId: userId(arrivalAgent),
-              departureAgentId: userId(departureAgent),
-              templateSnapshot: status === "COMPLETED" ? templateSnapshotJson(template) : undefined,
-              records: {
-                create: records.map((r) => ({
-                  milestoneDefinitionId: milestoneId.get(r.code)!,
-                  actualTime: r.time,
-                  recordedById: userId(r.by)!,
-                })),
+            create: [
+              {
+                taskTypeId: baseType.id,
+                templateId: template.id,
+                isPrimary: true,
+                status,
+                arrivalAgentId: userId(arrivalAgent),
+                departureAgentId: userId(departureAgent),
+                templateSnapshot: status === "COMPLETED" ? templateSnapshotJson(template) : undefined,
+                records: {
+                  create: records.map((r) => ({
+                    milestoneDefinitionId: milestoneId.get(r.code)!,
+                    actualTime: r.time,
+                    recordedById: userId(r.by)!,
+                  })),
+                },
               },
-            },
+              // Every active task type of the airline gets a task (5. mérföldkő).
+              { taskTypeId: placeholderType.id, templateId: placeholderTemplate.id },
+            ],
           },
         },
       });

@@ -44,6 +44,16 @@ Nyílt forráskódú webalkalmazás repülőtéri földi kiszolgálás (ground h
 - **Nevek és tervezet**: pozíciónként egy ügynök, majd „Mentés a tervezetbe”: pozíciónként egy műszak a beosztás tervezetében, egyetlen operatív résszel. Publikált napra nem ír; ha egy műszak átfedne az ügynök egy meglévő tervezet-műszakjával, semmi nem íródik. Az újramentés a terv korábbi, még tervezetben lévő műszakjait cseréli.
 - **Kiosztás átvétele** (task-kiosztási jogosultsággal, alapból Műszakvezető): a terv szerinti ügynök a nap taskjainak csak a még kiosztatlan részeire kerül; a már kiosztottakat kihagyja és listázza, gyors fordulónál mindkét rész ugyanahhoz az ügynökhöz kerül. A szokásos ütközés-figyelmeztetések jelennek meg.
 
+**5. mérföldkő – feladattípusok (több task járatonként)**
+
+- **Feladattípus** (`Admin → Feladattípusok`): a járaton végzett munka fajtája névvel és rövid kóddal (pl. GOU, HDS). Egy járathoz feladattípusonként egy task tartozik; ezeket különböző emberek végzik, saját sablonnal és időablakkal.
+- **A légitársaság feladattípusai** (`Admin → Légitársaságok és sablonok`): típusonként a használt sablon, aktív jelölés és egy elsődleges típus. Az új járatok (kézzel és importtal is) minden aktív típushoz kapnak egy taskot; a beállítás későbbi módosítása csak az új járatokat érinti.
+- **Egy- és kétrészes sablon:** a sablon feladattípushoz tartozik, és állhat érkezési részből, indulási részből vagy mindkettőből; az ATA az érkezési, az ATD az indulási résszel kötelező. A task részei a sablonja és a járata közös részei, a horgonyok a járatból számolnak.
+- **Elsődleges task:** ha a külső rendszerből nincs ATA/ATD, az elsődleges task rögzítése a járat értéke; a többi task ATA/ATD sora ezt mutatja, a saját rögzítés ott nem hatályos.
+- **Megjelenítés:** a napi listán járatonként a taskok típussal, ügynökkel és státusszal (a nap és a sorrend az elsődleges task szerint); a task és az ügynök nézetben a feladattípus; a sávos nézet és a terv dobozain a feladattípus kódja.
+- **Különböző emberek:** ha ugyanaz az ember ugyanazon a járaton két feladattípust kapna, a kiosztás és a sávos nézet figyelmeztet (de ment). A tervező ugyanannak a járatnak két különböző taskját nem teszi egy pozícióba.
+- **Migráció:** a korábbi adatok az „Alap” feladattípus alá kerültek, a viselkedésük nem változott.
+
 ## Indítás Docker Compose-zal
 
 Követelmény: [Docker Desktop](https://www.docker.com/products/docker-desktop/) (Windows / macOS) vagy Docker Engine Compose-zal (Linux).
@@ -59,6 +69,8 @@ Az első indításkor a konténer létrehozza az adatbázis-táblákat, és bet�
 ### Demo felhasználók
 
 Mindegyik jelszava: `demo1234`
+
+A demo légitársaságnak két feladattípusa van: az elsődleges „Alap” (a demo sablonnal) és egy „Helyőrző” (HLY, csak indulási részből álló helyőrző sablonnal), így minden demo járatnak két taskja van. A csak érkező járat helyőrző taskjának nincs teendője. A valós GOU- és HDS-sablonokat a projekt gazdája adja meg.
 
 A demo beosztás a betöltés napjára és a következő napra publikált és valós réteget tartalmaz: Nagy Eszter reggelén egy oktatás blokk van 20–20 perc utazási idővel, a második napon pedig a valós műszakja eltér a publikálttól.
 
@@ -136,6 +148,7 @@ Ha a Docker nem elérhető, a Prisma saját helyi Postgrese is megfelel fejleszt
 | `lib/turnaround.ts` | Időszámítási és foglaltsági szabályok, tiszta függvények tesztekkel |
 | `lib/board.ts` | A sávos nézet modellje: dobozok, sávok, blokkok, a háromféle ütközés |
 | `lib/roster.ts` | Beosztás-segédfüggvények: publikált napok, a publikált és a valós réteg eltérései |
+| `lib/task-types.ts` | Feladattípusok: egy új járat taskjai a légitársaság aktív feladattípusai szerint, és ugyanannak az embernek két feladattípusa egy járaton |
 | `lib/planning/` | Tervezés: bemenet (napi ablakok), a pozíció szabályai, minimális pozíciószám, kiegyenlítés és mutatók, a terv nézete, mentés a tervezetbe, kiosztás átvétele; tiszta függvények tesztekkel |
 | `lib/import/` | Járatrend-import: fájlbeolvasás, átalakítások, oszlop-párosítás, fordulók képzése, összevetés a meglévő járatokkal; tiszta függvények, tesztek a mintafájllal |
 | `lib/permissions/` | A jogosultságok katalógusa és a jogosultsági szabályok (a proxy, az oldalak és minden szerverművelet ezt használja) |

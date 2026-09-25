@@ -1,5 +1,6 @@
 import { DEMO_MILESTONES, DEMO_TEMPLATE_PARAMS } from "@/lib/demo-template";
 import { localToUtc, parseLocalDate } from "@/lib/time";
+import type { MilestoneDef } from "@/lib/turnaround";
 
 // Demo data for one day (CLAUDE.md, MVP point 3). Pure, so it can be tested without a database.
 
@@ -23,6 +24,23 @@ export const SEED_TEMPLATE = { name: "Alap", ...DEMO_TEMPLATE_PARAMS };
 /** The airline of the schedule import sample (README), with a copy of the demo template. */
 export const SEED_IMPORT_AIRLINE = { name: "Ryanair", iataCode: "FR" };
 export const SEED_MILESTONES = DEMO_MILESTONES;
+
+/**
+ * A second task type of the demo airline (5. mérföldkő), so that several tasks
+ * per flight can be tried. A placeholder, departure part only: the real GOU and
+ * HDS templates come from the owner of the project.
+ */
+export const SEED_PLACEHOLDER_TASK_TYPE = { name: "Helyőrző", code: "HLY" };
+export const SEED_PLACEHOLDER_TEMPLATE = {
+  name: "Helyőrző",
+  arrivalPart: false,
+  departurePart: true,
+  ...DEMO_TEMPLATE_PARAMS,
+};
+export const SEED_PLACEHOLDER_MILESTONES: Omit<MilestoneDef, "id">[] = [
+  { order: 1, code: "START", name: "Kezdés", anchor: "DEPARTURE", offsetMinutes: -20, required: true, part: "DEPARTURE_PART" },
+  { order: 2, code: "ATD", name: "Off-block (ATD)", anchor: "DEPARTURE", offsetMinutes: 0, required: true, part: "DEPARTURE_PART" },
+];
 
 export interface SeedFlight {
   /** Null on a departure-only flight (rule 11). */
