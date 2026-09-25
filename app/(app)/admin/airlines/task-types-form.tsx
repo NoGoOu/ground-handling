@@ -14,15 +14,54 @@ export interface AirlineTaskTypeOption {
   templateId: string | null;
   active: boolean;
   isPrimary: boolean;
+  /** The qualification ids each part needs (6. mérföldkő). */
+  requirements: Record<"ARRIVAL_PART" | "DEPARTURE_PART", string[]>;
+}
+
+function RequirementCell({
+  taskTypeId,
+  part,
+  qualifications,
+  checked,
+  disabled,
+}: {
+  taskTypeId: string;
+  part: "ARRIVAL_PART" | "DEPARTURE_PART";
+  qualifications: { id: string; code: string; name: string }[];
+  checked: string[];
+  disabled: boolean;
+}) {
+  return (
+    <td className="px-3 py-2">
+      <div className="flex flex-wrap gap-x-3 gap-y-1">
+        {qualifications.map((q) => (
+          <label key={q.id} className="flex items-center gap-1 text-xs" title={q.name}>
+            <input
+              type="checkbox"
+              name={`req:${taskTypeId}:${part}`}
+              value={q.id}
+              defaultChecked={checked.includes(q.id)}
+              disabled={disabled}
+              className="size-4"
+            />
+            <span className="font-mono">{q.code}</span>
+          </label>
+        ))}
+      </div>
+    </td>
+  );
 }
 
 /** An airline's task types: template, active and primary per type (CLAUDE.md, 5. mérföldkő). */
 export function AirlineTaskTypesForm({
   action,
   rows,
+  qualifications,
 }: {
   action: (state: ActionResult | null, formData: FormData) => Promise<ActionResult>;
   rows: AirlineTaskTypeOption[];
+  /** The active qualifications a requirement may name. */
+  qualifications: { id: string; code: string; name: string }[];
 }) {
   const [result, formAction, pending] = useActionState(action, null);
   return (
@@ -35,6 +74,12 @@ export function AirlineTaskTypesForm({
               <th className="px-3 py-2">{t.columns.template}</th>
               <th className="px-3 py-2 text-center">{t.columns.active}</th>
               <th className="px-3 py-2 text-center">{t.columns.primary}</th>
+              {qualifications.length > 0 && (
+                <>
+                  <th className="px-3 py-2">{t.columns.arrivalRequirement}</th>
+                  <th className="px-3 py-2">{t.columns.departureRequirement}</th>
+                </>
+              )}
             </tr>
           </thead>
           <tbody className="divide-y divide-neutral-100">
@@ -84,11 +129,23 @@ export function AirlineTaskTypesForm({
                     aria-label={`${t.columns.primary}: ${row.taskType.name}`}
                   />
                 </td>
+                {qualifications.length > 0 &&
+                  (["ARRIVAL_PART", "DEPARTURE_PART"] as const).map((part) => (
+                    <RequirementCell
+                      key={part}
+                      taskTypeId={row.taskType.id}
+                      part={part}
+                      qualifications={qualifications}
+                      checked={row.requirements[part]}
+                      disabled={row.templates.length === 0}
+                    />
+                  ))}
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+      <p className="text-sm text-neutral-600">{qualifications.length > 0 ? t.requirementHint : t.noQualifications}</p>
       <div className="flex flex-wrap items-center gap-3">
         <button type="submit" disabled={pending} className="btn btn-primary">
           {pending ? messages.form.saving : t.airlineSave}

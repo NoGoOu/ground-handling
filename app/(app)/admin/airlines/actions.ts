@@ -10,7 +10,7 @@ import { canManageAirlines } from "@/lib/permissions";
 import { getCurrentUser } from "@/lib/session";
 import { AIRLINE_FIELDS, airlineSchema, type AirlineFormInput } from "@/lib/validation/airline";
 import { fieldErrors, formValues, type FormState } from "@/lib/validation/form";
-import { airlineTaskTypesError, airlineTaskTypesFrom } from "@/lib/validation/task-type";
+import { airlineTaskTypesError, airlineTaskTypesFrom, requirementsFrom } from "@/lib/validation/task-type";
 
 export type AirlineFormState = FormState<AirlineFormInput>;
 
@@ -81,6 +81,21 @@ export async function saveAirlineTaskTypes(
       throw new ActionError(messages.taskTypes.errors.templateNotOwn);
     }
 
+    // The requirements of each part (6. mérföldkő): active qualifications only;
+    // a requirement of an inactive one is left as it is (approved decision 1).
+    const requirements = requirementsFrom(
+      formData,
+      taskTypes.map((type) => type.id),
+    );
+    const activeQualifications = new Set(
+      (await prisma.qualification.findMany({ where: { active: true }, select: { id: true } })).map((q) => q.id),
+    );
+    for (const parts of requirements.values()) {
+      if (Object.values(parts).flat().some((id) => !activeQualifications.has(id))) {
+        throw new ActionError(messages.taskTypes.errors.requirement);
+      }
+    }
+
     await prisma.$transaction(async (tx) => {
       // The primary flag is unique per airline: clear it before setting it again.
       await tx.airlineTaskType.updateMany({ where: { airlineId }, data: { isPrimary: false } });
@@ -89,10 +104,21 @@ export async function saveAirlineTaskTypes(
       });
       for (const row of chosen) {
         const data = { templateId: row.templateId!, active: row.active, isPrimary: row.taskTypeId === primaryId };
-        await tx.airlineTaskType.upsert({
+        const { id: airlineTaskTypeId } = await tx.airlineTaskType.upsert({
           where: { airlineId_taskTypeId: { airlineId, taskTypeId: row.taskTypeId } },
           create: { airlineId, taskTypeId: row.taskTypeId, ...data },
           update: data,
+          select: { id: true },
+        });
+        const parts = requirements.get(row.taskTypeId)!;
+        await tx.taskRequirement.deleteMany({
+          where: { airlineTaskTypeId, qualification: { active: true } },
+        });
+        await tx.taskRequirement.createMany({
+          data: (["ARRIVAL_PART", "DEPARTURE_PART"] as const).flatMap((part) =>
+            parts[part].map((qualificationId) => ({ airlineTaskTypeId, part, qualificationId })),
+          ),
+          skipDuplicates: true,
         });
       }
     });

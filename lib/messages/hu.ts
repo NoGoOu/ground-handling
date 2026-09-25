@@ -888,7 +888,17 @@ export const hu = {
     airlineTitle: "Feladattípusok",
     airlineHint:
       "Az új járatok az aktív feladattípusok mindegyikéhez kapnak egy taskot, a kiválasztott sablonnal. Az elsődleges feladattípus taskjának ATA/ATD-rögzítése a járat értéke, ha a külső rendszerből nincs. A módosítás csak az új járatokat érinti.",
-    columns: { taskType: "Feladattípus", template: "Sablon", active: "Aktív", primary: "Elsődleges" },
+    columns: {
+      taskType: "Feladattípus",
+      template: "Sablon",
+      active: "Aktív",
+      primary: "Elsődleges",
+      arrivalRequirement: "Követelmény: érkezés",
+      departureRequirement: "Követelmény: indulás",
+    },
+    requirementHint:
+      "A kiosztott ügynöknek a task ablakának kezdőnapján érvényes jogosítással kell rendelkeznie; hiánynál a rendszer figyelmeztet, de nem tilt. Gyors fordulónál a két rész követelménye együtt számít.",
+    noQualifications: "Még nincs aktív jogosítás.",
     noTemplate: "– nincs –",
     noTemplatesForType: "Ehhez a feladattípushoz ennek a légitársaságnak még nincs sablonja.",
     airlineSave: "Feladattípusok mentése",
@@ -902,6 +912,7 @@ export const hu = {
       primaryMissing: "Jelöld ki az elsődleges feladattípust.",
       primaryInactive: "Az elsődleges feladattípusnak aktívnak kell lennie.",
       templateNotOwn: "A sablon nem ehhez a légitársasághoz vagy feladattípushoz tartozik.",
+      requirement: "Követelménynek csak aktív jogosítás választható.",
     },
   },
   planning: {

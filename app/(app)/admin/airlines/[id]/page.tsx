@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { listQualifications } from "@/lib/data/training";
 import { prisma } from "@/lib/db";
 import { messages } from "@/lib/messages";
 import { canManageAirlines } from "@/lib/permissions";
@@ -20,11 +21,12 @@ export default async function AirlinePage(props: PageProps<"/admin/airlines/[id]
       where: { id },
       include: {
         templates: { orderBy: { name: "asc" }, include: { taskType: { select: { code: true } } } },
-        taskTypes: true,
+        taskTypes: { include: { requirements: { select: { part: true, qualificationId: true } } } },
       },
     }),
     prisma.taskType.findMany({ orderBy: { code: "asc" }, select: { id: true, name: true, code: true } }),
   ]);
+  const qualifications = await listQualifications(true);
   if (!airline) notFound();
   const partsLabel = (template: { arrivalPart: boolean; departurePart: boolean }) =>
     messages.templateForm.partsChoice[
@@ -62,8 +64,13 @@ export default async function AirlinePage(props: PageProps<"/admin/airlines/[id]
               templateId: own?.templateId ?? null,
               active: own?.active ?? false,
               isPrimary: own?.isPrimary ?? false,
+              requirements: {
+                ARRIVAL_PART: own?.requirements.filter((r) => r.part === "ARRIVAL_PART").map((r) => r.qualificationId) ?? [],
+                DEPARTURE_PART: own?.requirements.filter((r) => r.part === "DEPARTURE_PART").map((r) => r.qualificationId) ?? [],
+              },
             };
           })}
+          qualifications={qualifications}
         />
       </section>
 

@@ -56,3 +56,21 @@ export function airlineTaskTypesError(rows: readonly AirlineTaskTypeRow[], prima
   if (!active.some((row) => row.taskTypeId === primaryId)) return e.primaryInactive;
   return null;
 }
+
+export type RequirementPart = "ARRIVAL_PART" | "DEPARTURE_PART";
+
+/**
+ * The qualifications each part of each task type needs (6. mérföldkő), as the
+ * form sends them: checkboxes named "req:<taskTypeId>:<part>" with the
+ * qualification ids as values.
+ */
+export function requirementsFrom(
+  formData: FormData,
+  taskTypeIds: readonly string[],
+): Map<string, Record<RequirementPart, string[]>> {
+  const read = (taskTypeId: string, part: RequirementPart) =>
+    [...new Set(formData.getAll(`req:${taskTypeId}:${part}`).filter((v): v is string => typeof v === "string" && v !== ""))].sort();
+  return new Map(
+    taskTypeIds.map((id) => [id, { ARRIVAL_PART: read(id, "ARRIVAL_PART"), DEPARTURE_PART: read(id, "DEPARTURE_PART") }]),
+  );
+}

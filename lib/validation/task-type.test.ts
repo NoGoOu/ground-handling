@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { messages } from "@/lib/messages";
 import { fieldErrors } from "@/lib/validation/form";
-import { airlineTaskTypesError, airlineTaskTypesFrom, taskTypeSchema } from "@/lib/validation/task-type";
+import { airlineTaskTypesError, airlineTaskTypesFrom, requirementsFrom, taskTypeSchema } from "@/lib/validation/task-type";
 
 const e = messages.taskTypes.errors;
 
@@ -41,5 +41,21 @@ describe("an airline's task types", () => {
   it("may all be inactive: the airline then takes no flights", () => {
     expect(airlineTaskTypesError([row("gou", "t1", false)], null)).toBeNull();
     expect(airlineTaskTypesError([], null)).toBeNull();
+  });
+});
+
+describe("the requirements of an airline's task types (6. mérföldkő)", () => {
+  it("are read per task type and part", () => {
+    const form = new FormData();
+    form.append("req:gou:ARRIVAL_PART", "prm");
+    form.append("req:gou:ARRIVAL_PART", "dg");
+    form.append("req:gou:DEPARTURE_PART", "alt");
+    form.append("req:gou:DEPARTURE_PART", "alt");
+    expect(requirementsFrom(form, ["gou", "hds"])).toEqual(
+      new Map([
+        ["gou", { ARRIVAL_PART: ["dg", "prm"], DEPARTURE_PART: ["alt"] }],
+        ["hds", { ARRIVAL_PART: [], DEPARTURE_PART: [] }],
+      ]),
+    );
   });
 });
