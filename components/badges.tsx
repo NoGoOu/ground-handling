@@ -95,3 +95,15 @@ export function TaskTypeBadge({ taskType }: { taskType: { name: string; code: st
     </span>
   );
 }
+
+const qualificationStyle = {
+  VALID: "bg-emerald-100 text-emerald-800",
+  EXPIRING: "bg-amber-100 text-amber-900",
+  EXPIRED: "bg-red-100 text-red-800",
+  MISSING: "bg-neutral-100 text-neutral-600",
+} as const;
+
+/** The status of a qualification on a day (6. mérföldkő). */
+export function QualificationStatusBadge({ status }: { status: keyof typeof qualificationStyle }) {
+  return <span className={`${base} ${qualificationStyle[status]}`}>{messages.training.status[status]}</span>;
+}

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { messages } from "@/lib/messages";
-import { canManageTraining, canViewTraining } from "@/lib/permissions";
+import { canManageTraining, canViewTraining, canViewTrainingOf, trainingVisibleUserIds } from "@/lib/permissions";
 import { requireCapability } from "@/lib/session";
 
 const t = messages.training;
@@ -9,7 +9,21 @@ const t = messages.training;
 export default async function TrainingPage() {
   const user = await requireCapability(canViewTraining);
   const h = t.hub;
+  const visible = trainingVisibleUserIds(user);
+  // Everyone sees their own data (an agent is a team member); a team leader the
+  // team; the coordinator and the admin everyone.
+  const own = !!user.teamId && canViewTrainingOf(user, user.id);
+  const everyone = visible === null;
+  const team = !everyone && (visible?.length ?? 0) > 1;
   const sections = [
+    ...(own ? [{ href: "/training/me", title: h.mine, hint: h.mineHint }] : []),
+    ...(team ? [{ href: "/training/team", title: h.team, hint: h.teamHint }] : []),
+    ...(everyone
+      ? [
+          { href: "/training/people", title: h.people, hint: h.peopleHint },
+          { href: "/training/team", title: t.team.title, hint: t.team.intro },
+        ]
+      : []),
     ...(canManageTraining(user)
       ? [
           { href: "/training/qualifications", title: h.qualifications, hint: h.qualificationsHint },

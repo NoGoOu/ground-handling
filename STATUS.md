@@ -4,13 +4,13 @@
 
 ## Mi készült el
 
-- 6. mérföldkő, 3. lépés: koordinátori felület (`/training`, menü: „Képzések”). Jogosítások (név, kód, érvényesség, aktív), képzések (adott jogosítás – inaktív nem választható –, dolgozat és sikerességi határ), rekordok (az ügynök nem módosítható; dolgozatnál az eredményből számol a sikeresség, egyébként a koordinátor jelöli; az érvényesség vége számolt, kézzel felülírható), fájlok (PDF/JPG/PNG, 10 MB, a típust a fájl eleje dönti el; eltávolításkor a fájl törlődik, a naplósor megmarad; saját kötet Dockerben), letöltés a rekord megtekintésének jogosultságával és hatókörével, lejáró jogosítások (hamarosan lejár és lejárt, hatókör szerint). Az admin beállításoknál a „hamarosan lejár” napjai. A szabályok tiszta függvények (`lib/training.ts`), tesztekkel.
-- 6. mérföldkő, 1–2. lépés: adatmodell és migráció; jogosítás-számítás tiszta függvényekként (`lib/qualifications.ts`).
+- 6. mérföldkő, 4. lépés: nézetek. Ügynök: saját jogosítások (állapot, érvényesség) és képzések a letölthető fájlokkal, telefonon egy oszlopban (`/training/me`). Csapatvezető: ember × jogosítás táblázat állapotszínekkel (`/training/team`), a csapat lejáró jogosításai. Koordinátor és admin: mindenki, személyenkénti oldal (`/training/people`), a rekordok szerkesztésére mutató linkekkel. A személyoldal hatókörön kívül „nem található”.
+- 6. mérföldkő, 1–3. lépés: adatmodell és migráció; jogosítás-számítás (`lib/qualifications.ts`); koordinátori felület (jogosítások, képzések, rekordok, fájlok, lejáró jogosítások).
 - 5. mérföldkő (feladattípusok) kész; eltérései elfogadva (További eldöntött szabályok 27–32.).
 
 ## Állapot
 
-- Utolsó commit: `ed5b07a` – feat: calculate the qualifications of an agent (a 3. lépés commitja ezt követi)
+- Utolsó commit: `dc1a765` – feat: let the coordinator manage qualifications, trainings and records (a 4. lépés commitja ezt követi)
 - Tesztek: `npm test` → 422 teszt, mind zöld
 - Lint és build: `npm run lint` hibátlan, `npx tsc --noEmit` tiszta
 
@@ -24,4 +24,4 @@
 
 ## Következő lépés
 
-- 6. mérföldkő, 4. lépés: nézetek (ügynök: saját; csapatvezető: csapat-táblázat; koordinátor és admin: mindenki).
+- 6. mérföldkő, 5. lépés: admin – követelmények a légitársaság feladattípusainál, részenként.
