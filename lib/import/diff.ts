@@ -41,6 +41,11 @@ export interface ExistingFlight {
 export interface AirlineInfo {
   id: string;
   code: string;
+  /**
+   * The template of the primary task type (5. mérföldkő); null when the
+   * airline has no active task type and so takes no flight. The save makes a
+   * task for every active task type.
+   */
   defaultTemplateId: string | null;
 }
 

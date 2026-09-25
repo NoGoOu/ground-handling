@@ -3,7 +3,7 @@ import { fieldErrors } from "@/lib/validation/form";
 import { flightSchema, type FlightFormInput } from "@/lib/validation/flight";
 
 const valid: FlightFormInput = {
-  templateId: "t1",
+  airlineId: "a1",
   inboundFlightNumber: " zz 1101 ",
   outboundFlightNumber: "ZZ1102",
   stand: " 31 ",
@@ -28,8 +28,8 @@ describe("flight form validation", () => {
     expect(data.std?.toISOString()).toBe("2026-09-22T05:55:00.000Z");
   });
 
-  it("requires a template, but the stand can wait", () => {
-    expect(Object.keys(errorsFor({ templateId: "", stand: "" }))).toEqual(["templateId"]);
+  it("requires an airline, but the stand can wait", () => {
+    expect(Object.keys(errorsFor({ airlineId: "", stand: "" }))).toEqual(["airlineId"]);
     expect(flightSchema.parse({ ...valid, stand: " " }).stand).toBeNull();
     expect(errorsFor({ stand: "x".repeat(11) })).toHaveProperty("stand");
   });

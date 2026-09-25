@@ -6,7 +6,7 @@ const e = messages.flightForm.errors;
 
 // ETA and ETD are not here: they change only through "Késés rögzítése", so
 // every change has a source, a note, and who and when (see lib/validation/delay.ts).
-export const FLIGHT_FIELDS = ["templateId", "inboundFlightNumber", "outboundFlightNumber", "stand", "sta", "std"] as const;
+export const FLIGHT_FIELDS = ["airlineId", "inboundFlightNumber", "outboundFlightNumber", "stand", "sta", "std"] as const;
 
 export type FlightFormInput = Record<(typeof FLIGHT_FIELDS)[number], string>;
 
@@ -33,7 +33,8 @@ export const optionalTime = z.string().transform((value, ctx) => {
  */
 export const flightSchema = z
   .object({
-    templateId: z.string().min(1, e.template),
+    // The tasks and their templates come from the airline's task types (5. mérföldkő).
+    airlineId: z.string().min(1, e.airline),
     inboundFlightNumber: optionalFlightNumber,
     outboundFlightNumber: optionalFlightNumber,
     // The stand can wait: an imported flight has none until the shift lead sets it.

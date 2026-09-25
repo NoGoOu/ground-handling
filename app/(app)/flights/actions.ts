@@ -3,6 +3,7 @@
 import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import { ActionError, actionUser, runAction, type ActionResult } from "@/lib/action";
+import { newFlightTasksByAirline } from "@/lib/data/task-types";
 import { getTaskView, taskAssignment } from "@/lib/data/tasks";
 import { findAssignableAgent } from "@/lib/data/users";
 import { prisma } from "@/lib/db";
@@ -29,14 +30,11 @@ async function parse(formData: FormData) {
   const values = formValues(formData, FLIGHT_FIELDS);
   const parsed = flightSchema.safeParse(values);
   if (!parsed.success) return { values, state: { errors: fieldErrors(parsed.error), values } };
-  const template = await prisma.turnaroundTemplate.findUnique({
-    where: { id: parsed.data.templateId },
-    select: { airlineId: true, taskTypeId: true },
-  });
-  if (!template) return { values, state: { errors: { templateId: e.template }, values } };
-  const { templateId, ...flight } = parsed.data;
-  // The template is the task's (5. mérföldkő); the flight gets the airline.
-  return { values, data: { ...flight, airlineId: template.airlineId }, task: { templateId, taskTypeId: template.taskTypeId } };
+  const airline = await prisma.airline.findUnique({ where: { id: parsed.data.airlineId }, select: { id: true } });
+  if (!airline) return { values, state: { errors: { airlineId: e.airline }, values } };
+  // One task per active task type of the airline, with its template (5. mérföldkő).
+  const tasks = (await newFlightTasksByAirline(airline.id)).get(airline.id) ?? [];
+  return { values, data: parsed.data, tasks };
 }
 
 /** What a dropped part takes with it: its estimate and its cancellation. */
@@ -66,14 +64,15 @@ function listDay(flight: { sta: Date | null; std: Date | null }): string {
   return toLocalDate((flight.sta ?? flight.std)!);
 }
 
-/** Creates the flight together with its task (CLAUDE.md: created automatically). */
+/** Creates the flight with a task for every active task type of its airline (CLAUDE.md, 5. mérföldkő). */
 export async function createFlight(_previous: FlightFormState, formData: FormData): Promise<FlightFormState> {
   if (!(await isAllowed())) return { message: messages.errors.forbidden };
   const result = await parse(formData);
   if (!result.data) return result.state;
+  if (result.tasks.length === 0) return { errors: { airlineId: e.noTaskTypes }, values: result.values };
 
   const flight = await prisma.flight.create({
-    data: { ...result.data, tasks: { create: { ...result.task, isPrimary: true } } },
+    data: { ...result.data, tasks: { create: result.tasks } },
   });
   redirect(`/flights?date=${listDay(flight)}`);
 }
@@ -87,18 +86,12 @@ export async function updateFlight(
   const existing = await prisma.flight.findUnique({
     where: { id: flightId },
     select: {
+      airlineId: true,
       sta: true,
       std: true,
       ata: true,
       atd: true,
-      tasks: {
-        select: {
-          id: true,
-          templateId: true,
-          isPrimary: true,
-          records: { select: { milestoneDefinition: { select: { part: true } } } },
-        },
-      },
+      tasks: { select: { records: { select: { milestoneDefinition: { select: { part: true } } } } } },
     },
   });
   if (!existing) return { message: messages.errors.notFound };
@@ -106,14 +99,13 @@ export async function updateFlight(
   const result = await parse(formData);
   if (!result.data) return result.state;
 
-  // The form sets the template of the primary task (the only one until the
-  // task types of the 5. mérföldkő reach the form).
-  const primary = existing.tasks.find((task) => task.isPrimary) ?? existing.tasks[0];
-  // Decision 6 (CLAUDE.md): records point at the template's milestones.
-  if (primary && primary.records.length > 0 && result.task.templateId !== primary.templateId) {
-    return { errors: { templateId: e.templateLocked }, values: result.values };
-  }
+  // Another airline means other task types: allowed while nothing is recorded
+  // on the flight's tasks, and then the tasks are made anew (decision 6 of
+  // CLAUDE.md, carried over to the task types in the approved plan).
   const records = existing.tasks.flatMap((task) => task.records);
+  const newAirline = result.data.airlineId !== existing.airlineId;
+  if (newAirline && records.length > 0) return { errors: { airlineId: e.airlineLocked }, values: result.values };
+  if (newAirline && result.tasks.length === 0) return { errors: { airlineId: e.noTaskTypes }, values: result.values };
 
   // A part that has already happened (a record, or a time from the external
   // system) cannot be dropped: its milestones would silently disappear.
@@ -136,8 +128,9 @@ export async function updateFlight(
         ...(dropsDeparture ? DROPPED_DEPARTURE : {}),
       },
     });
-    if (primary && primary.templateId !== result.task.templateId) {
-      await tx.task.update({ where: { id: primary.id }, data: result.task });
+    if (newAirline) {
+      await tx.task.deleteMany({ where: { flightId } });
+      await tx.task.createMany({ data: result.tasks.map((task) => ({ flightId, ...task })) });
     }
     // A dropped part takes its agent with it (a one-sided task has one agent).
     if (dropsArrival || dropsDeparture) {

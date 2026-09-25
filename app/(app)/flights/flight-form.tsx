@@ -9,49 +9,42 @@ import type { FlightFormState } from "./actions";
 
 const t = messages.flightForm;
 
-export interface TemplateOption {
+export interface AirlineOption {
   id: string;
-  name: string;
-  airline: string;
+  label: string;
 }
 
 export function FlightForm({
   action,
-  templates,
+  airlines,
   initial,
   submitLabel,
 }: {
   action: (state: FlightFormState, formData: FormData) => Promise<FlightFormState>;
-  templates: TemplateOption[];
+  airlines: AirlineOption[];
   initial: FlightFormInput;
   submitLabel: string;
 }) {
   const [state, formAction, pending] = useActionState(action, {});
   const value = (key: keyof FlightFormInput) => state.values?.[key] ?? initial[key];
   const error = (key: keyof FlightFormInput) => state.errors?.[key];
-  const airlines = [...new Set(templates.map((tpl) => tpl.airline))];
 
   return (
     <form action={formAction} className="flex max-w-2xl flex-col gap-4">
       <FormMessage message={state.message} />
-      <FormField label={t.template} error={error("templateId")}>
-        <select name="templateId" defaultValue={value("templateId")} className="input" required>
+      <FormField label={t.airline} error={error("airlineId")}>
+        <select name="airlineId" defaultValue={value("airlineId")} className="input" required>
           <option value="" disabled>
             –
           </option>
           {airlines.map((airline) => (
-            <optgroup key={airline} label={airline}>
-              {templates
-                .filter((tpl) => tpl.airline === airline)
-                .map((tpl) => (
-                  <option key={tpl.id} value={tpl.id}>
-                    {airline} – {tpl.name}
-                  </option>
-                ))}
-            </optgroup>
+            <option key={airline.id} value={airline.id}>
+              {airline.label}
+            </option>
           ))}
         </select>
       </FormField>
+      <p className="-mt-2 text-sm text-neutral-600">{t.airlineHint}</p>
 
       <FormField label={t.stand} hint={messages.form.optional} error={error("stand")}>
         <input name="stand" defaultValue={value("stand")} maxLength={10} className="input max-w-40" />

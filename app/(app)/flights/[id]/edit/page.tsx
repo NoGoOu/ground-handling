@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { MissingBadge } from "@/components/badges";
 import { estimateText } from "@/components/estimate-note";
-import { listTemplateOptions } from "@/lib/data/templates";
+import { listAirlineOptions } from "@/lib/data/task-types";
 import { prisma } from "@/lib/db";
 import { flightLabel } from "@/lib/flight";
 import { messages } from "@/lib/messages";
@@ -20,7 +20,7 @@ const person = { select: { name: true } } as const;
 export default async function EditFlightPage(props: PageProps<"/flights/[id]/edit">) {
   await requireCapability(canManageFlights);
   const { id } = await props.params;
-  const [flight, templates, events] = await Promise.all([
+  const [flight, airlines, events] = await Promise.all([
     prisma.flight.findUnique({
       where: { id },
       include: {
@@ -28,11 +28,10 @@ export default async function EditFlightPage(props: PageProps<"/flights/[id]/edi
         etdRecordedBy: person,
         arrivalCancelledBy: person,
         departureCancelledBy: person,
-        // The form sets the template of the primary task (5. mérföldkő).
-        tasks: { select: { templateId: true, isPrimary: true } },
+        airline: { select: { id: true, name: true, iataCode: true } },
       },
     }),
-    listTemplateOptions(),
+    listAirlineOptions(),
     prisma.flightEvent.findMany({
       where: { flightId: id },
       include: { createdBy: person },
@@ -86,10 +85,15 @@ export default async function EditFlightPage(props: PageProps<"/flights/[id]/edi
 
       <FlightForm
         action={updateFlight.bind(null, flight.id)}
-        templates={templates}
+        airlines={
+          // The flight's own airline stays selectable even without active task types.
+          airlines.some((airline) => airline.id === flight.airline.id)
+            ? airlines
+            : [{ id: flight.airline.id, label: `${flight.airline.name} (${flight.airline.iataCode})` }, ...airlines]
+        }
         submitLabel={messages.form.save}
         initial={{
-          templateId: (flight.tasks.find((task) => task.isPrimary) ?? flight.tasks[0])?.templateId ?? "",
+          airlineId: flight.airlineId,
           inboundFlightNumber: flight.inboundFlightNumber ?? "",
           outboundFlightNumber: flight.outboundFlightNumber ?? "",
           stand: flight.stand ?? "",

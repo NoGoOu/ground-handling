@@ -594,7 +594,7 @@ export const hu = {
           "két külön járatot kellene egy fordulóvá összevonni, de egyik sem törölhető (kézzel készült, vagy üzemi adat van rajta), vagy nem mindkettő egyoldalú",
         lostLeg: "a régi pár a fájlból hiányzik, a párosítás nem írható át",
         unknownAirline: "nincs ilyen légitársaság: {code}",
-        noTemplate: "a(z) {code} légitársaságnak nincs alapértelmezett sablonja",
+        noTemplate: "a(z) {code} légitársaságnak nincs aktív feladattípusa",
       },
       repair: "átpárosítva",
       merge: "összevonva, a(z) {flight} járat törlődik",
@@ -674,7 +674,8 @@ export const hu = {
   flightForm: {
     newTitle: "Új járat",
     editTitle: "Járat szerkesztése",
-    template: "Légitársaság és sablon",
+    airline: "Légitársaság",
+    airlineHint: "A járat taskjai a légitársaság aktív feladattípusai szerint jönnek létre, a hozzájuk beállított sablonnal.",
     inbound: "Érkező járatszám",
     outbound: "Induló járatszám",
     stand: "Állóhely",
@@ -693,7 +694,8 @@ export const hu = {
     delayLink: "Késés, törlés",
     none: "–",
     errors: {
-      template: "Válassz sablont.",
+      airline: "Válassz légitársaságot.",
+      noTaskTypes: "Ennek a légitársaságnak nincs aktív feladattípusa, így járata sem lehet.",
       flightNumber: "2–10 karakter, betűk és számok.",
       stand: "Az állóhely legfeljebb 10 karakter.",
       time: "Adj meg érvényes időpontot.",
@@ -702,7 +704,7 @@ export const hu = {
       arrivalIncomplete: "Az érkezési részhez járatszám és STA is kell.",
       departureIncomplete: "Az indulási részhez járatszám és STD is kell.",
       partInUse: "Ez a rész nem hagyható el, mert már van hozzá rögzített vagy a rendszerből kapott idő.",
-      templateLocked: "A sablon nem módosítható, mert a taskon már van rögzítés.",
+      airlineLocked: "A légitársaság nem módosítható, mert a járat egyik taskján már van rögzítés.",
     },
   },
   planning: {

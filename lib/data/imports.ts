@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { Prisma } from "@/generated/prisma/client";
-import { primaryTemplateIds } from "@/lib/data/task-types";
+import { newFlightTasksByAirline } from "@/lib/data/task-types";
 import { prisma } from "@/lib/db";
 import type { AirlineInfo, ExistingFlight, ImportDiff } from "@/lib/import/diff";
 import type { ImportMapping } from "@/lib/import/mapping";
@@ -123,11 +123,16 @@ export async function loadExistingFlights(window: { start: Date; end: Date }): P
 }
 
 export async function loadAirlines(): Promise<AirlineInfo[]> {
-  const [airlines, templates] = await Promise.all([
+  const [airlines, tasks] = await Promise.all([
     prisma.airline.findMany({ select: { id: true, iataCode: true } }),
-    primaryTemplateIds(),
+    newFlightTasksByAirline(),
   ]);
-  return airlines.map((a) => ({ id: a.id, code: a.iataCode, defaultTemplateId: templates.get(a.id) ?? null }));
+  // The primary task's template: an airline without it takes no flight.
+  return airlines.map((a) => ({
+    id: a.id,
+    code: a.iataCode,
+    defaultTemplateId: tasks.get(a.id)?.find((task) => task.isPrimary)?.templateId ?? null,
+  }));
 }
 
 const flightDate = (date: string) => new Date(`${date}T00:00:00Z`);
@@ -249,18 +254,12 @@ export async function applyImport({
             ...imported,
           })),
         });
-        const templates = await tx.turnaroundTemplate.findMany({
-          where: { id: { in: [...new Set(created.map(({ entry }) => entry.templateId))] } },
-          select: { id: true, taskTypeId: true },
-        });
-        const taskTypeOf = new Map(templates.map((t) => [t.id, t.taskTypeId]));
+        // One task per active task type of the airline (5. mérföldkő).
+        const tasksByAirline = await newFlightTasksByAirline();
         await tx.task.createMany({
-          data: created.map(({ id, entry }) => ({
-            flightId: id,
-            templateId: entry.templateId,
-            taskTypeId: taskTypeOf.get(entry.templateId)!,
-            isPrimary: true,
-          })),
+          data: created.flatMap(({ id, entry }) =>
+            (tasksByAirline.get(entry.airlineId) ?? []).map((task) => ({ flightId: id, ...task })),
+          ),
         });
       }
 
