@@ -17,8 +17,12 @@ export function StatusBadge({ status }: { status: TaskStatus }) {
   return <span className={`${base} ${statusStyle[status]}`}>{messages.status[status]}</span>;
 }
 
-/** Quick or long turnaround; a one-sided flight (rule 11) shows its kind instead. */
-export function TypeBadge({ type, kind }: { type: TurnaroundType | null; kind: FlightKind }) {
+/**
+ * Quick or long turnaround; a one-sided flight (rule 11) shows its kind
+ * instead, a task without a part of the flight (5. mérföldkő) that it has nothing to do.
+ */
+export function TypeBadge({ type, kind }: { type: TurnaroundType | null; kind: FlightKind | null }) {
+  if (!kind) return <span className={`${base} bg-neutral-100 text-neutral-600`}>{messages.flightKind.NONE}</span>;
   if (!type) return <span className={`${base} bg-teal-100 text-teal-800`}>{messages.flightKind[kind]}</span>;
   const style = type === "QUICK" ? "bg-amber-100 text-amber-800" : "bg-indigo-100 text-indigo-800";
   return <span className={`${base} ${style}`}>{messages.turnaroundType[type]}</span>;

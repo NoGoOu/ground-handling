@@ -122,7 +122,7 @@ export async function changeStatus(
     // (decision 2 in CLAUDE.md).
     const templateSnapshot =
       status === "COMPLETED"
-        ? templateSnapshotJson({ ...task.params, milestones: task.milestones })
+        ? templateSnapshotJson({ ...task.params, milestones: task.milestones, parts: task.templateParts })
         : Prisma.DbNull;
     await prisma.task.update({ where: { id: taskId }, data: { status, templateSnapshot } });
     refresh();

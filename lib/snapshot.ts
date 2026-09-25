@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { Prisma } from "@/generated/prisma/client";
-import type { MilestoneDef, TemplateParams } from "@/lib/turnaround";
+import type { MilestoneDef, TemplateParams, TemplateParts } from "@/lib/turnaround";
 
 // A completed task keeps the template as it was at completion (CLAUDE.md, "Lezárt task pillanatképe").
 
@@ -26,17 +26,21 @@ const snapshotSchema = z.object({
       part: z.enum(["ARRIVAL_PART", "DEPARTURE_PART"]),
     }),
   ),
+  /** The template's parts (5. mérföldkő); older snapshots have both. */
+  parts: z.object({ arrival: z.boolean(), departure: z.boolean() }).optional(),
 });
 
 export interface TemplateSnapshot {
   params: TemplateParams;
   milestones: MilestoneDef[];
+  parts?: TemplateParts;
 }
 
-export function buildTemplateSnapshot(
-  template: TemplateParams & { milestones: readonly MilestoneDef[] },
-): TemplateSnapshot {
+type SnapshotSource = TemplateParams & { milestones: readonly MilestoneDef[]; parts?: TemplateParts };
+
+export function buildTemplateSnapshot(template: SnapshotSource): TemplateSnapshot {
   return {
+    ...(template.parts ? { parts: { arrival: template.parts.arrival, departure: template.parts.departure } } : {}),
     params: {
       minTurnaroundMinutes: template.minTurnaroundMinutes,
       travelMinutes: template.travelMinutes,
@@ -58,9 +62,7 @@ export function buildTemplateSnapshot(
 }
 
 /** The snapshot as a value for the Task.templateSnapshot JSON column (it is plain data). */
-export function templateSnapshotJson(
-  template: TemplateParams & { milestones: readonly MilestoneDef[] },
-): Prisma.InputJsonValue {
+export function templateSnapshotJson(template: SnapshotSource): Prisma.InputJsonValue {
   return buildTemplateSnapshot(template) as unknown as Prisma.InputJsonValue;
 }
 

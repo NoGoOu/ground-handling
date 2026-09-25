@@ -21,3 +21,13 @@ describe("template snapshot", () => {
     expect(parseTemplateSnapshot({ params: {}, milestones: [] })).toBeNull();
   });
 });
+
+describe("the parts in a snapshot (5. mérföldkő)", () => {
+  it("keeps the template's parts, and reads an older snapshot without them", () => {
+    const template = { ...DEMO_TEMPLATE_PARAMS, milestones: [], parts: { arrival: false, departure: true } };
+    const snapshot = buildTemplateSnapshot(template);
+    expect(parseTemplateSnapshot(JSON.parse(JSON.stringify(snapshot)))?.parts).toEqual({ arrival: false, departure: true });
+    const older = { params: DEMO_TEMPLATE_PARAMS, milestones: [] };
+    expect(parseTemplateSnapshot(older)?.parts).toBeUndefined();
+  });
+});

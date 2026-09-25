@@ -59,7 +59,8 @@ export function flightKind(flight: Pick<FlightTimes, "sta" | "std">): FlightKind
   throw new Error("A flight needs an arrival or a departure part");
 }
 
-export function hasPart(kind: FlightKind, part: Part): boolean {
+export function hasPart(kind: FlightKind | null, part: Part): boolean {
+  if (kind === null) return false;
   if (kind === "TURNAROUND") return true;
   return part === "ARRIVAL_PART" ? kind === "ARRIVAL_ONLY" : kind === "DEPARTURE_ONLY";
 }
@@ -81,8 +82,29 @@ export function isPartCancelled(flight: FlightTimes, part: Part): boolean {
   return part === "ARRIVAL_PART" ? !!flight.arrivalCancelled : !!flight.departureCancelled;
 }
 
-/** Rule 11: a one-sided flight has only the milestones of its own part. */
-export function milestonesFor(kind: FlightKind, milestones: readonly MilestoneDef[]): MilestoneDef[] {
+/** The parts a template has (5. mérföldkő): arrival, departure or both. */
+export interface TemplateParts {
+  arrival: boolean;
+  departure: boolean;
+}
+
+export const BOTH_PARTS: TemplateParts = { arrival: true, departure: true };
+
+/**
+ * The parts of a task (5. mérföldkő): those both the template and the flight
+ * have. Null when they share none: the task then has nothing to do.
+ */
+export function partsKind(kind: FlightKind | null, parts: TemplateParts): FlightKind | null {
+  const arrival = hasPart(kind, "ARRIVAL_PART") && parts.arrival;
+  const departure = hasPart(kind, "DEPARTURE_PART") && parts.departure;
+  if (arrival && departure) return "TURNAROUND";
+  if (arrival) return "ARRIVAL_ONLY";
+  if (departure) return "DEPARTURE_ONLY";
+  return null;
+}
+
+/** Rule 11: a one-sided flight (or task) has only the milestones of its own part. */
+export function milestonesFor(kind: FlightKind | null, milestones: readonly MilestoneDef[]): MilestoneDef[] {
   return milestones.filter((m) => hasPart(kind, m.part));
 }
 
@@ -239,6 +261,14 @@ export interface TimelineRow {
   recorded: Date | null;
   /** The external system's value (ATA and ATD rows only). */
   systemValue: Date | null;
+  /**
+   * The ATA/ATD row of a task that is not the flight's primary one: its actual
+   * is the flight's (the system's value, else the primary task's record), and
+   * the task's own record is shown but does not count (5. mérföldkő).
+   */
+  fromFlight: boolean;
+  /** On such a row, the primary task's record. */
+  primaryValue: Date | null;
   /** The value used in calculations: rule 9 for ATA/ATD, the record otherwise. */
   actual: Date | null;
   deviationMinutes: number | null;
@@ -374,9 +404,9 @@ export function effectiveDepartureAgentId(
 }
 
 export interface Timeline {
-  /** The parts the flight has. */
-  kind: FlightKind;
-  /** The parts still worked after cancellations; null when all are cancelled. */
+  /** The parts the task has: of the flight, those its template has too; null when none. */
+  kind: FlightKind | null;
+  /** Of those, the parts still worked after cancellations; null when none. */
   activeKind: FlightKind | null;
   /** Null on a departure-only flight. */
   arrivalAnchor: Date | null;
@@ -396,6 +426,14 @@ export interface TimelineInput {
   recorded: RecordedTimes;
   /** Global setting (decision 7); the defaults are used when not given. */
   thresholds?: DeviationThresholds;
+  /** The parts of the task's template (5. mérföldkő); both when not given. */
+  templateParts?: TemplateParts;
+  /**
+   * For a task that is not the flight's primary one: the primary task's own
+   * ATA/ATD records. Without a system value they are the flight's effective
+   * ATA/ATD; this task's records then do not count (5. mérföldkő).
+   */
+  primaryRecords?: { ata: Date | null; atd: Date | null };
 }
 
 export function computeTimeline({
@@ -404,12 +442,19 @@ export function computeTimeline({
   milestones,
   recorded,
   thresholds = DEVIATION_THRESHOLDS,
+  templateParts = BOTH_PARTS,
+  primaryRecords,
 }: TimelineInput): Timeline {
-  const kind = flightKind(flight);
-  const active = activeKind(flight);
-  // Rule 11: the milestones of a missing part do not exist for this flight.
+  // The task's parts: of the flight's, those its template has (5. mérföldkő).
+  const kind = partsKind(flightKind(flight), templateParts);
+  const active = partsKind(activeKind(flight), templateParts);
+  // Rule 11: the milestones of a missing part do not exist for this task.
   milestones = milestonesFor(kind, milestones);
-  const { ata, atd } = effectiveActuals(flight, milestones, recorded);
+  // Rule 9, and the primary task's records for the others (5. mérföldkő).
+  const { ata, atd } = primaryRecords
+    ? { ata: flight.ata ?? primaryRecords.ata, atd: flight.atd ?? primaryRecords.atd }
+    : effectiveActuals(flight, milestones, recorded);
+  // The anchors are the flight's, from its parts, with this task's template.
   const arrival = arrivalAnchor(flight, ata);
   // A cancelled arrival leaves a departure-only flight: no minimum turnaround.
   const departure = departureAnchor(flight, flight.arrivalCancelled ? null : arrival, params);
@@ -417,11 +462,15 @@ export function computeTimeline({
 
   const actuals = new Map<string, Date>();
   const systemValues = new Map<string, Date | null>();
+  const flightRows = new Map<string, Date | null>();
   for (const def of milestones) {
     const system =
       def.code === ATA_CODE ? (flight.ata ?? null) : def.code === ATD_CODE ? (flight.atd ?? null) : null;
     systemValues.set(def.id, system);
-    const actual = system ?? recorded.get(def.id) ?? null;
+    const fromFlight = !!primaryRecords && (def.code === ATA_CODE || def.code === ATD_CODE);
+    const primary = fromFlight ? ((def.code === ATA_CODE ? primaryRecords!.ata : primaryRecords!.atd) ?? null) : null;
+    if (fromFlight) flightRows.set(def.id, primary);
+    const actual = system ?? (fromFlight ? primary : recorded.get(def.id)) ?? null;
     if (actual) actuals.set(def.id, actual);
   }
 
@@ -436,6 +485,8 @@ export function computeTimeline({
       planned: plannedTime,
       recorded: recorded.get(def.id) ?? null,
       systemValue: systemValues.get(def.id) ?? null,
+      fromFlight: flightRows.has(def.id),
+      primaryValue: flightRows.get(def.id) ?? null,
       actual,
       deviationMinutes: deviation,
       deviationLevel: deviation === null ? null : deviationLevel(deviation, thresholds),
@@ -471,10 +522,11 @@ export function computeTimeline({
  * planned time has passed or the task is completed (decision 5 in CLAUDE.md).
  */
 export function isRequiredMissing(
-  row: Pick<TimelineRow, "milestone" | "actual" | "planned"> & { cancelled?: boolean },
+  row: Pick<TimelineRow, "milestone" | "actual" | "planned"> & { cancelled?: boolean; fromFlight?: boolean },
   { now, completed }: { now: Date; completed: boolean },
 ): boolean {
-  // A cancelled part's milestones are never flagged ("Késés és törlés").
-  if (!row.milestone.required || row.actual || row.cancelled) return false;
+  // A cancelled part's milestones are never flagged ("Késés és törlés"), nor
+  // the flight's ATA/ATD on a task that is not the primary one (5. mérföldkő).
+  if (!row.milestone.required || row.actual || row.cancelled || row.fromFlight) return false;
   return completed || now.getTime() >= row.planned.getTime();
 }

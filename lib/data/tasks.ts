@@ -9,21 +9,36 @@ import { localDayRange } from "@/lib/time";
 import {
   ATA_CODE,
   ATD_CODE,
+  BOTH_PARTS,
   computeTimeline,
   effectiveDepartureAgentId,
   type DeviationThresholds,
   type MilestoneDef,
   type TemplateParams,
+  type TemplateParts,
   type Timeline,
 } from "@/lib/turnaround";
 
 const personSelect = { select: { id: true, name: true } } as const;
 
+/** The primary task's ATA/ATD records: the flight's actuals when the system has none (5. mérföldkő). */
+const primaryActualsInclude = {
+  where: { isPrimary: true },
+  select: {
+    records: {
+      where: { milestoneDefinition: { code: { in: [ATA_CODE, ATD_CODE] } } },
+      select: { actualTime: true, milestoneDefinition: { select: { code: true } } },
+    },
+  },
+} satisfies Prisma.Flight$tasksArgs;
+
 const taskInclude = {
   template: { include: { milestones: true } },
+  taskType: { select: { id: true, name: true, code: true } },
   flight: {
     include: {
       airline: true,
+      tasks: primaryActualsInclude,
       etaRecordedBy: personSelect,
       etdRecordedBy: personSelect,
       arrivalCancelledBy: personSelect,
@@ -66,6 +81,12 @@ export interface Cancellation {
 export interface TaskView {
   id: string;
   status: TaskStatus;
+  /** The kind of work (5. mérföldkő). */
+  taskType: { id: string; name: string; code: string };
+  /** Its ATA/ATD records are the flight's when the external system has none. */
+  isPrimary: boolean;
+  /** The parts of the task's template. */
+  templateParts: TemplateParts;
   flight: {
     id: string;
     /** The arrival part; null on a departure-only flight (rule 11). */
@@ -108,20 +129,34 @@ export interface TaskView {
   timeline: Timeline;
 }
 
-function templateFor(task: TaskWithRelations): { params: TemplateParams; milestones: MilestoneDef[]; frozen: boolean } {
+function templateFor(task: TaskWithRelations): {
+  params: TemplateParams;
+  milestones: MilestoneDef[];
+  parts: TemplateParts;
+  frozen: boolean;
+} {
   const snapshot = task.status === "COMPLETED" ? parseTemplateSnapshot(task.templateSnapshot) : null;
-  if (snapshot) return { ...snapshot, frozen: true };
+  if (snapshot) return { params: snapshot.params, milestones: snapshot.milestones, parts: snapshot.parts ?? BOTH_PARTS, frozen: true };
   const { template } = task;
   return {
     params: template,
     milestones: template.milestones,
+    parts: { arrival: template.arrivalPart, departure: template.departurePart },
     frozen: false,
   };
 }
 
+/** For a task that is not primary, the primary task's ATA/ATD records (5. mérföldkő). */
+function primaryRecordsFor(task: TaskWithRelations): { ata: Date | null; atd: Date | null } | undefined {
+  const primary = task.flight.tasks[0];
+  if (task.isPrimary || !primary) return undefined;
+  const byCode = (code: string) => primary.records.find((r) => r.milestoneDefinition.code === code)?.actualTime ?? null;
+  return { ata: byCode(ATA_CODE), atd: byCode(ATD_CODE) };
+}
+
 function toTaskView(task: TaskWithRelations, thresholds: DeviationThresholds): TaskView {
   const { flight } = task;
-  const { params, milestones, frozen } = templateFor(task);
+  const { params, milestones, parts, frozen } = templateFor(task);
   const records = new Map<string, RecordInfo>(
     task.records.map((r) => [
       r.milestoneDefinitionId,
@@ -140,6 +175,8 @@ function toTaskView(task: TaskWithRelations, thresholds: DeviationThresholds): T
     milestones,
     recorded: new Map([...records].map(([id, r]) => [id, r.actualTime])),
     thresholds,
+    templateParts: parts,
+    primaryRecords: primaryRecordsFor(task),
   });
   const departureAgentId = effectiveDepartureAgentId(
     timeline.shape.type,
@@ -150,6 +187,9 @@ function toTaskView(task: TaskWithRelations, thresholds: DeviationThresholds): T
   return {
     id: task.id,
     status: task.status,
+    taskType: task.taskType,
+    isPrimary: task.isPrimary,
+    templateParts: parts,
     flight: {
       id: flight.id,
       inboundFlightNumber: flight.inboundFlightNumber,

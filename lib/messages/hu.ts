@@ -167,6 +167,8 @@ export const hu = {
     TURNAROUND: "Forduló",
     ARRIVAL_ONLY: "Csak érkező",
     DEPARTURE_ONLY: "Csak induló",
+    /** A task that shares no part with its flight (5. mérföldkő). */
+    NONE: "Nincs teendő",
   },
   part: {
     ARRIVAL_PART: "Érkezési rész",

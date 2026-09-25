@@ -18,11 +18,14 @@ const t = messages.flights;
 const tt = messages.times;
 
 function AgentsCell({ task, agents }: { task: TaskView; agents: AgentOption[] }) {
+  // A task without a part of the flight (5. mérföldkő) has nobody to assign.
+  const { kind } = task.timeline;
+  if (!kind) return <span className="text-neutral-500">{messages.flightKind.NONE}</span>;
   return (
     <AssignmentForm
       action={assignAgents.bind(null, task.id)}
       type={task.timeline.shape.type}
-      kind={task.timeline.kind}
+      kind={kind}
       agents={agents}
       arrivalAgentId={task.arrivalAgent?.id ?? null}
       departureAgentId={task.departureAgent?.id ?? null}
