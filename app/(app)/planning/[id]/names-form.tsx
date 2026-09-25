@@ -8,14 +8,22 @@ import { fmt } from "@/lib/messages/format";
 
 const t = messages.planning;
 
+export interface NameOption {
+  id: string;
+  name: string;
+  /** Holds every qualification the position needs on the day (6. mérföldkő). */
+  fits: boolean;
+  /** What they lack, named, when they do not fit. */
+  missing: string | null;
+}
+
 /** One agent per position of the day (CLAUDE.md, "Nevek és tervezet"). */
 export function NamesForm({
   positions,
-  agents,
   action,
 }: {
-  positions: { id: string; number: number; userId: string | null; shift: string }[];
-  agents: { id: string; name: string }[];
+  /** Per position its agents, those who fit first (CLAUDE.md, 6. mérföldkő: a névadás sorrendje). */
+  positions: { id: string; number: number; userId: string | null; shift: string; options: NameOption[] }[];
   action: (state: ActionResult | null, formData: FormData) => Promise<ActionResult>;
 }) {
   const [result, formAction, pending] = useActionState(action, null);
@@ -30,11 +38,24 @@ export function NamesForm({
             </span>
             <select name={`agent:${position.id}`} defaultValue={position.userId ?? ""} className="input">
               <option value="">{t.names.none}</option>
-              {agents.map((agent) => (
-                <option key={agent.id} value={agent.id}>
-                  {agent.name}
-                </option>
-              ))}
+              <optgroup label={t.names.fitting}>
+                {position.options
+                  .filter((o) => o.fits)
+                  .map((o) => (
+                    <option key={o.id} value={o.id}>
+                      {o.name}
+                    </option>
+                  ))}
+              </optgroup>
+              <optgroup label={t.names.notFitting}>
+                {position.options
+                  .filter((o) => !o.fits)
+                  .map((o) => (
+                    <option key={o.id} value={o.id}>
+                      {o.missing ? `${o.name} – ${o.missing}` : o.name}
+                    </option>
+                  ))}
+              </optgroup>
             </select>
           </label>
         ))}

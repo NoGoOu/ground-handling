@@ -2,13 +2,13 @@ import type { Prisma } from "@/generated/prisma/client";
 import { listPublicationsInRange } from "@/lib/data/publications";
 import { listRosterAgents } from "@/lib/data/shifts";
 import { getTaskView, listTaskViewsForDay, type TaskView } from "@/lib/data/tasks";
-import type { QualificationContext } from "@/lib/data/training";
+import { describeShortfalls, loadQualificationContext, type QualificationContext } from "@/lib/data/training";
 import { prisma } from "@/lib/db";
 import { flightLabel } from "@/lib/flight";
 import { messages } from "@/lib/messages";
 import { planDay } from "@/lib/planning/balance";
 import { draftConflicts, draftPlan, type DraftConflict } from "@/lib/planning/draft";
-import { windowsOfDay, type PlanWindow } from "@/lib/planning/input";
+import { windowsOfDay, type PlanWindow, type WindowPart } from "@/lib/planning/input";
 import {
   DEFAULT_PLANNING_SETTINGS,
   pickSettings,
@@ -17,7 +17,8 @@ import {
 } from "@/lib/planning/settings";
 import type { TakeoverItem, TakeoverResult, TakeoverTask } from "@/lib/planning/takeover";
 import { itemWindow, planDayView, type PlanDayView } from "@/lib/planning/view";
-import { windowRequirement } from "@/lib/qualifications";
+import { covers, shortage } from "@/lib/planning/staffing";
+import { shortfalls, usableOn, windowRequirement } from "@/lib/qualifications";
 import { SETTINGS_ID } from "@/lib/settings";
 import { addDays, localDayRange } from "@/lib/time";
 import { hasPart } from "@/lib/turnaround";
@@ -46,8 +47,23 @@ export async function listPlanningTasks(start: string, end: string): Promise<Tas
 }
 
 /** The input of each day of the period (CLAUDE.md, "Folyamat" 2). */
-export function windowsByDay(tasks: readonly TaskView[], days: readonly string[]): Map<string, PlanWindow[]> {
-  const planning = tasks.map((task) => ({ id: task.id, flightId: task.flight.id, windows: task.timeline.shape.windows }));
+export function windowsByDay(
+  tasks: readonly TaskView[],
+  days: readonly string[],
+  context?: QualificationContext,
+): Map<string, PlanWindow[]> {
+  const planning = tasks.map((task) => ({
+    id: task.id,
+    flightId: task.flight.id,
+    windows: task.timeline.shape.windows,
+    // What each window needs (6. mérföldkő), when the qualifications are loaded.
+    ...(context
+      ? {
+          requires: (part: WindowPart) =>
+            windowRequirement(context.requirementsOf(task.flight.airlineId, task.taskType.id), part),
+        }
+      : {}),
+  }));
   return new Map(days.map((day) => [day, windowsOfDay(planning, day)]));
 }
 
@@ -111,10 +127,13 @@ export async function calculatePlanDays(planId: string, days: readonly string[])
   if (days.length === 0) return;
   const sorted = [...days].sort();
   const { settings } = await getPlanningSettings();
-  const byDay = windowsByDay(await listPlanningTasks(sorted[0], sorted.at(-1)!), sorted);
+  // The requirements of the windows and the candidates (6. mérföldkő): the active agents.
+  const [context, agents] = await Promise.all([loadQualificationContext(null), listRosterAgents(null)]);
+  const byDay = windowsByDay(await listPlanningTasks(sorted[0], sorted.at(-1)!), sorted, context);
   const calculatedAt = new Date();
   for (const day of sorted) {
-    const positions = planDay(byDay.get(day) ?? [], settings);
+    const staffing = { agents: agents.map((agent) => usableOn(context.recordsOf(agent.id), day)) };
+    const positions = planDay(byDay.get(day) ?? [], settings, staffing);
     const copy = settings as unknown as Prisma.InputJsonValue;
     await prisma.$transaction(async (tx) => {
       const { id: dayId } = await tx.planDay.upsert({
@@ -146,8 +165,21 @@ export async function createPlan(userId: string, start: string, end: string): Pr
   return plan.id;
 }
 
+/** Whether the day can be staffed with today's qualifications (6. mérföldkő), and who fits each position. */
+export interface PlanStaffing {
+  /** The numbers of the positions a best staffing leaves empty. */
+  unfilled: number[];
+  /** Per qualification the positions need: how many need it, how many hold it ("PRM: kell 4, van 3"). */
+  perQualification: { code: string; need: number; have: number }[];
+  /** Per position the agents, those who fit first; the others with what they lack. */
+  candidates: Map<string, { id: string; name: string; fits: boolean; missing: string | null }[]>;
+}
+
 /** A stored plan day with what its view needs; null when the day is not in the plan. */
-export async function getPlanDayView(planId: string, day: string): Promise<(PlanDayView & { dayId: string; calculatedAt: Date; settings: PlanningSettings }) | null> {
+export async function getPlanDayView(
+  planId: string,
+  day: string,
+): Promise<(PlanDayView & { dayId: string; calculatedAt: Date; settings: PlanningSettings; staffing: PlanStaffing }) | null> {
   const stored = await prisma.planDay.findUnique({
     where: { planId_date: { planId, date: dateValue(day) } },
     select: {
@@ -167,8 +199,9 @@ export async function getPlanDayView(planId: string, day: string): Promise<(Plan
       select: {
         id: true,
         flightId: true,
+        taskTypeId: true,
         taskType: { select: { code: true } },
-        flight: { select: { inboundFlightNumber: true, outboundFlightNumber: true, stand: true } },
+        flight: { select: { airlineId: true, inboundFlightNumber: true, outboundFlightNumber: true, stand: true } },
       },
     }),
   ]);
@@ -187,7 +220,46 @@ export async function getPlanDayView(planId: string, day: string): Promise<(Plan
     labels,
     current,
   });
-  return { ...view, dayId: stored.id, calculatedAt: stored.calculatedAt, settings };
+
+  // Staffing with today's qualifications and requirements (approved decision 7).
+  const [context, agents] = await Promise.all([loadQualificationContext(null), listRosterAgents(null)]);
+  const taskOf = new Map(labelled.map((task) => [task.id, task]));
+  const laneNeeds = view.lanes.map((lane) =>
+    [
+      ...new Set(
+        lane.boxes.flatMap((box) => {
+          const task = taskOf.get(box.taskId);
+          return task ? windowRequirement(context.requirementsOf(task.flight.airlineId, task.taskTypeId), box.part) : [];
+        }),
+      ),
+    ].sort(),
+  );
+  const usable = agents.map((agent) => usableOn(context.recordsOf(agent.id), day));
+  // A position emptied by hand needs nobody.
+  const staffed = view.lanes.flatMap((lane, index) => (lane.boxes.length > 0 ? [index] : []));
+  const found = shortage(staffed.map((index) => laneNeeds[index]), { agents: usable });
+  const candidates = new Map(
+    view.lanes.map((lane, index) => {
+      const options = agents.map((agent, a) => {
+        const missing = shortfalls(laneNeeds[index], context.recordsOf(agent.id), day);
+        return {
+          id: agent.id,
+          name: agent.name,
+          fits: covers(usable[a], laneNeeds[index]),
+          missing: missing.length > 0 ? describeShortfalls(missing, context.codeOf) : null,
+        };
+      });
+      // Those who fit first (CLAUDE.md, "Tervező": a névadás sorrendje), each group by name.
+      const ordered = [...options.filter((o) => o.fits), ...options.filter((o) => !o.fits)];
+      return [lane.positionId, ordered] as [string, typeof options];
+    }),
+  );
+  const staffing: PlanStaffing = {
+    unfilled: found.unfilled.map((index) => view.lanes[staffed[index]].number),
+    perQualification: found.perQualification.map((row) => ({ code: context.codeOf(row.qualificationId), need: row.need, have: row.have })),
+    candidates,
+  };
+  return { ...view, dayId: stored.id, calculatedAt: stored.calculatedAt, settings, staffing };
 }
 
 /**
@@ -227,11 +299,6 @@ export async function movePlanItem(
       settings: settingsFromJson(planDay.settings),
     };
   });
-}
-
-/** The agents a position may be named for: active members of a team. */
-export async function listPositionAgents() {
-  return listRosterAgents(null);
 }
 
 /** Names the positions of a plan day; an empty value clears the name. Unknown agents are refused. */

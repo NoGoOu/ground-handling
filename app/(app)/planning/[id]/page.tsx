@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { boardRange, hourTicks } from "@/lib/board";
-import { getPlan, getPlanDayView, listPositionAgents } from "@/lib/data/planning";
+import { getPlan, getPlanDayView } from "@/lib/data/planning";
 import { messages } from "@/lib/messages";
 import { fmt } from "@/lib/messages/format";
 import { canAssignTasks, canPlan, canViewPlans } from "@/lib/permissions";
@@ -38,7 +38,6 @@ export default async function PlanPage(props: PageProps<"/planning/[id]">) {
   const day = requested && plan.days.includes(requested) ? requested : plan.days[0];
   const view = day ? await getPlanDayView(id, day) : null;
   const planner = canPlan(user);
-  const agents = planner ? await listPositionAgents() : [];
   const index = plan.days.indexOf(day);
 
   const range = view
@@ -121,6 +120,24 @@ export default async function PlanPage(props: PageProps<"/planning/[id]">) {
             </p>
           )}
           {view.hasManual && <p className="text-sm text-neutral-600">{t.plan.manual}</p>}
+          {view.staffing.unfilled.length > 0 && (
+            <div role="status" className="flex flex-col gap-1 rounded-md bg-red-50 px-3 py-2 text-sm text-red-800">
+              <p>
+                ⚠{" "}
+                {fmt(t.plan.shortage, {
+                  count: view.staffing.unfilled.length,
+                  positions: view.staffing.unfilled.map((number) => fmt(t.plan.position, { number })).join(", "),
+                })}
+              </p>
+              {view.staffing.perQualification.length > 0 && (
+                <p>
+                  {fmt(t.plan.shortageRows, {
+                    rows: view.staffing.perQualification.map((row) => fmt(t.plan.shortageRow, row)).join("; "),
+                  })}
+                </p>
+              )}
+            </div>
+          )}
 
           {view.lanes.length === 0 ? (
             <p className="rounded-lg border border-dashed border-neutral-300 p-8 text-center text-neutral-600">{t.plan.empty}</p>
@@ -186,8 +203,8 @@ export default async function PlanPage(props: PageProps<"/planning/[id]">) {
                       number: lane.number,
                       userId: lane.userId,
                       shift: `${formatTimeOnDay(lane.shift.start, day)}–${formatTimeOnDay(lane.shift.end, day)}`,
+                      options: view.staffing.candidates.get(lane.positionId) ?? [],
                     }))}
-                    agents={agents}
                     action={savePositionNames.bind(null, id, day)}
                   />
                   <p className="border-t border-neutral-200 pt-3 text-sm text-neutral-600">{t.draft.hint}</p>

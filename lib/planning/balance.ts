@@ -2,6 +2,7 @@ import { minimalPositions } from "./assign";
 import { compareWindows, type PlanWindow } from "./input";
 import { busyMinutes, fits, shiftMinutes } from "./position";
 import type { PlanningSettings } from "./settings";
+import { deficiency, positionRequirement, type Staffing } from "./staffing";
 
 // Steps 2–3 of the algorithm (CLAUDE.md, 4. mérföldkő, "Cél és algoritmus"):
 // an even load within the allowed headcount (the minimum + the allowed extra
@@ -96,7 +97,7 @@ interface Candidate {
  * Windows are handled by their index in plan order, so a position is a sorted
  * list of numbers, and a candidate's stats come from one pass without copying.
  */
-function improve(start: PlanWindow[][], settings: PlanningSettings): PlanWindow[][] {
+function improve(start: PlanWindow[][], settings: PlanningSettings, staffing?: Staffing): PlanWindow[][] {
   const all = start.flat().sort(compareWindows);
   const index = new Map(all.map((window, i) => [window, i]));
   const starts = all.map((w) => w.start.getTime());
@@ -147,8 +148,18 @@ function improve(start: PlanWindow[][], settings: PlanningSettings): PlanWindow[
     [...position.filter((i) => i !== remove), ...(add === null ? [] : [add])].sort((a, b) => a - b);
   const stats = positions.map((p) => statsWith(p, null, null));
 
+  // The positions left empty at best (6. mérföldkő): a change may not make it grow.
+  const deficiencyOf = (list: readonly number[][]) =>
+    staffing
+      ? deficiency(
+          list.filter((p) => p.length > 0).map((p) => positionRequirement(p.map((i) => all[i]))),
+          staffing,
+        )
+      : 0;
+
   for (let step = 0; step < MAX_STEPS; step++) {
     const current = scoreOf(stats);
+    const currentDeficiency = deficiencyOf(positions);
     const candidates: Candidate[] = [];
     const changed = [...stats];
     const consider = (from: number, to: number, x: number, y: number | null) => {
@@ -180,6 +191,12 @@ function improve(start: PlanWindow[][], settings: PlanningSettings): PlanWindow[
       const newTo = windowsOf(positions[c.to], c.y, c.x);
       const asWindows = (p: number[]) => p.map((i) => all[i]);
       if (!fits(asWindows(newFrom), settings) || !fits(asWindows(newTo), settings)) continue;
+      if (
+        staffing &&
+        deficiencyOf(positions.map((p, i) => (i === c.from ? newFrom : i === c.to ? newTo : p))) > currentDeficiency
+      ) {
+        continue;
+      }
       positions[c.from] = newFrom;
       positions[c.to] = newTo;
       stats[c.from] = statsWith(newFrom, null, null);
@@ -200,17 +217,19 @@ function numbered(positions: PlanWindow[][]): PlanWindow[][] {
 /**
  * The plan of one day: the fewest positions under the rules, then balanced
  * within the allowed headcount. Of the tried headcounts the best one wins:
- * the smaller spread, then less work, less idle time, fewer positions.
+ * the fewer positions left empty at best (with the qualifications, 6.
+ * mérföldkő), then the smaller spread, less work, less idle time, fewer positions.
  */
-export function planDay(windows: readonly PlanWindow[], settings: PlanningSettings): PlanWindow[][] {
-  const base = minimalPositions(windows, settings);
+export function planDay(windows: readonly PlanWindow[], settings: PlanningSettings, staffing?: Staffing): PlanWindow[][] {
+  const base = minimalPositions(windows, settings, staffing);
   if (base.length === 0) return [];
   let best: { positions: PlanWindow[][]; score: number[] } | null = null;
   for (let extra = 0; extra <= settings.extraPositions; extra++) {
     const start = [...base.map((p) => [...p]), ...Array.from({ length: extra }, () => [] as PlanWindow[])];
-    const positions = numbered(improve(start, settings));
+    const positions = numbered(improve(start, settings, staffing));
     const metrics = metricsOf(positions, settings);
-    const score = [metrics.loadSpread, metrics.workMinutes, metrics.idleMinutes, positions.length];
+    const empty = staffing ? deficiency(positions.map(positionRequirement), staffing) : 0;
+    const score = [empty, metrics.loadSpread, metrics.workMinutes, metrics.idleMinutes, positions.length];
     if (!best || compareScores(score, best.score) < 0) best = { positions, score };
   }
   return best!.positions;

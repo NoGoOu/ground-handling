@@ -19,6 +19,8 @@ export interface PlanWindow extends TimeWindow {
    * share a position (5. mérföldkő). Without it the rule is not checked.
    */
   flightId?: string;
+  /** The qualifications the window needs (6. mérföldkő), sorted; none when not given. */
+  requires?: string[];
 }
 
 /** What the input needs of a task: its occupancy windows (lib/turnaround). */
@@ -26,6 +28,8 @@ export interface PlanningTask {
   id: string;
   flightId?: string;
   windows: readonly OccupancyWindow[];
+  /** The qualifications a window of the given part needs (6. mérföldkő). */
+  requires?: (part: WindowPart) => string[];
 }
 
 export const windowId = (taskId: string, part: WindowPart) => `${taskId}:${part}`;
@@ -54,6 +58,7 @@ export function windowsOfDay(tasks: readonly PlanningTask[], localDate: string):
         start: window.start,
         end: window.end,
         ...(task.flightId ? { flightId: task.flightId } : {}),
+        ...(task.requires ? { requires: task.requires(window.part) } : {}),
       });
     }
   }
