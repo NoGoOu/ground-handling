@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { deviationLevel } from "@/lib/turnaround";
 import { fieldErrors } from "@/lib/validation/form";
-import { settingsSchema, type SettingsFormInput } from "@/lib/validation/settings";
+import { expirySettingsSchema, settingsSchema, type SettingsFormInput } from "@/lib/validation/settings";
 
 const valid: SettingsFormInput = { deviationGreenMaxMinutes: "0", deviationYellowMaxMinutes: "5" };
 
@@ -40,5 +40,13 @@ describe("colouring follows the configured thresholds", () => {
     expect(deviationLevel(3, loose)).toBe("green");
     expect(deviationLevel(10, loose)).toBe("yellow");
     expect(deviationLevel(11, loose)).toBe("red");
+  });
+});
+
+describe("expiry warning form (6. mérföldkő)", () => {
+  it("takes whole days up to a year", () => {
+    expect(expirySettingsSchema.parse({ expiryWarningDays: "30" })).toEqual({ expiryWarningDays: 30 });
+    expect(expirySettingsSchema.safeParse({ expiryWarningDays: "366" }).success).toBe(false);
+    expect(expirySettingsSchema.safeParse({ expiryWarningDays: "" }).success).toBe(false);
   });
 });

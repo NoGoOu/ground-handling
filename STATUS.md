@@ -4,14 +4,14 @@
 
 ## Mi készült el
 
-- 6. mérföldkő, 2. lépés: jogosítás-számítás (`lib/qualifications.ts`): az érvényesség vége a teljesítés napja + a hónapok (rövidebb hónapban a hónap utolsó napja), jogosításonként a legutolsó sikeres rekord számít (azonos napon a később rögzített), egy későbbi sikertelen próbálkozás nem veszi el; állapot egy napon (érvényes, hamarosan lejár, lejárt, hiányzik; az utolsó napon még érvényes); a task ablakának követelménye (gyors fordulón a két rész uniója, inaktív jogosítás nélkül) és a hiányzó vagy lejárt jogosítások. Tesztekkel.
-- 6. mérföldkő, 1. lépés: adatmodell és migráció (jogosítás, képzés, rekord, csatolmány, követelmények, „hamarosan lejár” beállítás, két új jogosultság és az Oktatási koordinátor szerepkör) (`abc2e9a`).
+- 6. mérföldkő, 3. lépés: koordinátori felület (`/training`, menü: „Képzések”). Jogosítások (név, kód, érvényesség, aktív), képzések (adott jogosítás – inaktív nem választható –, dolgozat és sikerességi határ), rekordok (az ügynök nem módosítható; dolgozatnál az eredményből számol a sikeresség, egyébként a koordinátor jelöli; az érvényesség vége számolt, kézzel felülírható), fájlok (PDF/JPG/PNG, 10 MB, a típust a fájl eleje dönti el; eltávolításkor a fájl törlődik, a naplósor megmarad; saját kötet Dockerben), letöltés a rekord megtekintésének jogosultságával és hatókörével, lejáró jogosítások (hamarosan lejár és lejárt, hatókör szerint). Az admin beállításoknál a „hamarosan lejár” napjai. A szabályok tiszta függvények (`lib/training.ts`), tesztekkel.
+- 6. mérföldkő, 1–2. lépés: adatmodell és migráció; jogosítás-számítás tiszta függvényekként (`lib/qualifications.ts`).
 - 5. mérföldkő (feladattípusok) kész; eltérései elfogadva (További eldöntött szabályok 27–32.).
 
 ## Állapot
 
-- Utolsó commit: `abc2e9a` – feat: add the training and qualification data model (a 2. lépés commitja ezt követi)
-- Tesztek: `npm test` → 411 teszt, mind zöld
+- Utolsó commit: `ed5b07a` – feat: calculate the qualifications of an agent (a 3. lépés commitja ezt követi)
+- Tesztek: `npm test` → 422 teszt, mind zöld
 - Lint és build: `npm run lint` hibátlan, `npx tsc --noEmit` tiszta
 
 ## Eltérések a CLAUDE.md-től
@@ -24,4 +24,4 @@
 
 ## Következő lépés
 
-- 6. mérföldkő, 3. lépés: koordinátori felület (jogosítások, képzések, rekordok, fájlok, lejáró jogosítások).
+- 6. mérföldkő, 4. lépés: nézetek (ügynök: saját; csapatvezető: csapat-táblázat; koordinátor és admin: mindenki).

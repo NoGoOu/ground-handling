@@ -9,7 +9,11 @@ export const SETTINGS_ID = "global";
 
 export interface Settings {
   deviationThresholds: DeviationThresholds;
+  /** A qualification expiring within this many days is "hamarosan lejár" (6. mérföldkő). */
+  expiryWarningDays: number;
 }
+
+export const DEFAULT_EXPIRY_WARNING_DAYS = 30;
 
 /** Read once per request; falls back to the defaults while the row is missing. */
 export const getSettings = cache(async (): Promise<Settings> => {
@@ -18,5 +22,6 @@ export const getSettings = cache(async (): Promise<Settings> => {
     deviationThresholds: row
       ? { greenMax: row.deviationGreenMaxMinutes, yellowMax: row.deviationYellowMaxMinutes }
       : DEVIATION_THRESHOLDS,
+    expiryWarningDays: row?.expiryWarningDays ?? DEFAULT_EXPIRY_WARNING_DAYS,
   };
 });

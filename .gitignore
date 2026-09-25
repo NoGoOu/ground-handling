@@ -49,3 +49,6 @@ next-env.d.ts
 
 # generated Prisma client
 /generated
+
+# training files (6. mérföldkő)
+/uploads

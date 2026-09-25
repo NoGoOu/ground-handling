@@ -22,6 +22,10 @@ services:
       # Override in production, e.g. AUTH_SECRET=... docker compose up
       AUTH_SECRET: ${AUTH_SECRET:-insecure-demo-secret-change-me}
       AUTH_TRUST_HOST: "true"
+      # Files of the training records (6. mérföldkő), on their own volume.
+      UPLOAD_DIR: /app/uploads
+    volumes:
+      - uploads:/app/uploads
     ports:
       - "3000:3000"
     depends_on:
@@ -30,3 +34,4 @@ services:
 
 volumes:
   db-data:
+  uploads:

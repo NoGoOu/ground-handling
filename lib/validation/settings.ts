@@ -27,3 +27,9 @@ export const settingsSchema = z
   });
 
 export type SettingsData = z.output<typeof settingsSchema>;
+
+/** "Hamarosan lejár" (6. mérföldkő): a form of its own on the settings page. */
+export const EXPIRY_SETTINGS_FIELDS = ["expiryWarningDays"] as const;
+export type ExpirySettingsFormInput = Record<(typeof EXPIRY_SETTINGS_FIELDS)[number], string>;
+
+export const expirySettingsSchema = z.object({ expiryWarningDays: intField(0, 365, e.days) });
