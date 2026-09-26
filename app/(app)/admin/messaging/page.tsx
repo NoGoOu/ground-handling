@@ -1,18 +1,19 @@
 import Link from "next/link";
 import { listApiCalls, listApiKeys } from "@/lib/data/api-keys";
+import { listDelayCodes } from "@/lib/data/delays";
 import { messages } from "@/lib/messages";
 import { fmt } from "@/lib/messages/format";
 import { canManageMessaging } from "@/lib/permissions";
 import { requireCapability } from "@/lib/session";
 import { formatDateTime } from "@/lib/time";
-import { createKey, revokeKey } from "./actions";
-import { ApiKeyForm, RevokeKeyButton } from "./forms";
+import { createDelayCode, createKey, revokeKey, updateDelayCode } from "./actions";
+import { ApiKeyForm, DelayCodeForm, RevokeKeyButton } from "./forms";
 
 const t = messages.messaging;
 
 export default async function MessagingSettingsPage() {
   await requireCapability(canManageMessaging);
-  const [keys, calls] = await Promise.all([listApiKeys(), listApiCalls()]);
+  const [keys, calls, delayCodes] = await Promise.all([listApiKeys(), listApiCalls(), listDelayCodes()]);
   return (
     <div className="flex flex-col gap-4">
       <Link href="/admin" className="self-start text-sm text-sky-700 hover:underline">
@@ -55,6 +56,32 @@ export default async function MessagingSettingsPage() {
             ))}
           </ul>
         )}
+      </section>
+
+      <section className="flex flex-col gap-3 rounded-xl border border-neutral-200 bg-white p-4">
+        <h2 className="font-semibold">{messages.delayCodes.title}</h2>
+        <p className="max-w-3xl text-sm text-neutral-600">{messages.delayCodes.hint}</p>
+        <DelayCodeForm
+          action={createDelayCode}
+          initial={{ code: "", description: "", active: "on" }}
+          submitLabel={messages.delayCodes.create}
+        />
+        {delayCodes.length === 0 ? (
+          <p className="text-sm text-neutral-600">{messages.delayCodes.empty}</p>
+        ) : (
+          <ul className="flex flex-col divide-y divide-neutral-100">
+            {delayCodes.map((code) => (
+              <li key={code.id} className="py-2">
+                <DelayCodeForm
+                  action={updateDelayCode.bind(null, code.id)}
+                  initial={{ code: code.code, description: code.description ?? "", active: code.active ? "on" : "" }}
+                  submitLabel={messages.delayCodes.save}
+                />
+              </li>
+            ))}
+          </ul>
+        )}
+        <p className="text-sm text-neutral-500">{messages.delayCodes.noDelete}</p>
       </section>
 
       <section className="flex flex-col gap-3 rounded-xl border border-neutral-200 bg-white p-4">

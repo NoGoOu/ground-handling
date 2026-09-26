@@ -20,15 +20,20 @@ import { fmt } from "@/lib/messages/format";
 import {
   canChangeTaskStatus,
   canManageFlights,
+  canRecordDelayCodes,
   canRecordMilestone,
   canViewFlightMessages,
   canViewTask,
   homePathFor,
 } from "@/lib/permissions";
 import { requireUser, type CurrentUser } from "@/lib/session";
-import { formatTime, formatTimeOnDay, toLocalDate, toLocalDateTimeInput } from "@/lib/time";
+import { formatDateTime, formatTime, formatTimeOnDay, toLocalDate, toLocalDateTimeInput } from "@/lib/time";
 import { hasPart, isRequiredMissing, type Part, type TimelineRow } from "@/lib/turnaround";
-import { changeStatus, recordNow, setMilestoneTime } from "./actions";
+import { listDelayCodes, listDelayRecords, type DelayRecordRow } from "@/lib/data/delays";
+import { checkDelays } from "@/lib/telex/checks";
+import { warningText } from "@/lib/telex/describe";
+import { addDelayCode, changeStatus, recordNow, removeDelayCode, setMilestoneTime } from "./actions";
+import { AddDelayCodeForm, RemoveDelayCodeButton } from "./delay-codes";
 import { MilestoneActions } from "./milestone-actions";
 import { StatusControl } from "./status-control";
 import { TaskTabs } from "./tabs";
@@ -239,6 +244,81 @@ function MilestoneRow({ ctx, row }: { ctx: ViewContext; row: TimelineRow }) {
   );
 }
 
+/**
+ * The delay codes of the flight's departure part (7. mérföldkő): by hand or
+ * from the newest departure MVT, with a warning when they do not add up to
+ * the delay (rule 7).
+ */
+function DelayCodes({
+  task,
+  records,
+  codes,
+  editable,
+}: {
+  task: TaskView;
+  records: DelayRecordRow[];
+  codes: { code: string; description: string | null; active: boolean }[];
+  editable: boolean;
+}) {
+  const d = messages.delayRecords;
+  const described = new Map(codes.map((c) => [c.code, c]));
+  const delay = task.timeline.delayMinutes;
+  const warnings = checkDelays(records, delay);
+  const cancelled = task.flight.departureCancelled;
+  return (
+    <section className="flex flex-col gap-2 rounded-xl border border-neutral-200 bg-white p-4">
+      <h2 className="font-semibold">{d.title}</h2>
+      <p className="text-sm text-neutral-600">{d.hint}</p>
+      {records.length === 0 ? (
+        <p className="text-sm text-neutral-600">{d.empty}</p>
+      ) : (
+        <ul className="flex flex-col divide-y divide-neutral-100 text-sm">
+          {records.map((record) => (
+            <li key={record.id} className="flex flex-wrap items-center justify-between gap-2 py-1.5">
+              <span className="flex flex-col">
+                <span>
+                  <span className="font-mono font-semibold">{fmt(d.row, { code: record.code, minutes: record.minutes })}</span>
+                  {described.get(record.code)?.description && <> · {described.get(record.code)!.description}</>}
+                  {!described.has(record.code) && <span className="ml-2 text-orange-700">⚠ {d.unknownCode}</span>}
+                </span>
+                <span className="text-neutral-500">
+                  {fmt(d.recorded, {
+                    source: d.source[record.source],
+                    name: record.createdBy?.name ?? d.byMessage,
+                    time: formatDateTime(record.createdAt),
+                  })}
+                </span>
+              </span>
+              {editable && record.source === "MANUAL" && <RemoveDelayCodeButton action={removeDelayCode.bind(null, record.id)} />}
+            </li>
+          ))}
+        </ul>
+      )}
+      <p className="text-sm text-neutral-700">
+        {fmt(d.total, {
+          sum: records.reduce((total, r) => total + r.minutes, 0),
+          delay: delay === null ? d.noDelay : fmt(d.delayMinutes, { minutes: delay }),
+        })}
+      </p>
+      {warnings.map((w, i) => (
+        <p key={i} className="text-sm text-orange-700">
+          ⚠ {warningText(w)}
+        </p>
+      ))}
+      {cancelled ? (
+        <p className="text-sm text-neutral-600">{d.cancelled}</p>
+      ) : (
+        editable && (
+          <AddDelayCodeForm
+            action={addDelayCode.bind(null, task.flight.id)}
+            codes={codes.filter((c) => c.active).map((c) => ({ code: c.code, description: c.description }))}
+          />
+        )
+      )}
+    </section>
+  );
+}
+
 function PartSection({ ctx, part }: { ctx: ViewContext; part: Part }) {
   const rows = ctx.task.timeline.rows.filter((row) => row.milestone.part === part);
   if (rows.length === 0) return null;
@@ -290,6 +370,10 @@ export default async function TaskPage(props: PageProps<"/tasks/[id]">) {
   // The messages of the flight (7. mérföldkő), for whoever may see them.
   const agents = await flightPartAgents(task.flight.id);
   const showMessages = canViewFlightMessages(user, [...agents.arrival, ...agents.departure]);
+  // Delay codes belong to the flight's departure part.
+  const [delayRecords, delayCodes] = task.flight.std
+    ? await Promise.all([listDelayRecords(task.flight.id), listDelayCodes()])
+    : [[], []];
 
   return (
     <div className="flex flex-col gap-4">
@@ -313,6 +397,14 @@ export default async function TaskPage(props: PageProps<"/tasks/[id]">) {
       )}
       <PartSection ctx={ctx} part="ARRIVAL_PART" />
       <PartSection ctx={ctx} part="DEPARTURE_PART" />
+      {task.flight.std && (
+        <DelayCodes
+          task={task}
+          records={delayRecords}
+          codes={delayCodes}
+          editable={canRecordDelayCodes(user, agents.departure)}
+        />
+      )}
     </div>
   );
 }

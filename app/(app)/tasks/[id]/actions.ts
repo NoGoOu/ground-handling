@@ -4,14 +4,17 @@ import { refresh } from "next/cache";
 import { Prisma } from "@/generated/prisma/client";
 import { TaskStatus } from "@/generated/prisma/enums";
 import { ActionError, actionUser, runAction, type ActionResult } from "@/lib/action";
-import { getTaskView, taskAssignment, type TaskView } from "@/lib/data/tasks";
+import { addDelayRecord, removeDelayRecord } from "@/lib/data/delays";
+import { flightPartAgents, getTaskView, taskAssignment, type TaskView } from "@/lib/data/tasks";
 import { prisma } from "@/lib/db";
 import { messages } from "@/lib/messages";
 import { fmt } from "@/lib/messages/format";
-import { canChangeTaskStatus, canRecordMilestone } from "@/lib/permissions";
+import { canChangeTaskStatus, canRecordDelayCodes, canRecordMilestone } from "@/lib/permissions";
 import { templateSnapshotJson } from "@/lib/snapshot";
 import { parseLocalDateTime } from "@/lib/time";
 import { hasPart, isPartCancelled, truncateToMinute } from "@/lib/turnaround";
+import { DELAY_RECORD_FIELDS, delayRecordSchema } from "@/lib/validation/delay-code";
+import { fieldErrors, formValues } from "@/lib/validation/form";
 
 // Bound arguments (task, milestone, status) come from the client, so each one is
 // checked here against the database and the permission rules.
@@ -133,5 +136,38 @@ export async function changeStatus(
         return { ok: true, warning: fmt(t.missingOnComplete, { names: missing.map((r) => r.milestone.name).join(", ") }) };
       }
     }
+  });
+}
+
+/** Delay codes of the task's flight (7. mérföldkő): whoever manages flights, or records on its departure part. */
+async function delayActor(flightId: string) {
+  const user = await actionUser();
+  const { departure } = await flightPartAgents(flightId);
+  if (!canRecordDelayCodes(user, departure)) throw new ActionError(messages.errors.forbidden);
+  return user;
+}
+
+export async function addDelayCode(flightId: string, _previous: ActionResult | null, formData: FormData): Promise<ActionResult> {
+  return runAction(async () => {
+    const user = await delayActor(flightId);
+    const parsed = delayRecordSchema.safeParse(formValues(formData, DELAY_RECORD_FIELDS));
+    if (!parsed.success) throw new ActionError(Object.values(fieldErrors(parsed.error))[0] ?? messages.errors.invalidInput);
+    // By hand, only a code of the table.
+    const known = await prisma.delayCode.findFirst({ where: { code: parsed.data.code, active: true } });
+    if (!known) throw new ActionError(messages.delayRecords.unknownCode);
+    if (!(await addDelayRecord(flightId, parsed.data.code, parsed.data.minutes, user.id))) {
+      throw new ActionError(messages.delayRecords.cancelled);
+    }
+    refresh();
+  });
+}
+
+export async function removeDelayCode(recordId: string): Promise<ActionResult> {
+  return runAction(async () => {
+    const record = await prisma.delayRecord.findUnique({ where: { id: recordId }, select: { flightId: true } });
+    if (!record) throw new ActionError(messages.errors.notFound);
+    const user = await delayActor(record.flightId);
+    if (!(await removeDelayRecord(recordId, user.id))) throw new ActionError(messages.errors.notFound);
+    refresh();
   });
 }

@@ -19,7 +19,8 @@ export interface MvtData {
   si: string[];
 }
 
-const DELAY_CODE = /^(\d{2}[A-Z]?|[A-Z]{2})$/;
+/** A delay code of the DL line: two digits and maybe a letter, or two letters. */
+export const DELAY_CODE = /^(\d{2}[A-Z]?|[A-Z]{2})$/;
 
 /** "68/36/0040/0036": the codes, then their durations. */
 function parseDelays(text: string, line: string, warnings: TelexWarning[]): MvtData["delays"] {
