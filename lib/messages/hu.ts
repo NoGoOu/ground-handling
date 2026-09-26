@@ -1104,6 +1104,15 @@ export const hu = {
     warnings: {
       noHeader: "Hiányzik a fejléc sor.",
       badHeader: "A fejléc nem értelmezhető: {line}",
+      unknownLine: "Ismeretlen sor: {line}",
+      unknownField: "Ismeretlen mező ({field}) ebben a sorban: {line}",
+      badTime: "Érvénytelen idő: {line}",
+      badDelay: "A késéssor nem értelmezhető: {line}",
+      delayCount: "A késéskódok és az időtartamok száma eltér: {line}",
+      badPosition: "A pozíciósor nem értelmezhető: {line}",
+      afterEnd: "Sor a CPM END után: {line}",
+      mixedDirections: "Az UCM-ben IN és OUT is van; az első számít.",
+      noDirection: "Az UCM-ből hiányzik az IN vagy OUT sor.",
     },
   },
 } as const;

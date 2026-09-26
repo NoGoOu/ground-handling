@@ -6,6 +6,19 @@ export const WARNING_CODES = [
   // The header line is missing or not "flight/date.registration…".
   "noHeader",
   "badHeader",
+  // A line or a field the parser does not know; the rest is still read.
+  "unknownLine",
+  "unknownField",
+  "badTime",
+  // DL: a code that is not one, or not as many durations as codes.
+  "badDelay",
+  "delayCount",
+  "badPosition",
+  // Lines after CPM END.
+  "afterEnd",
+  // UCM: IN and OUT in one message, or neither.
+  "mixedDirections",
+  "noDirection",
 ] as const;
 
 export type WarningCode = (typeof WARNING_CODES)[number];
