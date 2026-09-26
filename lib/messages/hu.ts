@@ -1113,6 +1113,15 @@ export const hu = {
       afterEnd: "Sor a CPM END után: {line}",
       mixedDirections: "Az UCM-ben IN és OUT is van; az első számít.",
       noDirection: "Az UCM-ből hiányzik az IN vagy OUT sor.",
+      registrationMismatch: "A lajstrom eltér: a járaton {flight}, az üzenetben {message}.",
+    },
+    unmatched: {
+      noHeader: "nincs értelmezhető fejléc",
+      airline: "a járatszám légitársasága nincs a rendszerben",
+      notHome: "nem érinti BUD-ot",
+      part: "nem dönthető el, a járat melyik részéről szól",
+      none: "nincs ilyen járat",
+      many: "több járat is szóba jön",
     },
   },
 } as const;

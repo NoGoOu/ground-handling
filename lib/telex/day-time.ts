@@ -37,3 +37,47 @@ export function parseDuration(text: string): number | null {
 export function formatDuration(minutes: number): string {
   return `${pad(Math.floor(minutes / 60))}${pad(minutes % 60)}`;
 }
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** The dates with this day of the month in the month of the reference and the two around it. */
+function datesWithDay(day: number, reference: Date): number[] {
+  const year = reference.getUTCFullYear();
+  const month = reference.getUTCMonth();
+  return [-1, 0, 1].flatMap((offset) => {
+    const date = new Date(Date.UTC(year, month + offset, day));
+    // Day 31 does not exist in every month.
+    return date.getUTCDate() === day ? [date.getTime()] : [];
+  });
+}
+
+/**
+ * A header's day of the month as a date "YYYY-MM-DD": the date with that day
+ * nearest to when the message came in (docs/messages.md, "Üzemnap").
+ */
+export function resolveOperatingDay(day: number, receivedAt: Date): string {
+  const receivedDay = Date.UTC(receivedAt.getUTCFullYear(), receivedAt.getUTCMonth(), receivedAt.getUTCDate());
+  const nearest = datesWithDay(day, receivedAt).reduce((best, date) =>
+    Math.abs(date - receivedDay) < Math.abs(best - receivedDay) ? date : best,
+  );
+  return new Date(nearest).toISOString().slice(0, 10);
+}
+
+/**
+ * A time of a message as an instant (UTC). With a day, the date with that day
+ * nearest to the reference, e.g. the off-block on the 17th of a flight of the
+ * 12th. Without one, the first such time at or after the reference, e.g. an
+ * estimated arrival after the take-off.
+ */
+export function resolveDayTime(time: DayTime, reference: Date): Date {
+  const minutes = (time.hour * 60 + time.minute) * 60_000;
+  if (time.day !== null) {
+    const referenceDay = Date.UTC(reference.getUTCFullYear(), reference.getUTCMonth(), reference.getUTCDate());
+    const day = datesWithDay(time.day, reference).reduce((best, date) =>
+      Math.abs(date - referenceDay) < Math.abs(best - referenceDay) ? date : best,
+    );
+    return new Date(day + minutes);
+  }
+  const sameDay = Date.UTC(reference.getUTCFullYear(), reference.getUTCMonth(), reference.getUTCDate()) + minutes;
+  return new Date(sameDay >= reference.getTime() ? sameDay : sameDay + DAY_MS);
+}

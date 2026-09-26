@@ -19,6 +19,8 @@ export const WARNING_CODES = [
   // UCM: IN and OUT in one message, or neither.
   "mixedDirections",
   "noDirection",
+  // The flight part has another registration (e.g. an aircraft change).
+  "registrationMismatch",
 ] as const;
 
 export type WarningCode = (typeof WARNING_CODES)[number];
