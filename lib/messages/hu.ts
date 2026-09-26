@@ -1099,6 +1099,13 @@ export const hu = {
       },
     },
   },
+  // 7. mérföldkő: messages (MVT, LDM, CPM, UCM).
+  telex: {
+    warnings: {
+      noHeader: "Hiányzik a fejléc sor.",
+      badHeader: "A fejléc nem értelmezhető: {line}",
+    },
+  },
 } as const;
 
 export type Messages = typeof hu;
