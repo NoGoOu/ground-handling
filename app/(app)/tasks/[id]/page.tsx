@@ -12,7 +12,7 @@ import {
 } from "@/components/badges";
 import { EstimateNote } from "@/components/estimate-note";
 import { TimeStack } from "@/components/time-stack";
-import { getTaskView, listFlightTasks, taskAssignment, type TaskView } from "@/lib/data/tasks";
+import { flightPartAgents, getTaskView, listFlightTasks, taskAssignment, type TaskView } from "@/lib/data/tasks";
 import { flightLabel } from "@/lib/flight";
 import { dayAnchors } from "@/lib/flight-day";
 import { messages } from "@/lib/messages";
@@ -21,6 +21,7 @@ import {
   canChangeTaskStatus,
   canManageFlights,
   canRecordMilestone,
+  canViewFlightMessages,
   canViewTask,
   homePathFor,
 } from "@/lib/permissions";
@@ -30,6 +31,7 @@ import { hasPart, isRequiredMissing, type Part, type TimelineRow } from "@/lib/t
 import { changeStatus, recordNow, setMilestoneTime } from "./actions";
 import { MilestoneActions } from "./milestone-actions";
 import { StatusControl } from "./status-control";
+import { TaskTabs } from "./tabs";
 
 const t = messages.task;
 const tt = messages.times;
@@ -285,6 +287,9 @@ export default async function TaskPage(props: PageProps<"/tasks/[id]">) {
   const day = toLocalDate(dayAnchors(task.timeline).order);
   const ctx: ViewContext = { task, user, day, now: new Date() };
   const backHref = canManageFlights(user) ? `/flights?date=${day}` : homePathFor(user);
+  // The messages of the flight (7. mérföldkő), for whoever may see them.
+  const agents = await flightPartAgents(task.flight.id);
+  const showMessages = canViewFlightMessages(user, [...agents.arrival, ...agents.departure]);
 
   return (
     <div className="flex flex-col gap-4">
@@ -298,6 +303,7 @@ export default async function TaskPage(props: PageProps<"/tasks/[id]">) {
           </Link>
         )}
       </div>
+      {showMessages && <TaskTabs taskId={task.id} active="task" />}
       <Header task={task} day={ctx.day} siblings={siblings} />
       {canChangeTaskStatus(user, taskAssignment(task)) && (
         <section className="flex flex-col gap-2 rounded-xl border border-neutral-200 bg-white p-4">

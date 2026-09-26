@@ -4,13 +4,13 @@
 
 ## Mi készült el
 
-- 7. mérföldkő, 7. lépés: `POST /api/messages` Bearer API-kulccsal (szöveg vagy JSON: text, source, receivedAt; 256 KB; üzenetenkénti válasz típussal, párosítással, figyelmeztetésekkel; hibák: 401, 400, 413, 422), minden hívás naplózva, a kulcs utolsó használata látszik; a proxy ezt az útvonalat nem munkamenettel védi. Admin → Üzenetküldés: kulcs létrehozása (csak egyszer látszik, hash-elve tárolva), visszavonás, hívásnapló. Új „Üzenetek” menü (Műszakvezető, Admin): kézi bemásolás ugyanazzal a feldolgozással, „Párosítatlan üzenetek” lista okkal, nyers szöveggel, hozzárendeléssel a jelölt járatrészekhez vagy elvetéssel. Élesben kipróbálva curl-lel (tárolás, párosítás, ATD és késéskód, PTM csak naplóban, duplikátum, hibás kulcs).
-- 7. mérföldkő, 0–6. lépés: tervező a terv napjára; adatmodell és jogosultságok; szétválasztás és fejléc; feldolgozók; párosítás; ellenőrzések; hatás és verziózás.
+- 7. mérföldkő, 8. lépés: a task nézet fülsort kapott („Mérföldkövek”, „Üzenetek”); az Üzenetek fül a járat üzeneteit mutatja a járat minden taskján, részenként, verziócsoportonként (érvényes elöl, a korábbiak lenyitva), irány, beérkezés, forrás, figyelmeztetések, a feldolgozott tartalom (helyi időben) és a nyers szöveg a borítékkal. Láthatóság: „Üzenetek megtekintése” a járat taskjainak tényleges ügynökei szerint (ügynök: a saját taskjai járatai; műszakvezető, admin: összes).
+- 7. mérföldkő, 0–7. lépés: tervező a terv napjára; adatmodell és jogosultságok; szétválasztás és fejléc; feldolgozók; párosítás; ellenőrzések; hatás és verziózás; API, kulcsok, bemásolás, párosítatlanok.
 - 6. mérföldkő (képzések és jogosítások) kész; pontosításai elfogadva (További eldöntött szabályok 33–40.).
 
 ## Állapot
 
-- Utolsó commit: `7b8ece5` – feat: store received messages and apply them to their flights (a 7. lépés commitja ezt követi)
+- Utolsó commit: `22268ba` – feat: receive messages through an API and by hand (a 8. lépés commitja ezt követi)
 - Tesztek: `npm test` → 517 teszt, mind zöld
 - Lint és build: `npm run lint` hibátlan, `npx tsc --noEmit` tiszta
 
@@ -26,4 +26,4 @@
 
 ## Következő lépés
 
-- 7. mérföldkő, 8. lépés: „Üzenetek” fül a task nézetben (műszakvezető és ügynök), járatrészenként a verziókkal, nyers és feldolgozott tartalommal, figyelmeztetésekkel.
+- 7. mérföldkő, 9. lépés: infografika fix elrendezésben, járatrészenként (utasok, rakomány, ULD-k, halmok, különleges kódok, súlyadatok, figyelmeztetések, forrásüzenet).

@@ -438,3 +438,41 @@ export async function listUnmatched(discarded: boolean) {
     })),
   );
 }
+
+/** A message of a flight as its "Üzenetek" tab shows it. */
+export async function listFlightMessages(flightId: string) {
+  const rows = await prisma.message.findMany({
+    where: { flightId },
+    include: {
+      apiKey: { select: { name: true } },
+      createdBy: { select: { name: true } },
+      deliveries: { orderBy: { attemptedAt: "asc" } },
+    },
+    orderBy: [{ receivedAt: "desc" }, { createdAt: "desc" }],
+  });
+  return rows.map((row) => ({
+    ...row,
+    parsedMessage: parsedOf(row),
+    stored: row.parsed as unknown as StoredParsed,
+    warnings: row.warnings as unknown as TelexWarning[],
+  }));
+}
+
+export type FlightMessage = Awaited<ReturnType<typeof listFlightMessages>>[number];
+
+/**
+ * The messages of one flight part by version: per type and kind the current
+ * version first, then the earlier ones, the newest group first.
+ */
+export function versionGroups(rows: readonly FlightMessage[], part: Part): { key: string; versions: FlightMessage[] }[] {
+  const groups = new Map<string, FlightMessage[]>();
+  for (const row of rows) {
+    if (row.part !== part) continue;
+    const key = row.versionKey ?? row.id;
+    groups.set(key, [...(groups.get(key) ?? []), row]);
+  }
+  return [...groups].map(([key, versions]) => ({
+    key,
+    versions: [...versions].sort((a, b) => Number(b.current) - Number(a.current) || b.receivedAt.getTime() - a.receivedAt.getTime()),
+  }));
+}

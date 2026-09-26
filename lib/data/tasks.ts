@@ -337,3 +337,18 @@ export function groupByFlight(tasks: readonly TaskView[]): { primary: TaskView; 
   }
   return groups;
 }
+
+/**
+ * The agents actually working each part of a flight, over all its tasks
+ * (7. mérföldkő: who sees and sends its messages). A quick turnaround's
+ * departure is its arrival agent's (rule 8).
+ */
+export async function flightPartAgents(flightId: string): Promise<{ arrival: string[]; departure: string[] }> {
+  const tasks = await prisma.task.findMany({ where: { flightId }, select: { id: true } });
+  const views = (await Promise.all(tasks.map((task) => getTaskView(task.id)))).filter((view): view is TaskView => !!view);
+  const ids = (list: (string | null | undefined)[]) => [...new Set(list.filter((id): id is string => !!id))];
+  return {
+    arrival: ids(views.map((view) => view.arrivalAgent?.id)),
+    departure: ids(views.map((view) => view.effectiveDepartureAgent?.id)),
+  };
+}
