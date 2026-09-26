@@ -19,6 +19,7 @@ const CANDIDATES: Record<TargetField, readonly string[]> = {
   dayOffset: ["dd", "day offset", "arr day"],
   aircraftType: ["a/c", "ac", "aircraft", "ac type", "equipment", "típus"],
   aircraftConfig: ["cfg", "config", "configuration"],
+  registration: ["reg", "registration", "tail", "lajstrom"],
   nextAirline: ["onwdevental", "next al", "onward airline"],
   nextFlightNumber: ["onwdeventflno", "next flno", "onward flight", "next flight"],
 };

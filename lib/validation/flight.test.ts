@@ -71,3 +71,41 @@ describe("one-sided flights (rule 11)", () => {
     expect(errorsFor({ outboundFlightNumber: "" })).toHaveProperty("outboundFlightNumber");
   });
 });
+
+describe("what messages are matched by (7. mérföldkő)", () => {
+  it("normalises stations and registrations", () => {
+    const data = flightSchema.parse({
+      ...valid,
+      origin: " stn ",
+      destination: "osr",
+      arrivalRegistration: "ha-lya",
+      departureRegistration: "HA LYB",
+    });
+    expect(data.origin).toBe("STN");
+    expect(data.destination).toBe("OSR");
+    expect(data.arrivalRegistration).toBe("HALYA");
+    expect(data.departureRegistration).toBe("HALYB");
+  });
+
+  it("takes the operating day from the scheduled time in Budapest unless given", () => {
+    // 00:30 in Budapest is still the previous day in UTC.
+    const data = flightSchema.parse({ ...valid, sta: "2026-09-22T00:30", std: "2026-09-22T01:30" });
+    expect(data.arrivalFlightDate?.toISOString().slice(0, 10)).toBe("2026-09-22");
+    const overnight = flightSchema.parse({ ...valid, arrivalFlightDate: "2026-09-21" });
+    expect(overnight.arrivalFlightDate?.toISOString().slice(0, 10)).toBe("2026-09-21");
+    expect(overnight.departureFlightDate?.toISOString().slice(0, 10)).toBe("2026-09-22");
+  });
+
+  it("leaves them empty on a missing part", () => {
+    const data = flightSchema.parse({ ...valid, ...noDeparture, destination: "OSR", departureRegistration: "HALYA" });
+    expect(data.destination).toBeNull();
+    expect(data.departureRegistration).toBeNull();
+    expect(data.departureFlightDate).toBeNull();
+  });
+
+  it("rejects malformed values", () => {
+    expect(errorsFor({ origin: "BUDA" })).toHaveProperty("origin");
+    expect(errorsFor({ arrivalRegistration: "X".repeat(11) })).toHaveProperty("arrivalRegistration");
+    expect(errorsFor({ departureFlightDate: "2026-13-40" })).toHaveProperty("departureFlightDate");
+  });
+});

@@ -28,6 +28,8 @@ export interface ExistingFlight {
   std: Date | null;
   aircraftType: string | null;
   aircraftConfig: string | null;
+  arrivalRegistration: string | null;
+  departureRegistration: string | null;
   importProfileId: string | null;
   /** Created by hand or by an import; only an imported flight may be merged away. */
   source: "MANUAL" | "IMPORT";
@@ -49,7 +51,15 @@ export interface AirlineInfo {
   defaultTemplateId: string | null;
 }
 
-export type ScheduleField = "sta" | "std" | "origin" | "destination" | "aircraftType" | "aircraftConfig";
+export type ScheduleField =
+  | "sta"
+  | "std"
+  | "origin"
+  | "destination"
+  | "aircraftType"
+  | "aircraftConfig"
+  | "arrivalRegistration"
+  | "departureRegistration";
 
 export interface FieldChange {
   field: ScheduleField;
@@ -125,6 +135,9 @@ export function scheduleChanges(flight: ExistingFlight, turnaround: ImportedTurn
     destination: departure?.destination ?? null,
     aircraftType: departure?.aircraftType ?? arrival?.aircraftType ?? null,
     aircraftConfig: departure?.aircraftConfig ?? arrival?.aircraftConfig ?? null,
+    // Written only when the file gives one; a message may have filled it (7. mérföldkő).
+    arrivalRegistration: arrival?.registration ?? flight.arrivalRegistration,
+    departureRegistration: departure?.registration ?? flight.departureRegistration,
   };
   return (Object.keys(wanted) as ScheduleField[])
     .filter((field) => !same(flight[field], wanted[field]))

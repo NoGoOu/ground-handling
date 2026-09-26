@@ -29,7 +29,7 @@ const FIELD_GROUPS: TargetField[][] = [
   ["airline", "flightNumber", "suffix", "origin", "destination"],
   ["periodFrom", "periodTill", "pattern", "date"],
   ["std", "sta", "dayOffset"],
-  ["aircraftType", "aircraftConfig", "nextAirline", "nextFlightNumber"],
+  ["aircraftType", "aircraftConfig", "registration", "nextAirline", "nextFlightNumber"],
 ];
 
 const stationOf = (cell: Cell) => String(cell ?? "").trim().toUpperCase();

@@ -59,6 +59,13 @@ async function main() {
     // Global settings: the defaults from the schema (decision 7).
     await tx.setting.upsert({ where: { id: SETTINGS_ID }, create: { id: SETTINGS_ID }, update: {} });
 
+    // Messages (7. mérföldkő) point at users and flights.
+    await tx.message.deleteMany();
+    await tx.apiCallLog.deleteMany();
+    await tx.apiKey.deleteMany();
+    await tx.unsupportedMessageLog.deleteMany();
+    await tx.addressBookEntry.deleteMany();
+    await tx.delayCode.deleteMany();
     await tx.plan.deleteMany();
     // Training data (6. mérföldkő): records and their file rows, trainings, requirements.
     await tx.trainingRecord.deleteMany();
@@ -270,6 +277,9 @@ async function main() {
       await tx.flight.create({
         data: {
           ...flightData,
+          // The operating days messages are matched by (7. mérföldkő): the day of the scheduled time.
+          arrivalFlightDate: flightData.sta ? new Date(`${toLocalDate(flightData.sta)}T00:00:00Z`) : null,
+          departureFlightDate: flightData.std ? new Date(`${toLocalDate(flightData.std)}T00:00:00Z`) : null,
           etaSource: eta?.source,
           etaNote: eta?.note,
           etaRecordedById: eta?.by,

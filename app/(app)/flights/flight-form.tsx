@@ -26,7 +26,7 @@ export function FlightForm({
   submitLabel: string;
 }) {
   const [state, formAction, pending] = useActionState(action, {});
-  const value = (key: keyof FlightFormInput) => state.values?.[key] ?? initial[key];
+  const value = (key: keyof FlightFormInput) => state.values?.[key] ?? initial[key] ?? "";
   const error = (key: keyof FlightFormInput) => state.errors?.[key];
 
   return (
@@ -51,7 +51,7 @@ export function FlightForm({
       </FormField>
 
       <p className="text-sm text-neutral-600">
-        {t.timeHint} {t.partsHint}
+        {t.timeHint} {t.partsHint} {t.messagesHint}
       </p>
       {/* Rule 11: either part may be left empty, but not both. */}
       <div className="grid gap-4 sm:grid-cols-2">
@@ -63,6 +63,15 @@ export function FlightForm({
           <FormField label={t.sta} error={error("sta")}>
             <input type="datetime-local" name="sta" defaultValue={value("sta")} className="input" />
           </FormField>
+          <FormField label={t.origin} hint={messages.form.optional} error={error("origin")}>
+            <input name="origin" defaultValue={value("origin")} maxLength={3} className="input max-w-24 uppercase" />
+          </FormField>
+          <FormField label={t.registration} hint={messages.form.optional} error={error("arrivalRegistration")}>
+            <input name="arrivalRegistration" defaultValue={value("arrivalRegistration")} className="input max-w-40 uppercase" />
+          </FormField>
+          <FormField label={t.flightDate} hint={t.flightDateHint} error={error("arrivalFlightDate")}>
+            <input type="date" name="arrivalFlightDate" defaultValue={value("arrivalFlightDate")} className="input" />
+          </FormField>
         </fieldset>
         <fieldset className="flex flex-col gap-4 rounded-lg border border-neutral-200 p-4">
           <legend className="px-1 font-semibold">{t.departurePart}</legend>
@@ -71,6 +80,15 @@ export function FlightForm({
           </FormField>
           <FormField label={t.std} error={error("std")}>
             <input type="datetime-local" name="std" defaultValue={value("std")} className="input" />
+          </FormField>
+          <FormField label={t.destination} hint={messages.form.optional} error={error("destination")}>
+            <input name="destination" defaultValue={value("destination")} maxLength={3} className="input max-w-24 uppercase" />
+          </FormField>
+          <FormField label={t.registration} hint={messages.form.optional} error={error("departureRegistration")}>
+            <input name="departureRegistration" defaultValue={value("departureRegistration")} className="input max-w-40 uppercase" />
+          </FormField>
+          <FormField label={t.flightDate} hint={t.flightDateHint} error={error("departureFlightDate")}>
+            <input type="date" name="departureFlightDate" defaultValue={value("departureFlightDate")} className="input" />
           </FormField>
         </fieldset>
       </div>

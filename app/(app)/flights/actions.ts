@@ -2,6 +2,7 @@
 
 import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
+import { Prisma } from "@/generated/prisma/client";
 import { ActionError, actionUser, runAction, type ActionResult } from "@/lib/action";
 import { newFlightTasksByAirline } from "@/lib/data/task-types";
 import { getTaskView, listFlightTasks, taskAssignment } from "@/lib/data/tasks";
@@ -22,6 +23,11 @@ export type FlightFormState = FormState<FlightFormInput>;
 export type DelayFormState = FormState<DelayFormInput>;
 
 const e = messages.flightForm.errors;
+
+/** Another flight has the same flight number, operating day and station (7. mérföldkő). */
+function isUniqueViolation(error: unknown): boolean {
+  return error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002";
+}
 
 async function isAllowed(): Promise<boolean> {
   const user = await getCurrentUser();
@@ -73,9 +79,13 @@ export async function createFlight(_previous: FlightFormState, formData: FormDat
   if (!result.data) return result.state;
   if (result.tasks.length === 0) return { errors: { airlineId: e.noTaskTypes }, values: result.values };
 
-  const flight = await prisma.flight.create({
-    data: { ...result.data, tasks: { create: result.tasks } },
-  });
+  let flight;
+  try {
+    flight = await prisma.flight.create({ data: { ...result.data, tasks: { create: result.tasks } } });
+  } catch (error) {
+    if (isUniqueViolation(error)) return { message: e.duplicate, values: result.values };
+    throw error;
+  }
   redirect(`/flights?date=${listDay(flight)}`);
 }
 
@@ -121,31 +131,37 @@ export async function updateFlight(
     return { errors: { std: e.partInUse }, values: result.values };
   }
 
-  const flight = await prisma.$transaction(async (tx) => {
-    const updated = await tx.flight.update({
-      where: { id: flightId },
-      data: {
-        ...result.data,
-        ...(dropsArrival ? DROPPED_ARRIVAL : {}),
-        ...(dropsDeparture ? DROPPED_DEPARTURE : {}),
-      },
-    });
-    if (newAirline) {
-      await tx.task.deleteMany({ where: { flightId } });
-      await tx.task.createMany({ data: result.tasks.map((task) => ({ flightId, ...task })) });
-    }
-    // A dropped part takes its agent with it (a one-sided task has one agent).
-    if (dropsArrival || dropsDeparture) {
-      await tx.task.updateMany({
-        where: { flightId },
+  const flight = await prisma
+    .$transaction(async (tx) => {
+      const updated = await tx.flight.update({
+        where: { id: flightId },
         data: {
-          ...(dropsArrival ? { arrivalAgentId: null } : {}),
-          ...(dropsDeparture ? { departureAgentId: null } : {}),
+          ...result.data,
+          ...(dropsArrival ? DROPPED_ARRIVAL : {}),
+          ...(dropsDeparture ? DROPPED_DEPARTURE : {}),
         },
       });
-    }
-    return updated;
-  });
+      if (newAirline) {
+        await tx.task.deleteMany({ where: { flightId } });
+        await tx.task.createMany({ data: result.tasks.map((task) => ({ flightId, ...task })) });
+      }
+      // A dropped part takes its agent with it (a one-sided task has one agent).
+      if (dropsArrival || dropsDeparture) {
+        await tx.task.updateMany({
+          where: { flightId },
+          data: {
+            ...(dropsArrival ? { arrivalAgentId: null } : {}),
+            ...(dropsDeparture ? { departureAgentId: null } : {}),
+          },
+        });
+      }
+      return updated;
+    })
+    .catch((error: unknown) => {
+      if (isUniqueViolation(error)) return null;
+      throw error;
+    });
+  if (!flight) return { message: e.duplicate, values: result.values };
   redirect(`/flights?date=${listDay(flight)}`);
 }
 
@@ -198,9 +214,10 @@ export async function assignAgents(
     );
     const updated = await getTaskView(taskId);
     const agentIds = [arrivalAgentId, departureAgentId].filter((id): id is string => !!id);
-    const qualification = updated && agentIds.length > 0
-      ? taskQualificationWarnings(updated, await loadQualificationContext(agentIds))
-      : [];
+    const qualification =
+      updated && agentIds.length > 0
+        ? taskQualificationWarnings(updated, await loadQualificationContext(agentIds))
+        : [];
     const warnings = [...(shared.length > 0 ? [messages.board.conflicts.SAME_FLIGHT] : []), ...qualification];
     return { ok: true, warning: warnings.length > 0 ? warnings.join(" · ") : undefined };
   });

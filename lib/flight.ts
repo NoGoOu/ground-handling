@@ -14,6 +14,12 @@ export function flightLabel(flight: FlightNumbers): string {
   return [flight.inboundFlightNumber, flight.outboundFlightNumber].filter(Boolean).join(" / ");
 }
 
+/** "HA-LYA" → "HALYA": registrations are compared without separators, as messages write them. */
+export function normaliseRegistration(value: string | null | undefined): string | null {
+  const cleaned = (value ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+  return cleaned || null;
+}
+
 export interface Lateness {
   late: boolean;
   /** The original scheduled time of the late part, shown with its day. */

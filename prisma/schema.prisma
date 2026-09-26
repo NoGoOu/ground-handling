@@ -41,6 +41,9 @@ model Setting {
   deviationYellowMaxMinutes Int      @default(5)
   /// A qualification expiring within this many days is "hamarosan lejár" (6. mérföldkő).
   expiryWarningDays         Int      @default(30)
+  /// The sender of the messages we send (7. mérföldkő).
+  senderEmail               String?
+  senderTypeB               String?
   updatedAt                 DateTime @updatedAt
 }
 
@@ -79,6 +82,11 @@ model User {
   recordsUpdated     TrainingRecord[]  @relation("TrainingRecordsUpdated")
   filesUploaded      TrainingFile[]    @relation("TrainingFilesUploaded")
   filesRemoved       TrainingFile[]    @relation("TrainingFilesRemoved")
+  messagesCreated    Message[]         @relation("MessagesCreated")
+  messagesDiscarded  Message[]         @relation("MessagesDiscarded")
+  delayRecords       DelayRecord[]     @relation("DelayRecordsCreated")
+  delayUpdates       DelayRecord[]     @relation("DelayRecordsUpdated")
+  apiKeys            ApiKey[]
 }
 
 /// A role is a name plus the permissions ticked for it (CLAUDE.md, "Jogosultsági rendszer").
@@ -225,6 +233,8 @@ model Airline {
   flights   Flight[]
   /// The task types its flights get (5. mérföldkő); replaces the default template.
   taskTypes AirlineTaskType[]
+  /// Who gets its messages (7. mérföldkő).
+  addresses AddressBookEntry[]
 }
 
 /// A kind of work on a flight, e.g. GOU or HDS (5. mérföldkő). Every flight has
@@ -341,6 +351,9 @@ model Flight {
   ata                 DateTime?
   /// From the external system.
   atd                 DateTime?
+  /// Per part (7. mérföldkő): a message fills it when empty.
+  arrivalRegistration   String?
+  departureRegistration String?
 
   // "Késés és törlés": where the current ETA and ETD came from.
   etaSource       EstimateSource?
@@ -368,8 +381,10 @@ model Flight {
   updatedAt DateTime @updatedAt
 
   /// One task per task type of the airline (5. mérföldkő; until then one).
-  tasks  Task[]
-  events FlightEvent[]
+  tasks        Task[]
+  events       FlightEvent[]
+  messages     Message[]
+  delayRecords DelayRecord[]
 
   @@unique([airlineId, inboundFlightNumber, arrivalFlightDate, origin])
   @@unique([airlineId, outboundFlightNumber, departureFlightDate, destination])
@@ -435,6 +450,12 @@ enum FlightEventKind {
   DELAY
   CANCEL
   RESTORE
+  /// An ATA or ATD from a message (7. mérföldkő).
+  ACTUAL
+  /// A registration from a message.
+  REGISTRATION
+  /// Delay codes from a message.
+  DELAY_CODES
 }
 
 /// Log of delays, cancellations and restorations on a flight: who, when, what.
@@ -450,8 +471,16 @@ model FlightEvent {
   etd         DateTime?
   source      EstimateSource?
   note        String?
-  createdById String
-  createdBy   User            @relation(fields: [createdById], references: [id])
+  /// ACTUAL: the new ATA or ATD; REGISTRATION: the registration.
+  ata          DateTime?
+  atd          DateTime?
+  registration String?
+  /// The message the change comes from (7. mérföldkő).
+  messageId   String?
+  message     Message?        @relation(fields: [messageId], references: [id], onDelete: SetNull)
+  /// Null when a message received through the API made the change.
+  createdById String?
+  createdBy   User?           @relation(fields: [createdById], references: [id])
   createdAt   DateTime        @default(now())
 
   @@index([flightId, createdAt])
@@ -700,4 +729,193 @@ model TaskRequirement {
   qualification     Qualification   @relation(fields: [qualificationId], references: [id])
 
   @@unique([airlineTaskTypeId, part, qualificationId])
+}
+
+// 7. mérföldkő: messages (docs/messages.md).
+
+enum MessageDirection {
+  INBOUND
+  OUTBOUND
+}
+
+enum MessageSource {
+  MANUAL
+  API
+  GENERATED
+}
+
+enum DeliveryChannel {
+  EMAIL
+  SITA
+}
+
+enum DeliveryStatus {
+  SENT
+  FAILED
+  NOT_SENDABLE
+}
+
+/// A received or sent message: the raw text always stays.
+model Message {
+  id           String           @id @default(cuid())
+  direction    MessageDirection
+  /// MVT, LDM, CPM or UCM.
+  type         String
+  /// The message itself, from its type line, verbatim.
+  rawText      String
+  /// The lines before the type line (Type B header, email text); not part of the hash.
+  envelope     String?
+  /// Hash of the normalised text of an inbound message, against duplicates.
+  textHash     String?          @unique
+  source       MessageSource
+  apiKeyId     String?
+  apiKey       ApiKey?          @relation(fields: [apiKeyId], references: [id], onDelete: SetNull)
+  /// The "source" field of an API request.
+  sourceNote   String?
+  receivedAt   DateTime
+  /// Header fields as read: flight number, day or date, registration, station or route.
+  flightNumber String?
+  headerDate   String?
+  registration String?
+  station      String?
+  /// The resolved operating day.
+  flightDate   DateTime?        @db.Date
+  /// The parsed content, and the warnings as { code, params }.
+  parsed       Json
+  warnings     Json
+
+  /// The flight part it belongs to; none while unmatched.
+  flightId        String?
+  flight          Flight?        @relation(fields: [flightId], references: [id], onDelete: Cascade)
+  part            MilestonePart?
+  /// Why it could not be matched.
+  unmatchedReason String?
+  /// Version: flight part + type + kind (docs/messages.md, "Verziók").
+  kind            String?
+  versionKey      String?
+  supersedesId    String?        @unique
+  supersedes      Message?       @relation("MessageVersions", fields: [supersedesId], references: [id], onDelete: SetNull)
+  supersededBy    Message?       @relation("MessageVersions")
+  /// The latest of its version key, the one that counts.
+  current         Boolean        @default(false)
+  discardedAt     DateTime?
+  discardedById   String?
+  discardedBy     User?          @relation("MessagesDiscarded", fields: [discardedById], references: [id])
+
+  createdById String?
+  createdBy   User?    @relation("MessagesCreated", fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+
+  deliveries   MessageDelivery[]
+  flightEvents FlightEvent[]
+  delayRecords DelayRecord[]
+
+  @@index([flightId, part])
+  @@index([versionKey, current])
+  @@index([receivedAt])
+}
+
+/// One recipient of an outbound message, with its outcome.
+model MessageDelivery {
+  id          String          @id @default(cuid())
+  messageId   String
+  message     Message         @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  recipient   String
+  channel     DeliveryChannel
+  status      DeliveryStatus
+  error       String?
+  attemptedAt DateTime        @default(now())
+
+  @@index([messageId])
+}
+
+model DelayCode {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  description String?
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+/// A delay code and its minutes on the departure part of a flight.
+model DelayRecord {
+  id          String         @id @default(cuid())
+  flightId    String
+  flight      Flight         @relation(fields: [flightId], references: [id], onDelete: Cascade)
+  /// As given; a code missing from the table is kept, with a warning.
+  code        String
+  minutes     Int
+  source      EstimateSource
+  /// The message it comes from; a newer version replaces these.
+  messageId   String?
+  message     Message?       @relation(fields: [messageId], references: [id], onDelete: SetNull)
+  createdById String?
+  createdBy   User?          @relation("DelayRecordsCreated", fields: [createdById], references: [id])
+  createdAt   DateTime       @default(now())
+  updatedById String?
+  updatedBy   User?          @relation("DelayRecordsUpdated", fields: [updatedById], references: [id])
+  updatedAt   DateTime       @updatedAt
+
+  @@index([flightId])
+}
+
+/// A key of the receiving API; only its hash is stored.
+model ApiKey {
+  id          String    @id @default(cuid())
+  name        String    @unique
+  keyHash     String    @unique
+  /// The first characters, to tell keys apart.
+  prefix      String
+  active      Boolean   @default(true)
+  lastUsedAt  DateTime?
+  revokedAt   DateTime?
+  createdById String
+  createdBy   User      @relation(fields: [createdById], references: [id])
+  createdAt   DateTime  @default(now())
+
+  messages Message[]
+  calls    ApiCallLog[]
+}
+
+/// Every call of the receiving API: key, time, outcome.
+model ApiCallLog {
+  id       String   @id @default(cuid())
+  apiKeyId String?
+  apiKey   ApiKey?  @relation(fields: [apiKeyId], references: [id], onDelete: SetNull)
+  at       DateTime @default(now())
+  status   Int
+  /// A short summary: message counts, or the error.
+  result   String
+
+  @@index([at])
+}
+
+/// A recognised but unsupported message (PTM, PSM): only its type, flight and
+/// date, never the content, which may hold personal data.
+model UnsupportedMessageLog {
+  id           String        @id @default(cuid())
+  type         String
+  flightNumber String?
+  headerDate   String?
+  receivedAt   DateTime
+  source       MessageSource
+  createdAt    DateTime      @default(now())
+
+  @@index([receivedAt])
+}
+
+/// A recipient of the messages of an airline of a type: an email or a SITA Type B address.
+model AddressBookEntry {
+  id          String          @id @default(cuid())
+  airlineId   String
+  airline     Airline         @relation(fields: [airlineId], references: [id], onDelete: Cascade)
+  messageType String
+  channel     DeliveryChannel
+  address     String
+  active      Boolean         @default(true)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@unique([airlineId, messageType, address])
 }

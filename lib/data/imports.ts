@@ -92,6 +92,8 @@ export async function loadExistingFlights(window: { start: Date; end: Date }): P
       departureCancelled: true,
       aircraftType: true,
       aircraftConfig: true,
+      arrivalRegistration: true,
+      departureRegistration: true,
       importProfileId: true,
       source: true,
       _count: { select: { events: true } },
@@ -111,6 +113,8 @@ export async function loadExistingFlights(window: { start: Date; end: Date }): P
     std: flight.std,
     aircraftType: flight.aircraftType,
     aircraftConfig: flight.aircraftConfig,
+    arrivalRegistration: flight.arrivalRegistration,
+    departureRegistration: flight.departureRegistration,
     importProfileId: flight.importProfileId,
     source: flight.source,
     operational:
@@ -151,11 +155,20 @@ function scheduleData(turnaround: ImportedTurnaround) {
     departureFlightDate: departure ? flightDate(departure.flightDate) : null,
     aircraftType: departure?.aircraftType ?? arrival?.aircraftType ?? null,
     aircraftConfig: departure?.aircraftConfig ?? arrival?.aircraftConfig ?? null,
+    // Only when the file gives one (7. mérföldkő).
+    ...(arrival?.registration ? { arrivalRegistration: arrival.registration } : {}),
+    ...(departure?.registration ? { departureRegistration: departure.registration } : {}),
   };
 }
 
-const NO_ARRIVAL = { inboundFlightNumber: null, sta: null, origin: null, arrivalFlightDate: null };
-const NO_DEPARTURE = { outboundFlightNumber: null, std: null, destination: null, departureFlightDate: null };
+const NO_ARRIVAL = { inboundFlightNumber: null, sta: null, origin: null, arrivalFlightDate: null, arrivalRegistration: null };
+const NO_DEPARTURE = {
+  outboundFlightNumber: null,
+  std: null,
+  destination: null,
+  departureFlightDate: null,
+  departureRegistration: null,
+};
 
 export interface ImportSummary {
   new: number;

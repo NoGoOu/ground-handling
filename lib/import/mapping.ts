@@ -1,3 +1,4 @@
+import { normaliseRegistration } from "@/lib/flight";
 import { addDays } from "@/lib/time";
 import type { Cell } from "./read";
 import {
@@ -32,6 +33,7 @@ export const TARGET_FIELDS = [
   "dayOffset",
   "aircraftType",
   "aircraftConfig",
+  "registration",
   "nextAirline",
   "nextFlightNumber",
 ] as const;
@@ -91,6 +93,8 @@ export interface Leg {
   sta: Date;
   aircraftType: string | null;
   aircraftConfig: string | null;
+  /** The planned registration, if the file says (7. mérföldkő). */
+  registration: string | null;
   /** The aircraft's next flight, if the file says. */
   next: string | null;
 }
@@ -174,6 +178,7 @@ export function legsFromRow(
     destination,
     aircraftType: cleanText(cell("aircraftType")),
     aircraftConfig: cleanText(cell("aircraftConfig")),
+    registration: normaliseRegistration(cleanText(cell("registration"))),
     next,
   };
 

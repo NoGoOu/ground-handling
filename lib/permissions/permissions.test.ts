@@ -8,8 +8,13 @@ import {
   canChangeTaskStatus,
   canRecordMilestone,
   canEditLayer,
+  canManageMessaging,
   canManageTraining,
   canPlan,
+  canRecordDelayCodes,
+  canRecordMessages,
+  canSendPartMessage,
+  canViewFlightMessages,
   canViewLayer,
   canViewPlans,
   canViewLayerOf,
@@ -312,5 +317,38 @@ describe("training data (6. mérföldkő)", () => {
     expect(trainingVisibleUserIds(leadOfAnna)).toEqual(["lead", "anna"]);
     expect(canManageTraining(lead)).toBe(false);
     expect(canAccessPath(lead, "/training/qualifications")).toBe(false);
+  });
+});
+
+describe("messages (7. mérföldkő)", () => {
+  it("shows an agent the messages of the flights of their tasks", () => {
+    expect(canViewFlightMessages(anna, ["anna", "bela"])).toBe(true);
+    expect(canViewFlightMessages(anna, ["bela", null])).toBe(false);
+    expect(canViewFlightMessages(lead, [null])).toBe(true);
+    expect(canViewFlightMessages(planner, ["anna"])).toBe(false);
+  });
+
+  it("lets an agent send on their own part only", () => {
+    expect(canSendPartMessage(bela, ["bela"])).toBe(true);
+    expect(canSendPartMessage(anna, ["bela"])).toBe(false);
+    expect(canSendPartMessage(lead, [null])).toBe(true);
+  });
+
+  it("keeps pasting, the unmatched list and the settings to the shift lead and the admin", () => {
+    expect(canRecordMessages(lead)).toBe(true);
+    expect(canRecordMessages(anna)).toBe(false);
+    expect(canAccessPath(anna, "/messages")).toBe(false);
+    expect(canAccessPath(lead, "/messages/unmatched")).toBe(true);
+    expect(canManageMessaging(admin)).toBe(true);
+    expect(canManageMessaging(lead)).toBe(false);
+    expect(canAccessPath(lead, "/admin/messaging")).toBe(false);
+    expect(canAccessPath(admin, "/admin/messaging")).toBe(true);
+  });
+
+  it("lets delay codes be recorded by flight managers and the departure agents", () => {
+    expect(canRecordDelayCodes(lead, [null])).toBe(true);
+    expect(canRecordDelayCodes(bela, ["bela"])).toBe(true);
+    expect(canRecordDelayCodes(anna, ["bela"])).toBe(false);
+    expect(canRecordDelayCodes(planner, ["planner"])).toBe(false);
   });
 });

@@ -228,6 +228,33 @@ export function trainingVisibleUserIds(actor: Actor): string[] | null {
   if (scope === "TEAM") return [actor.id, ...actor.teamMemberIds];
   return [actor.id];
 }
+/**
+ * The messages of a flight (7. mérföldkő): the agents are those of all its
+ * tasks, so an agent sees the messages of the flights of their tasks.
+ */
+export function canViewFlightMessages(actor: Actor, flightAgentIds: readonly (string | null)[]): boolean {
+  return inScope(actor, "MESSAGE_VIEW", flightAgentIds);
+}
+
+/** Manual pasting and the unmatched messages. */
+export const canRecordMessages = (actor: Actor) => can(actor, "MESSAGE_RECORD");
+
+/** Sending a message of a flight part: the agents are those of that part in the flight's tasks. */
+export function canSendPartMessage(actor: Actor, partAgentIds: readonly (string | null)[]): boolean {
+  return inScope(actor, "MESSAGE_SEND", partAgentIds);
+}
+
+/** API keys, address book, delay codes, sender addresses. */
+export const canManageMessaging = (actor: Actor) => can(actor, "MESSAGING_SETTINGS");
+
+/**
+ * Delay codes on the departure part: whoever manages flights, and whoever
+ * records on that part (the departure agents of the flight's tasks).
+ */
+export function canRecordDelayCodes(actor: Actor, departureAgentIds: readonly (string | null)[]): boolean {
+  return can(actor, "FLIGHT_MANAGE") || inScope(actor, "TASK_RECORD", departureAgentIds);
+}
+
 /** The plan is read by whoever plans or takes its assignment over onto the tasks. */
 export const canViewPlans = (actor: Actor) => can(actor, "PLANNING") || can(actor, "TASK_ASSIGN");
 export const canManageUsers = (actor: Actor) => can(actor, "USER_MANAGE");
@@ -244,7 +271,9 @@ const ROUTE_PERMISSIONS: [prefix: string, permissions: Permission[]][] = [
   ["/admin/templates", ["AIRLINE_MANAGE"]],
   ["/admin/task-types", ["AIRLINE_MANAGE"]],
   ["/admin/settings", ["SETTINGS_MANAGE"]],
-  ["/admin", ["USER_MANAGE", "ROLE_MANAGE", "TEAM_MANAGE", "AIRLINE_MANAGE", "SETTINGS_MANAGE"]],
+  ["/admin/messaging", ["MESSAGING_SETTINGS"]],
+  ["/admin", ["USER_MANAGE", "ROLE_MANAGE", "TEAM_MANAGE", "AIRLINE_MANAGE", "SETTINGS_MANAGE", "MESSAGING_SETTINGS"]],
+  ["/messages", ["MESSAGE_RECORD"]],
   ["/flights", ["FLIGHT_MANAGE"]],
   ["/import", ["SCHEDULE_IMPORT"]],
   ["/planning/settings", ["PLANNING"]],
@@ -262,7 +291,14 @@ const ROUTE_PERMISSIONS: [prefix: string, permissions: Permission[]][] = [
 
 /** Whether any admin area is open to the actor. */
 export function canOpenAdmin(actor: Actor): boolean {
-  return canManageUsers(actor) || canManageRoles(actor) || canManageTeams(actor) || canManageAirlines(actor) || canManageSettings(actor);
+  return (
+    canManageUsers(actor) ||
+    canManageRoles(actor) ||
+    canManageTeams(actor) ||
+    canManageAirlines(actor) ||
+    canManageSettings(actor) ||
+    canManageMessaging(actor)
+  );
 }
 
 /** Route-level check used by the proxy; pages and actions check again. */

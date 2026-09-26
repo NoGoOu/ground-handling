@@ -177,6 +177,7 @@ describe("pairing rules", () => {
     sta: new Date("2024-09-10T07:00:00Z"),
     aircraftType: null,
     aircraftConfig: null,
+    registration: null,
     next: null,
     ...overrides,
   });

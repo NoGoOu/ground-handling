@@ -43,6 +43,7 @@ describe("legs of the NetLine sample", () => {
       sta: new Date("2024-09-10T07:15:00Z"),
       aircraftType: "738",
       aircraftConfig: "Y189",
+      registration: null,
       next: "FR9942",
     });
     expect(legs.at(-1)?.flightDate).toBe("2024-10-22");
@@ -101,5 +102,21 @@ describe("row errors", () => {
     const row = [...table.rows[0]];
     row[resolved.destination] = "Budapest";
     expect(legsFromRow(row, 1, resolved).errors[0].code).toBe("station");
+  });
+});
+
+describe("registration (7. mérföldkő)", () => {
+  it("reads a registration column when the mapping has one, without separators", () => {
+    const withReg = {
+      headers: [...table.headers, "Reg"],
+      rows: table.rows.map((row) => [...row, "ha-lya"]),
+    };
+    const mapping = resolveMapping(
+      { ...NETLINE_MAPPING, columns: { ...NETLINE_MAPPING.columns, registration: "Reg" } },
+      withReg.headers,
+    );
+    const { legs } = legsFromRow(withReg.rows[0], 1, mapping);
+    expect(legs[0].registration).toBe("HALYA");
+    expect(legsOf(1).legs[0].registration).toBeNull();
   });
 });

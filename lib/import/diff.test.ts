@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { diffImport, planPeriod, type ExistingFlight } from "@/lib/import/diff";
+import { diffImport, planPeriod, scheduleChanges, type ExistingFlight } from "@/lib/import/diff";
 import type { Leg } from "@/lib/import/mapping";
 import { NETLINE_MAPPING, netlineTable } from "@/lib/import/netline.fixture";
 import { pairLegs, planImport, type ImportedTurnaround } from "@/lib/import/pairing";
@@ -25,6 +25,8 @@ function saved(t: ImportedTurnaround, id: string, overrides: Partial<ExistingFli
     std: t.departure?.std ?? null,
     aircraftType: t.departure?.aircraftType ?? t.arrival?.aircraftType ?? null,
     aircraftConfig: t.departure?.aircraftConfig ?? t.arrival?.aircraftConfig ?? null,
+    arrivalRegistration: null,
+    departureRegistration: null,
     importProfileId: PROFILE,
     source: "IMPORT",
     operational: false,
@@ -125,6 +127,7 @@ describe("a pairing that changed", () => {
     sta: new Date("2024-09-10T07:00:00Z"),
     aircraftType: null,
     aircraftConfig: null,
+    registration: null,
     next: null,
     ...overrides,
   });
@@ -171,6 +174,7 @@ describe("two one-sided flights the file pairs into a turnaround", () => {
     sta: new Date("2024-09-10T07:00:00Z"),
     aircraftType: null,
     aircraftConfig: null,
+    registration: null,
     next: null,
     ...overrides,
   });
@@ -227,5 +231,14 @@ describe("two one-sided flights the file pairs into a turnaround", () => {
       period: null,
     });
     expect(diff.entries.find((e) => e.turnaround.arrival === arrivalA)).toMatchObject({ kind: "conflict", reason: "merge" });
+  });
+});
+
+describe("registration from the file (7. mérföldkő)", () => {
+  it("is written only when the file gives one", () => {
+    const flight = saved(full, "f", { arrivalRegistration: "HALYB" });
+    expect(scheduleChanges(flight, full)).toEqual([]);
+    const withReg = { ...full, arrival: { ...full.arrival!, registration: "HALYC" } };
+    expect(scheduleChanges(flight, withReg)).toEqual([{ field: "arrivalRegistration", from: "HALYB", to: "HALYC" }]);
   });
 });

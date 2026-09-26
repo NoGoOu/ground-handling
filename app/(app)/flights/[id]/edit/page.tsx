@@ -99,6 +99,12 @@ export default async function EditFlightPage(props: PageProps<"/flights/[id]/edi
           stand: flight.stand ?? "",
           sta: input(flight.sta),
           std: input(flight.std),
+          origin: flight.origin ?? "",
+          destination: flight.destination ?? "",
+          arrivalRegistration: flight.arrivalRegistration ?? "",
+          departureRegistration: flight.departureRegistration ?? "",
+          arrivalFlightDate: flight.arrivalFlightDate ? flight.arrivalFlightDate.toISOString().slice(0, 10) : "",
+          departureFlightDate: flight.departureFlightDate ? flight.departureFlightDate.toISOString().slice(0, 10) : "",
         }}
       />
 
@@ -175,7 +181,7 @@ export default async function EditFlightPage(props: PageProps<"/flights/[id]/edi
                   {event.part && <> · {messages.part[event.part]}</>}
                   <span className="text-neutral-500">
                     {" "}
-                    · {event.createdBy.name}, {formatDateTime(event.createdAt)}
+                    · {event.createdBy?.name ?? messages.events.byMessage}, {formatDateTime(event.createdAt)}
                   </span>
                 </span>
                 {event.kind === "DELAY" && (
@@ -187,6 +193,20 @@ export default async function EditFlightPage(props: PageProps<"/flights/[id]/edi
                     {event.note && <> · {event.note}</>}
                   </span>
                 )}
+                {event.kind === "ACTUAL" && (event.ata || event.atd) && (
+                  <span className="text-neutral-600">
+                    {fmt(messages.events.actual, {
+                      label: event.ata ? "ATA" : "ATD",
+                      time: formatDateTime((event.ata ?? event.atd)!),
+                    })}
+                  </span>
+                )}
+                {event.kind === "REGISTRATION" && event.registration && (
+                  <span className="text-neutral-600">
+                    {fmt(messages.events.registration, { registration: event.registration })}
+                  </span>
+                )}
+                {event.kind === "DELAY_CODES" && event.note && <span className="text-neutral-600">{event.note}</span>}
               </li>
             ))}
           </ul>

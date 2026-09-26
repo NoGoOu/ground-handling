@@ -38,6 +38,10 @@ export const PERMISSIONS = {
   PLANNING: { label: "Tervezés", scoped: false, group: "Beosztás" },
   TRAINING_MANAGE: { label: "Képzések kezelése", scoped: false, group: "Képzések" },
   TRAINING_VIEW: { label: "Képzési adatok megtekintése", scoped: true, group: "Képzések" },
+  MESSAGE_VIEW: { label: "Üzenetek megtekintése", scoped: true, group: "Üzenetek" },
+  MESSAGE_RECORD: { label: "Üzenetek rögzítése", scoped: false, group: "Üzenetek" },
+  MESSAGE_SEND: { label: "Üzenetek küldése", scoped: true, group: "Üzenetek" },
+  MESSAGING_SETTINGS: { label: "Üzenetküldés beállításai", scoped: false, group: "Üzenetek" },
   USER_MANAGE: { label: "Felhasználók kezelése", scoped: false, group: "Adminisztráció" },
   ROLE_MANAGE: { label: "Szerepkörök kezelése", scoped: false, group: "Adminisztráció" },
   TEAM_MANAGE: { label: "Csapatok kezelése", scoped: false, group: "Adminisztráció" },
@@ -108,6 +112,10 @@ export const DEFAULT_ROLES: { name: string; builtIn: boolean; permissions: Parti
       ROSTER_ACTUAL_EDIT: "ALL",
       // The shift lead leads the team: its members' training data (6. mérföldkő).
       TRAINING_VIEW: "TEAM",
+      // Messages (7. mérföldkő).
+      MESSAGE_VIEW: "ALL",
+      MESSAGE_RECORD: "ALL",
+      MESSAGE_SEND: "ALL",
     },
   },
   {
@@ -126,6 +134,9 @@ export const DEFAULT_ROLES: { name: string; builtIn: boolean; permissions: Parti
       TASK_RECORD: "SELF",
       TASK_STATUS: "SELF",
       TRAINING_VIEW: "SELF",
+      // The messages of the flights of their tasks, sending on their own part (7. mérföldkő).
+      MESSAGE_VIEW: "SELF",
+      MESSAGE_SEND: "SELF",
     },
   },
 ];

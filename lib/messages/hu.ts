@@ -510,6 +510,7 @@ export const hu = {
       dayOffset: "Napeltolás (érkezés)",
       aircraftType: "Repülőgéptípus",
       aircraftConfig: "Konfiguráció",
+      registration: "Lajstrom",
       nextAirline: "Következő járat légitársasága",
       nextFlightNumber: "Következő járat száma",
     },
@@ -626,6 +627,8 @@ export const hu = {
         destination: "hová",
         aircraftType: "típus",
         aircraftConfig: "konfiguráció",
+        arrivalRegistration: "lajstrom (érkezés)",
+        departureRegistration: "lajstrom (indulás)",
       },
       warnings: {
         nextNotFound: "{flight} ({date}): a következő járat ({next}) nem található utána, csak érkező lesz.",
@@ -684,8 +687,19 @@ export const hu = {
   events: {
     title: "Napló",
     empty: "Még nincs bejegyzés.",
-    kind: { DELAY: "Késés rögzítése", CANCEL: "Törlés", RESTORE: "Visszaállítás" },
+    kind: {
+      DELAY: "Késés rögzítése",
+      CANCEL: "Törlés",
+      RESTORE: "Visszaállítás",
+      ACTUAL: "Tényleges idő üzenetből",
+      REGISTRATION: "Lajstrom üzenetből",
+      DELAY_CODES: "Késéskódok üzenetből",
+    },
     estimates: "ETA: {eta} · ETD: {etd}",
+    actual: "{label}: {time}",
+    registration: "Lajstrom: {registration}",
+    /** Who made a change that came in through the API. */
+    byMessage: "üzenet",
   },
   late: {
     label: "Késik",
@@ -713,6 +727,12 @@ export const hu = {
     estimatesHint: "Az ETA és az ETD a lenti „Késés rögzítése” művelettel módosítható.",
     delayLink: "Késés, törlés",
     none: "–",
+    origin: "Indulóállomás",
+    destination: "Célállomás",
+    registration: "Lajstrom",
+    flightDate: "Üzemnap",
+    flightDateHint: "Az indulás napja az indulóállomáson; üresen az ütemezett idő napja.",
+    messagesHint: "Az üzenetek a járatszám, az üzemnap és az állomás alapján párosulnak.",
     errors: {
       airline: "Válassz légitársaságot.",
       noTaskTypes: "Ennek a légitársaságnak nincs aktív feladattípusa, így járata sem lehet.",
@@ -725,6 +745,10 @@ export const hu = {
       departureIncomplete: "Az indulási részhez járatszám és STD is kell.",
       partInUse: "Ez a rész nem hagyható el, mert már van hozzá rögzített vagy a rendszerből kapott idő.",
       airlineLocked: "A légitársaság nem módosítható, mert a járat egyik taskján már van rögzítés.",
+      station: "Háromjegyű állomáskód, pl. BUD.",
+      registration: "A lajstrom legfeljebb 10 betű és szám.",
+      flightDate: "Adj meg érvényes napot.",
+      duplicate: "Ezzel a járatszámmal, üzemnappal és állomással már van járat.",
     },
   },
   training: {
