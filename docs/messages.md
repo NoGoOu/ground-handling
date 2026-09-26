@@ -1,14 +1,14 @@
 # Üzenetformátumok – Ground Handling App
 
-*Verzió: 3 · 2026. szeptember 24.*
+*Verzió: 4 · 2026. szeptember 26.*
 
-Referencia a 7. mérföldkőhöz (üzenetek fogadása, feldolgozása és előállítása). **Még nem építjük**, a CLAUDE.md „Később” szakasza hivatkozik rá. A formátumok a projekt gazdájának gyakorlatából és valós mintákból származnak. Ha a gyakorlatban új változat bukkan fel, ide kerül, és a mintájából tesztadat lesz.
+Referencia a 7. mérföldkőhöz (üzenetek fogadása, feldolgozása és előállítása), a CLAUDE.md „7. mérföldkő” szakasza hivatkozik rá. A formátumok a projekt gazdájának gyakorlatából és valós mintákból származnak. Ha a gyakorlatban új változat bukkan fel, ide kerül, és a mintájából tesztadat lesz.
 
 ## Általános szabályok
 
 - Az üzenet első sora a típus (MVT, LDM, CPM, UCM), a második a fejléc: `járat/dátum.lajstrom`, utána típusonként eltérő mezők.
 - Minden idő UTC.
-- A fejléc dátuma többnyire csak a hónap napja (`/16`), de előfordul teljes dátum is (`/19SEP26`). **A fejléc dátuma a járat menetrendi napja**, akkor is, ha a járat napokat késik. Csak nap esetén a hónapot a menetrendi időkhöz legközelebbi dátum adja.
+- A fejléc dátuma többnyire csak a hónap napja (`/16`), de előfordul teljes dátum is (`/19SEP26`). **A fejléc dátuma a járat menetrendi napja (üzemnapja)**, akkor is, ha a járat napokat késik. A dátum feloldását lásd a „Párosítás és a járat része” szakaszban.
 - A „nincs” jelölése változó: `/N`, `/NIL`, `.NIL`.
 - A mezők sorrendje rendszerenként eltérhet (lásd CPM), ezért a mezőket mintázat alapján kell felismerni (állomáskód: 3 betű, súly: szám, ULD-azonosító: lásd lent), nem csak a pozíciójuk alapján.
 - A SI sor (szabad szöveg) opcionális, lehet üres is. A CPM végén `CPM END` állhat. Sorvégi szóközök és üres sorok előfordulnak.
@@ -27,10 +27,10 @@ Referencia a 7. mérföldkőhöz (üzenetek fogadása, feldolgozása és előál
 - Fejléc: `járat/nap.lajstrom.állomás`
 - Indulás: `AD ddhhmm/ddhhmm` = off-block / felszállás. **Az off-block az ATD.**
 - Várható érkezés: `EA [dd]hhmm CÉL` (a nap elmaradhat).
-- Érkezés: `AA …` = földet érés / on-block; **az on-block az ATA.** Mintát még be kell szerezni.
+- Érkezés: `AA …` = földet érés / on-block; **az on-block az ATA.** Mintát még be kell szerezni (lásd „Hiányzó minták”).
 - Késés: `DLkód/kód/iiii/iiii` = késéskódok és időtartamuk (óra, perc). A kódok jelentése kódtáblából jön.
 - SI: szabad szöveges indoklás.
-- A BUD-ról induló és a BUD-ra érkező járatok MVT-jét a BUD-i handling küldi, ezért az alkalmazásnak később elő is kell tudnia állítani őket (a korrekciós MVT-vel együtt).
+- A BUD-ról induló és a BUD-ra érkező járatok MVT-jét a BUD-i handling küldi, ezért az alkalmazás elő is állítja őket (lásd „MVT előállítása”).
 - A BUD-ra érkező járat ETA-ját az indulási állomás MVT-jének EA sora adja.
 - **Ellenőrzés:** a késések összege = ATD − STD. Ha nem egyezik, figyelmeztetés.
 
@@ -64,6 +64,46 @@ Referencia a 7. mérföldkőhöz (üzenetek fogadása, feldolgozása és előál
 - Tételek: `.ULD/állomás/kategória`, egy sorban több is.
 - **Ellenőrzés (OUT):** az UCM E-s ULD-jei megegyeznek a CPM ELD-s pozícióinak ULD-jeivel; az X-es ULD-k nem szerepelnek a CPM-ben.
 - Az IN és OUT üzenetekből a BUD-on lévő ULD-készlet követhető (későbbi lehetőség). Példa: a PAG72809AGH 12-én érkezett RMO-ból, 16-án ment tovább OSR-be.
+
+## Fogadás és szétválasztás
+
+A fogadó API, a kézi bemásolás és a jogosultságok leírása a CLAUDE.md 7. mérföldkő szakaszában van. Itt a szövegre vonatkozó szabályok:
+
+- Egy beküldött szövegben több üzenet is lehet. Új üzenet ott kezdődik, ahol egy sor pontosan egy ismert típuskód: támogatott az MVT, LDM, CPM, UCM; felismert, de nem támogatott a PTM és a PSM (a lista bővíthető).
+- Az UCM `IN` és `OUT` sora az üzenet része, nem új üzenet. A `CPM END` a CPM végét jelzi.
+- A típussor előtti sorokat (pl. Type B fejléc és cím, email szöveg, aláírás) a feldolgozó átugorja; a nyers szöveg ezekkel együtt megmarad.
+- Nem támogatott típusnál a tartalmat nem tároljuk, csak a típust, a fejlécet (járat, dátum) és a beérkezés idejét naplózzuk, mert ezek személyes adatot tartalmazhatnak.
+
+## Párosítás és a járat része
+
+- **Járatszám:** kétkarakteres légitársaság-kód, 1–4 számjegy, opcionálisan egy betű. A kódot a rendszerben lévő légitársaságok IATA-kódjai alapján választjuk le, pl. `P75535` = P7 5535.
+- **Üzemnap:** a fejléc dátuma az adott szakasz üzemnapja, vagyis az indulás napja az indulóállomáson (a CLAUDE.md 20. eldöntött szabálya). Csak nap esetén a beérkezés idejéhez legközelebbi, azonos napú dátum.
+- **A járat része:**
+  - MVT: ha a fejléc állomása BUD és van `AD` sor, az indulási rész; ha a fejléc állomása BUD és van `AA` sor, az érkezési rész; ha a fejléc állomása más, és az `EA` sor célja BUD, az érkezési rész (ebből jön az ETA).
+  - UCM: a fejléc állomása BUD; `IN` az érkezési, `OUT` az indulási rész.
+  - LDM: ha a célállomás BUD, az érkezési rész; ha a járatszám egy BUD-ról induló járaté, az indulási rész.
+  - CPM: a fejléc állomása vagy útvonala alapján (pl. `CANBUD`): ha BUD a cél, az érkezési, ha BUD az indulóállomás, az indulási rész.
+- Ha a járatszám és az üzemnap alapján egy járat sem, vagy több is szóba jön, az üzenet párosítatlan. A BUD-ot nem érintő üzenet is párosítatlan, „nem érinti BUD-ot” jelzéssel.
+- **Lajstrom:** másodlagos. Ha a járatrészen nincs, az üzenet kitölti; ha eltér, figyelmeztetés (pl. gépcsere).
+- **Példa:** az `ET3365/12.ETBAB.BUD` MVT 17-én érkezik, az üzemnap 12-e, tehát a 12-i ET 3365 indulási részéhez párosul, és az ATD 17-én 07:16 UTC.
+
+## Verziók
+
+- A verziókulcs: járatrész + típus + fajta. Fajta az MVT-nél: `AD` (indulás), `AA` (érkezés), csak `EA` (várható érkezés más állomásról); az UCM-nél `IN` vagy `OUT`; az LDM-nél és a CPM-nél maga a típus.
+- Az azonos kulcsú, később beérkező üzenet új verzió; a korábbi megmarad, de a legfrissebb az érvényes.
+
+## MVT előállítása
+
+- Az indulási MVT a minták szerkezetét követi: fejléc (`járat/üzemnap.lajstrom.BUD`), `AD off-block/felszállás EA hhmm CÉL`, késésnél `DLkód/kód/iiii/iiii` (a minta szerint legfeljebb két kód; több kódnál figyelmeztetés), opcionálisan SI.
+- Az előállított szöveget a saját feldolgozónk visszaolvassa, és ugyanazokat az értékeket kell kapnia.
+- Az érkezési (`AA`) és a korrekciós MVT formátumához még nincs minta.
+
+## Hiányzó minták és kérdések
+
+- Érkezési MVT (`AA` sor), korrekciós MVT, és ha van ilyen, a várható indulást jelző (késési) MVT.
+- A LDM `PAD` és `TB`, valamint a CPM-fejléc `4/1` jelentése.
+- PTM és PSM, anonimizálva, ha a feldolgozásuk sorra kerül.
+- A SITA-küldés átjárója: jelenleg milyen programmal vagy átjárón keresztül megy ki a Type B üzenet.
 
 ## Ismert hibák a mintákban (tesztesetnek)
 

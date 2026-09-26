@@ -1,6 +1,6 @@
 # Ground Handling App – projektleírás
 
-*Verzió: 26 · 2026. szeptember 25.*
+*Verzió: 27 · 2026. szeptember 26.*
 
 Nyílt forráskódú webalkalmazás repülőtéri földi kiszolgálás (ground handling) szervezésére. Minden járatfordulóhoz feladattípusonként egy task tartozik, benne mérföldkövekkel, amelyeknek van tervezett és tényleges időpontja. A mérföldkövek légitársaságonként testreszabható sablonokból jönnek. A hozzáférés szerepkör alapú.
 
@@ -71,7 +71,7 @@ Az alábbi táblázat az alapértelmezett szerepköröket írja le. A 2. mérfö
   - Részenként: cancelled (igen/nem), cancelledBy, cancelledAt. Az ETA-hoz és az ETD-hez: forrás (kézi | üzenet), megjegyzés (opcionális), ki és mikor rögzítette. (2. mérföldkő, 10. lépés; lásd a „Késés és törlés” szakaszt.)
 - **Task:** flight (a járat létrehozásakor automatikusan létrejön; az 5. mérföldkőig 1:1, utána feladattípusonként egy, saját sablonnal), status (PLANNED | IN_PROGRESS | COMPLETED), arrivalAgent (opcionális), departureAgent (opcionális). A két ügynök lehet ugyanaz a személy. Csak érkező járatnál csak érkezési, csak induló járatnál csak indulási ügynök van.
 - **MilestoneRecord:** task, milestoneDefinition, actualTime, recordedBy, recordedAt, updatedBy, updatedAt. Taskonként és mérföldkövenként legfeljebb egy rekord.
-- **Setting** (globális beállítások, egyetlen sor): az eltérés színküszöbei percben (alapérték: zöld legfeljebb 0, sárga legfeljebb 5). Az admin szerkeszti.
+- **Setting** (globális beállítások, egyetlen sor): az eltérés színküszöbei percben (alapérték: zöld legfeljebb 0, sárga legfeljebb 5); a „hamarosan lejár” napjai (6. mérföldkő); a feladó email-címe és Type B címe (7. mérföldkő). Az admin szerkeszti.
 - **Role** (2. mérföldkő): name, builtIn, a hozzá tartozó jogosultságok hatókörrel. Alapértelmezett szerepkörök: Admin (beépített, zárolt), Tervező, Műszakvezető, Ügynök.
 - **Team** (2. mérföldkő): name, leader (User). Minden ügynök egy csapat tagja; egy felhasználó több csapatot is vezethet.
 - **SegmentType** (2. mérföldkő): name, code, operative (igen/nem), active. A tervező bővíti; használatban lévő típus nem törölhető, csak inaktiválható.
@@ -139,7 +139,7 @@ Ezt a logikát egy külön modulba kell tenni (`lib/turnaround.ts`), tiszta füg
    - Ha a szünet legalább `minBreakMinutes`: hosszú forduló. A két rész ügynöke külön választható, a műszakvezető dönt.
    - Egyébként gyors forduló, egy összefüggő foglaltsági ablakkal, és mindkét részt az érkezési ügynök végzi. Ha a járat késése miatt egy hosszú forduló gyorssá válik, az indulási rész is automatikusan az érkezési ügynökhöz kerül.
    - Így a két ablak soha nem fedheti át egymást.
-9. **Hatályos ATA / ATD:** a Flight `ata` / `atd` mezője (külső rendszerből), ha ki van töltve; különben az `ATA` / `ATD` kódú mérföldkő rögzített értéke. Az ügynök saját rögzítése a rendszerérték mellett is megmarad és látható, de a számításokban a rendszerből kapott érték számít.
+9. **Hatályos ATA / ATD:** a Flight `ata` / `atd` mezője (külső rendszerből; a 7. mérföldkőtől az MVT-ből), ha ki van töltve; különben az `ATA` / `ATD` kódú mérföldkő rögzített értéke. Az ügynök saját rögzítése a rendszerérték mellett is megmarad és látható, de a számításokban a rendszerből kapott érték számít.
 10. **Percpontosság:** minden időt percre pontosan rögzítünk, a másodperceket levágjuk (nem kerekítjük). Ez a „Most” gombra és a kézi megadásra is vonatkozik.
 11. **Csak érkező és csak induló járat:**
    - Csak érkező (a gép itt marad): csak az érkezési rész mérföldkövei tartoznak hozzá. Az érkezési horgony az 1. szabály szerint számol; indulási horgony, késés és forduló típus nincs.
@@ -280,7 +280,7 @@ Műszakvezetői, tervezői és admin nézet, asztali gépre. Telefonon ne törj�
 - Csak a BUD-ot érintő sorok és a megadott dátumtartomány kerülnek be.
 - A fordulókat a következő-járat oszlop alapján képezzük: az érkezést a következő járat első olyan példányával párosítjuk, amely az érkezés után indul BUD-ról. Ahol nincs következő járat, csak érkező járat lesz; az az indulás, amely egyetlen érkezés következő járata sem, csak induló járat lesz (11. időszámítási szabály).
 - Mentés előtt próbafuttatás összesítéssel; semmi nem íródik, amíg a felhasználó jóvá nem hagyja.
-- Az import csak a menetrendi mezőket írja (járatszámok, STA, STD, típus). Az ETA, ETD, ATA, ATD, a késés, a törlés és a kiosztás érintetlen marad.
+- Az import csak a menetrendi mezőket írja (járatszámok, STA, STD, típus; a 7. mérföldkőtől az indulóállomás és a célállomás is). Az ETA, ETD, ATA, ATD, a késés, a törlés és a kiosztás érintetlen marad.
 - Azonosítás: légitársaság + járatszám + menetrendi dátum + állomás. A meglévő járat frissül, nem duplikálódik.
 - A légitársaságot a járatszám légitársasági kódja adja, a sablon a légitársaság alapértelmezett sablonja. Ha a légitársaság nem létezik, vagy nincs alapértelmezett sablonja, a sor hibásként jelenik meg az előnézetben.
 - Hiányzó járat: ha egy korábban ugyanazzal a profillal importált járat a fájl időszakán belül hiányzik az új fájlból, nem törlődik és nem kerül töröltre, hanem „az utolsó importból hiányzik” jelölést kap, és a tervező dönt róla.
@@ -412,7 +412,7 @@ Globális beállítás, a Tervező és az Admin szerkeszti. Számoláskor a terv
 
 ## 6. mérföldkő – képzések és jogosítások
 
-**Ezt építjük most.** A képzési nyilvántartásból adódnak az ügynökök jogosításai, a feladatok pedig jogosításokat követelnek meg. Hiány esetén a rendszer mindenhol figyelmeztet, de nem tilt; a tervező pedig azt is ellenőrzi, hogy a pozíciók betölthetők-e valódi, érvényes jogosítású emberekkel.
+**Kész** (2026. szeptember 25.). A képzési nyilvántartásból adódnak az ügynökök jogosításai, a feladatok pedig jogosításokat követelnek meg. Hiány esetén a rendszer mindenhol figyelmeztet, de nem tilt; a tervező pedig azt is ellenőrzi, hogy a pozíciók betölthetők-e valódi, érvényes jogosítású emberekkel.
 
 ### Fogalmak
 
@@ -467,6 +467,103 @@ Globális beállítás, a Tervező és az Admin szerkeszti. Számoláskor a terv
 7. Tervező: a követelmények a számolásban, betölthetőség párosítással, hiányjelzés, a névadás sorrendje; tesztek (köztük a 3 PRM / 3 DG / 1 mindkettő eset)
 8. Seed (egy oktatási koordinátor felhasználó; jogosítások és képzések; a demo ügynököknél érvényes, hamarosan lejáró, lejárt és hiányzó jogosítás is, hogy minden állapot kipróbálható legyen), README, STATUS.md
 
+## 7. mérföldkő – üzenetek: fogadás, feldolgozás, infografika, késéskód, MVT-küldés
+
+**Ezt építjük most.** A formátumok, a kódok, az ellenőrzések, a párosítás részletei és a valós minták: `docs/messages.md`. A PTM és a PSM ebben a mérföldkőben kimarad, így itt nem kezelünk személyes adatot.
+
+### Fogadás
+
+- **Egyetlen belépési pont:** minden üzenet ugyanazon a feldolgozáson megy át. A külső források (később egy email- vagy SITA-átjáró, szkriptek) a fogadó API-n keresztül küldik be az üzeneteket; a kézi bemásolás a felületen ugyanezt a feldolgozást hívja.
+- **Fogadó API:** `POST /api/messages`, API-kulccsal (`Authorization: Bearer …`). A törzs lehet nyers szöveg vagy JSON (`text`, opcionálisan `source` és `receivedAt`). A válasz üzenetenként megadja a felismert típust, a párosítás eredményét és a figyelmeztetéseket. Méretkorlát kérésenként: 256 KB (helyőrző).
+- **API-kulcsok:** az admin hozza létre (név, aktív). A kulcs csak létrehozáskor látható, hash-elve tároljuk, visszavonható; látszik az utolsó használat ideje. Minden API-hívás naplózott (kulcs, idő, eredmény).
+- **Szétválasztás:** egy szövegben több üzenet is lehet. Új üzenet ott kezdődik, ahol egy sor pontosan egy ismert típuskód (támogatott: MVT, LDM, CPM, UCM; felismert, de nem támogatott: PTM, PSM; a lista bővíthető). Az UCM `IN` és `OUT` sora nem új üzenet. A típussor előtti sorokat (pl. Type B fejléc, email szöveg) a feldolgozó átugorja.
+- **Nem támogatott típus** (pl. PTM, PSM): a tartalmát nem tároljuk. A naplóba csak a típus, a fejléc (járat, dátum) és a beérkezés ideje kerül.
+- **Duplikátum:** azonos nyers szöveg nem kerül be kétszer (hash alapján), mert az átjárók újraküldhetnek; a második beküldés a meglévő üzenetre hivatkozik.
+
+### Feldolgozás és ellenőrzés
+
+- Típusonként hibatűrő feldolgozó, a `docs/messages.md` szerint; a mezőket mintázat alapján ismeri fel, nem csak a helyük alapján. Az ismeretlen sor figyelmeztetést ad, a feldolgozás folytatódik. A nyers szöveg mindig megmarad.
+- Az ellenőrzések (összegek, UCM–CPM, LDM–CPM, késések összege) tiszta függvények; eltérésnél figyelmeztetnek, semmit nem utasítanak el.
+
+### Párosítás a járattal
+
+- Járatszám (a légitársaság-kód a rendszer légitársaságai alapján) + üzemnap + állomás, a `docs/messages.md` szerint; ebből dől el a járat része is (érkezési vagy indulási). A lajstrom másodlagos: ha a járaton nincs, az üzenet kitölti; ha eltér, figyelmeztetés.
+- Ami nem párosítható egyértelműen, a „Párosítatlan üzenetek” listába kerül; ott kézzel hozzárendelhető egy járat részéhez, vagy elvethető (a nyers szöveg ekkor is megmarad).
+
+### Verziók
+
+- Ugyanarra a járatrészre érkező, azonos fajtájú üzenet (lásd `docs/messages.md`) új verzió: a korábbit nem írja felül, de mindig a legfrissebb érvényes látszik, és az számít.
+
+### Hatás a járatra
+
+- **Indulási MVT (BUD, AD):** az off-block a járat rendszerből kapott ATD-je (9. időszámítási szabály); a felszállás és a célállomás várható érkezése eltárolódik; a DL sor késéskódjai a járat késésrekordjai közé kerülnek (forrás: üzenet).
+- **Érkezési MVT (BUD, AA):** az on-block a járat rendszerből kapott ATA-ja; a földet érés eltárolódik.
+- **A BUD-ra érkező járat indulási MVT-je (más állomásról, EA … BUD):** a várható érkezés a járat ETA-ja (forrás: üzenet). A hatályos ETA/ETD a legutóbbi érték, kézi vagy üzenet (lásd „Késés és törlés”).
+- **LDM, CPM, UCM:** a járatrész infografikájának forrásai; a járat idejét nem változtatják.
+- Minden változás a járatnaplóba kerül, az üzenetre hivatkozva.
+
+### „Üzenetek” fül és infografika
+
+- A járaton új fül, a műszakvezető és az ügynök is látja (a jogosultság szerint): bejövő és kimenő üzenetek járatrészenként, a verziókkal; a nyers és a feldolgozott tartalom; a figyelmeztetések.
+- **Infografika, fix elrendezésben,** járatrészenként, az adott rész érvényes üzeneteiből (akár bejövők, akár a mi kimenőink), telefonon is jól olvashatóan:
+  - utasok: férfi, nő, gyerek, infant és összesen;
+  - rakomány: összesen, rakterenként, főfedélzet; kategóriánként, ha az üzenet megadja;
+  - ULD-k pozíció szerint, kategóriával és különleges kóddal; az üres ULD-halmok;
+  - különleges kódok összesítése (pl. ELI, ELM, PER, BIG), pozíciókkal;
+  - súlyadatok a SI sorokból, ha vannak;
+  - a figyelmeztetések, és minden blokknál a forrásüzenet és a beérkezés ideje.
+- A személyre szabható elrendezés később jön.
+
+### Késéskód
+
+- **Kódtábla:** kód, leírás, aktív; az admin kezeli. A seedben csak a mintákban szereplő kódok (36, 68, 93), a leírásukat a projekt gazdája adja meg.
+- **Késésrekord a járat indulási részén:** kód és perc, több is lehet; forrása kézi vagy üzenet; ki és mikor rögzítette. Rögzítheti, aki az indulási részt módosíthatja.
+- **Ellenőrzés:** ha a késések összege nem egyezik a késéssel (7. időszámítási szabály), figyelmeztetés.
+
+### MVT előállítása és küldése
+
+- **Előállítás** a járat adataiból és a rögzítésekből, szerkeszthető előnézettel:
+  - indulási MVT: fejléc (járatszám, üzemnap, lajstrom, BUD), `AD` a hatályos off-blockkal és a kézzel megadott felszállással, `EA` a célállomással (kézzel), `DL` a késésrekordokból, SI;
+  - érkezési MVT: `AA` a kézzel megadott földet éréssel és a hatályos on-blockkal;
+  - korrekciós MVT: egy korábban küldött MVT alapján.
+  - Az érkezési és a korrekciós MVT pontos formátumához még nincs minta; amíg a projekt gazdája nem ad, ezt a kettőt ne építsd meg, és jelezd a STATUS.md-ben.
+  - Az előállított szöveget a saját feldolgozónk visszaolvassa, és ugyanazokat az értékeket kell kapnia (teszt).
+- **Címjegyzék:** légitársaságonként és üzenettípusonként címzettek; egy címzett email-cím vagy SITA Type B cím (7 karakter). A feladó email-címe és Type B címe globális beállítás. Az admin kezeli.
+- **Küldés** az előnézetből, egy gombbal, a jóváhagyott szöveggel:
+  - email: SMTP-n, a kapcsolat adatai környezeti változókban (nem az adatbázisban);
+  - SITA: átjárón keresztül. Az átjáró fajtája még nyitott, ezért a küldés cserélhető csatorna. Amíg nincs átjáró beállítva, a SITA-címzett „nem küldhető – nincs átjáró” állapotot kap, és a szöveg másolható.
+  - **Biztonsági alapállás:** ha nincs beállítva valódi csatorna, a küldés csak naplóz, semmi nem hagyja el a rendszert. A demo és a fejlesztői környezet így nem küldhet véletlenül valódi címre.
+- **Kimenő üzenet:** tárolódik a járat „Üzenetek” fülén, címzettenkénti állapottal (elküldve, hiba, nem küldhető), ki és mikor küldte. A kimenő MVT a járat idejét nem változtatja, mert az a rögzítésekből készült.
+
+### Jogosultságok
+
+- „Üzenetek megtekintése” hatókörrel (Ügynök: a saját taskjai járatai; Műszakvezető és Admin: összes).
+- „Üzenetek rögzítése” (kézi bemásolás, párosítatlanok kezelése): Műszakvezető, Admin.
+- „Üzenetek küldése” hatókörrel (Ügynök: a saját indulási, illetve érkezési része; Műszakvezető és Admin: összes).
+- „Üzenetküldés beállításai” (API-kulcsok, címjegyzék, késéskód-tábla): Admin.
+
+### Adatmodell (kiegészítés)
+
+- **Flight:** részenként lajstrom (registration); az érkezési részhez indulóállomás (origin), az indulási részhez célállomás (destination). Az import a meglévő `Orig`/`Dest` oszlopból tölti.
+- **Message:** irány (bejövő, kimenő), típus, nyers szöveg, hash, forrás (kézi, API a kulcs nevével, előállított), beérkezés ideje, fejlécmezők, feldolgozott adat, figyelmeztetések, járat és rész (opcionális: párosítatlan), a verziókulcs, melyik verziót váltja, érvényes-e, ki rögzítette.
+- **MessageDelivery:** kimenő üzenet, címzett, csatorna, állapot, hibaüzenet, idő.
+- **DelayCode**, **DelayRecord**, **ApiKey**, **AddressBookEntry**; az API-hívások és a nem támogatott üzenetek naplója.
+
+### Lépésterv
+
+1. Adatmodell és migráció a fenti kiegészítésekkel; új jogosultságok; az import tölti a lajstromot, az indulóállomást és a célállomást, ha a párosítás megadja
+2. Feldolgozó alapok: szétválasztás, típusfelismerés, fejléc (járatszám, nap vagy teljes dátum, lajstrom, állomás), a „nincs” változatai; tesztek a mintákkal (köztük: az UCM `OUT` sora nem új üzenet; Type B fejléc a típussor előtt)
+3. Típusonkénti feldolgozók: MVT, LDM, CPM (mezősorrend-független), UCM; tesztek mind a nyolc mintára
+4. Párosítás járatra és részre, a párosítatlanok; tesztek (köztük az ET3365/12: 17-én jön, a 12-i járathoz párosul)
+5. Ellenőrzések tiszta függvényként; tesztek a két ismert hibára (`docs/messages.md`)
+6. Hatás a járatra és verziózás: ATD/ATA, ETA, késésrekordok, járatnapló; tesztek
+7. Fogadó API és API-kulcsok (admin), naplózás, duplikátumszűrés, méretkorlát; kézi bemásoló felület; „Párosítatlan üzenetek” lista
+8. „Üzenetek” fül (műszakvezető és ügynök)
+9. Infografika, fix elrendezésben
+10. Késéskód-tábla (admin) és késésrekordok a járaton, ellenőrzéssel
+11. Indulási MVT előállítása előnézettel és visszaolvasási teszttel; címjegyzék; küldés email és SITA csatornán, biztonságos alapállással; kimenő üzenetek állapottal. Az érkezési és a korrekciós MVT csak minta után
+12. Seed (demo üzenetek a demo járatokhoz, a minták alapján; minta címjegyzék nem létező címekkel; a három késéskód), README (API-példa `curl`-lel, a küldés beállítása), STATUS.md
+
 ## További eldöntött szabályok
 
 Ezeket a kérdéseket a megrendelő 2026. szeptember 22-én jóváhagyta; a kód is ezekre a számokra hivatkozik.
@@ -503,27 +600,28 @@ Ezeket a kérdéseket a megrendelő 2026. szeptember 22-én jóváhagyta; a kód
 30. **Járatszintű megjelenítés** (napszűrés, sorrend, „Késik”, késés): az elsődleges task szerint.
 31. **Közös rész nélküli task:** „nincs teendő” állapotú.
 32. **Sablon és feladattípus:** a sablon részei a létrehozásakor dőlnek el; feladattípus nem törölhető.
+33. **Inaktív jogosítás:** nem választható, és az ellenőrzések figyelmen kívül hagyják.
+34. **Lejáró jogosítások listája:** két csoport (hamarosan lejár, lejárt), csak aktív jogosításokkal.
+35. **Gyors forduló követelménye:** az ablak követelménye a két rész követelményeinek uniója.
+36. **Követelmény forrása:** mindig a légitársaság feladattípusának mostani beállítása; a taskon nem fagy be.
+37. **Képzési rekord:** az ügynök kivételével minden mezője javítható; az érvényesség vége alapból számolt, kézzel felülírható.
+38. **Fájl eltávolítása:** a fájl a tárhelyről törlődik, a naplósor megmarad.
+39. **Tervező és jogosítások:** a jelöltek az aktív ügynökök, a beosztástól függetlenül. A hiányjelzés megtekintéskor számolódik, a nyilvántartás aktuális adataival, de az érvényességet mindig a terv adott napjára vizsgálja, nem a mai napra.
+40. **„Hamarosan lejár”:** a napok száma globális beállítás (Admin → Beállítások).
 
 ## Később (most ne építsd)
 
-- **7. mérföldkő – üzenetek** (MVT, LDM, CPM, UCM, később PTM és PSM). A formátumok, a kódok, az ellenőrzések és a valós minták leírása: `docs/messages.md`.
-  - Fogadás és feldolgozás: a nyers szöveg és a feldolgozott adat tárolása járatonként, verziózva (a javított üzenet nem írja felül a korábbit, de mindig a legfrissebb érvényes látszik). Hibatűrő feldolgozó; az ellenőrzések eltérésnél figyelmeztetnek. A minták tesztadatok.
-  - Járatonként egy fül, amit az ügynök is lát.
-  - Az ATA és az ATD forrása az MVT (on-block, illetve off-block). A BUD-ra érkező járat ETA-ja az indulási állomás MVT-jéből jön.
-  - Előállítás: a BUD-ról induló és oda érkező járatok üzeneteit a BUD-i handling küldi, ezért az alkalmazásnak elő kell tudnia állítani őket, elsőként az MVT-t az ügynök rögzítéseiből (a korrekciós MVT-vel együtt).
-  - A párosításhoz a Flight lajstrom (registration) mezőt kap.
-  - A személyes adatot tartalmazó üzenetek (pl. PTM, PSM) hozzáférését és megőrzési idejét külön tisztázni kell.
-- Járat-infografika: a feldolgozott üzenetekből összegzett nézet (total pax, compartment-terheltség, speciális utasok és információk), a forrásüzenet idejével.
 - Személyre szabható elrendezés: az ügynök drag and droppal állítja be, mit lát és hogyan, felhasználónként mentve. Csak azután, hogy a fix elrendezés bevált.
 - A lezárt taskok utólagos javításának jogosultsága
 - Ügynöki beosztásnézet: az ügynök lássa a saját publikált és valós beosztását.
 - A beosztás TRN részének összekötése egy konkrét képzéssel
+- PTM és PSM feldolgozása (minta és az adatkezelési döntés után)
+- Email- és SITA-átjáró a bejövő üzenetekhez (a fogadó API-ra csatlakozik)
+- A BUD-on lévő ULD-készlet követése az UCM-ekből
 - Létszámigény: számítás (egy adott időpontban az átfedő foglaltsági ablakok száma, 15 perces sávokra bontva; a sávon belüli számolás módja még nyitott) és külön nézet (idősávos táblázat vagy grafikon). A sávos idősoros nézeten nem jelenik meg: a tervezés más logika szerint működik.
 - Járatinfó: a sablonban definiált egyedi mezők taskonként (pl. utaslétszám, különleges igények)
 - Szolgáltatások rögzítése taskonként, időpontokkal
-- Késéskód rögzítése, ha van késés (az MVT DL sorába kerül)
 - Kimutatások légitársaságonként (kiszállítás és beszállítás hossza, földi idő, késések)
-- Üzenetek küldése a külső rendszer felé (az előállítás a 7. mérföldkő része; a küldés csatornája még nyitott)
 - Több nyelv támogatása
 
 ## Állapotjelentés (`STATUS.md`)
