@@ -4,14 +4,14 @@
 
 ## Mi készült el
 
-- 7. mérföldkő, 5. lépés: ellenőrzések (`lib/telex/checks.ts`) – LDM: főfedélzet + rakterek = T, utasok = PAX; CPM: pozíciók = összsúly, TOW = ZFW + felszállási üzemanyag; LDM–CPM: főfedélzet és rakterenként (bulk esetén az alsó fedélzet egészében); UCM OUT–CPM: az E-s ULD-k = az ELD-s pozíciók, X-es ULD nincs a CPM-ben; késéskódok összege = késés (7. szabály). Mind csak figyelmeztet. A két ismert hibát (P7 5535/16 UCM–CPM, ET 3365/12 76 perc) tesztek fedik; a többi minta hibátlannak bizonyul.
-- 7. mérföldkő, 0–4. lépés: tervező a terv napjára; adatmodell és jogosultságok; szétválasztás és fejléc; feldolgozók; párosítás.
+- 7. mérföldkő, 6. lépés: hatás és verziózás. Tiszta rész (`lib/telex/effects.ts`): a BUD-i AD MVT adja az ATD-t és a késéskódokat (a késés-ellenőrzéssel), a BUD-i AA az ATA-t, a más állomásról jövő EA … BUD az ETA-t; az időket a menetrendi időhöz legközelebbi nappal oldja fel; törölt részre nincs hatás. Adatréteg (`lib/data/messages.ts`, `processText`): duplikátumszűrés hash alapján, PTM/PSM csak naplósor, tárolás a borítékkal, párosítás, verzió (járatrész + típus + fajta; a beérkezés szerint legfrissebb számít, a későn jött régebbi csak tárolódik), a lajstrom kitöltése, a késésrekordok cseréje, minden változás a járatnaplóba az üzenetre hivatkozva. Adatbázison kipróbálva a mintákkal (ET3365/12 → ATD 09. 17. 07:16 UTC).
+- 7. mérföldkő, 0–5. lépés: tervező a terv napjára; adatmodell és jogosultságok; szétválasztás és fejléc; feldolgozók; párosítás; ellenőrzések.
 - 6. mérföldkő (képzések és jogosítások) kész; pontosításai elfogadva (További eldöntött szabályok 33–40.).
 
 ## Állapot
 
-- Utolsó commit: `56ff92f` – feat: match messages to a flight part (az 5. lépés commitja ezt követi)
-- Tesztek: `npm test` → 504 teszt, mind zöld
+- Utolsó commit: `17e797e` – feat: check messages and their consistency (a 6. lépés commitja ezt követi)
+- Tesztek: `npm test` → 511 teszt, mind zöld
 - Lint és build: `npm run lint` hibátlan, `npx tsc --noEmit` tiszta
 
 ## Eltérések a CLAUDE.md-től
@@ -26,4 +26,4 @@
 
 ## Következő lépés
 
-- 7. mérföldkő, 6. lépés: hatás a járatra és verziózás (ATD/ATA, ETA, késésrekordok, lajstrom, járatnapló), a közös feldolgozó függvény; tesztek.
+- 7. mérföldkő, 7. lépés: fogadó API (`POST /api/messages`, API-kulcs, napló, méretkorlát), API-kulcsok kezelése, kézi bemásolás, „Párosítatlan üzenetek” lista.

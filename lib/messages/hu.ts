@@ -1125,6 +1125,8 @@ export const hu = {
       cpmStackNotInUcm: "UCM–CPM: a(z) {uld} a CPM-ben ULD-halom ({position}, ELD), az UCM-ben nem hordozó (E).",
       ucmEmptyInCpm: "UCM–CPM: a(z) {uld} az UCM-ben üres (X), mégis szerepel a CPM-ben ({position}).",
       delaySum: "A késéskódok összege {sum} perc, a késés {delay} perc.",
+      partCancelled: "A járat ezen része törölt, ezért az üzenet nem változtat rajta.",
+      olderVersion: "Egy később beérkezett verzió már érvényes, ezért ez nem változtat a járaton.",
     },
     unmatched: {
       noHeader: "nincs értelmezhető fejléc",

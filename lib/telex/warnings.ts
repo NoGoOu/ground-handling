@@ -33,6 +33,10 @@ export const WARNING_CODES = [
   "cpmStackNotInUcm",
   "ucmEmptyInCpm",
   "delaySum",
+  // Rule 17: a cancelled part takes nothing from a message.
+  "partCancelled",
+  // A version received later already counts.
+  "olderVersion",
 ] as const;
 
 export type WarningCode = (typeof WARNING_CODES)[number];
