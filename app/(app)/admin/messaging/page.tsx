@@ -1,19 +1,43 @@
 import Link from "next/link";
 import { listApiCalls, listApiKeys } from "@/lib/data/api-keys";
 import { listDelayCodes } from "@/lib/data/delays";
+import { channelSetup } from "@/lib/data/outbound";
+import { prisma } from "@/lib/db";
 import { messages } from "@/lib/messages";
 import { fmt } from "@/lib/messages/format";
 import { canManageMessaging } from "@/lib/permissions";
 import { requireCapability } from "@/lib/session";
+import { SUPPORTED_TYPES } from "@/lib/telex/split";
 import { formatDateTime } from "@/lib/time";
-import { createDelayCode, createKey, revokeKey, updateDelayCode } from "./actions";
-import { ApiKeyForm, DelayCodeForm, RevokeKeyButton } from "./forms";
+import {
+  addAddress,
+  createDelayCode,
+  createKey,
+  removeAddress,
+  revokeKey,
+  saveSender,
+  toggleAddress,
+  updateDelayCode,
+} from "./actions";
+import { AddressActions, AddressForm, ApiKeyForm, DelayCodeForm, RevokeKeyButton, SenderForm } from "./forms";
 
 const t = messages.messaging;
 
 export default async function MessagingSettingsPage() {
   await requireCapability(canManageMessaging);
-  const [keys, calls, delayCodes] = await Promise.all([listApiKeys(), listApiCalls(), listDelayCodes()]);
+  const [keys, calls, delayCodes, airlines, addresses, channels] = await Promise.all([
+    listApiKeys(),
+    listApiCalls(),
+    listDelayCodes(),
+    prisma.airline.findMany({ select: { id: true, name: true, iataCode: true }, orderBy: { name: "asc" } }),
+    prisma.addressBookEntry.findMany({
+      include: { airline: { select: { name: true, iataCode: true } } },
+      orderBy: [{ airline: { name: "asc" } }, { messageType: "asc" }, { address: "asc" }],
+    }),
+    channelSetup(),
+  ]);
+  const a = messages.addressBook;
+  const state = (on: boolean) => (on ? a.configured : a.notConfigured);
   return (
     <div className="flex flex-col gap-4">
       <Link href="/admin" className="self-start text-sm text-sky-700 hover:underline">
@@ -52,6 +76,46 @@ export default async function MessagingSettingsPage() {
                     {fmt(t.apiKeys.revoked, { time: key.revokedAt ? formatDateTime(key.revokedAt) : "–" })}
                   </span>
                 )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className="flex flex-col gap-3 rounded-xl border border-neutral-200 bg-white p-4">
+        <h2 className="font-semibold">{a.senderTitle}</h2>
+        <p className="max-w-3xl text-sm text-neutral-600">{a.senderHint}</p>
+        <p className="text-sm">{fmt(a.channelState, { email: state(channels.setup.email), sita: state(channels.setup.sita) })}</p>
+        <SenderForm
+          action={saveSender}
+          initial={{ senderEmail: channels.setup.senderEmail ?? "", senderTypeB: channels.setup.senderTypeB ?? "" }}
+        />
+      </section>
+
+      <section className="flex flex-col gap-3 rounded-xl border border-neutral-200 bg-white p-4">
+        <h2 className="font-semibold">{a.title}</h2>
+        <p className="max-w-3xl text-sm text-neutral-600">{a.hint}</p>
+        <AddressForm
+          action={addAddress}
+          airlines={airlines.map((airline) => ({ id: airline.id, label: `${airline.name} (${airline.iataCode})` }))}
+          types={SUPPORTED_TYPES}
+        />
+        {addresses.length === 0 ? (
+          <p className="text-sm text-neutral-600">{a.empty}</p>
+        ) : (
+          <ul className="flex flex-col divide-y divide-neutral-100 text-sm">
+            {addresses.map((entry) => (
+              <li key={entry.id} className="flex flex-wrap items-center justify-between gap-2 py-1.5">
+                <span className={entry.active ? "" : "text-neutral-400"}>
+                  <span className="font-medium">{entry.airline.iataCode}</span> · <span className="font-mono">{entry.messageType}</span> ·{" "}
+                  {a.channels[entry.channel]} · <span className="font-mono">{entry.address}</span>
+                  {!entry.active && <> · {a.inactive}</>}
+                </span>
+                <AddressActions
+                  active={entry.active}
+                  toggle={toggleAddress.bind(null, entry.id)}
+                  remove={removeAddress.bind(null, entry.id)}
+                />
               </li>
             ))}
           </ul>

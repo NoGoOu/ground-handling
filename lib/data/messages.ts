@@ -57,7 +57,7 @@ export function parsedOf(row: { type: string; parsed: Prisma.JsonValue }): Parse
   return { type: row.type, header: stored.header, data: stored.data, warnings: [] } as ParsedMessage;
 }
 
-const FLIGHT_SELECT = {
+export const FLIGHT_SELECT = {
   id: true,
   airlineId: true,
   inboundFlightNumber: true,
@@ -77,7 +77,7 @@ const FLIGHT_SELECT = {
   departureCancelled: true,
 } as const;
 
-type FlightRow = Prisma.FlightGetPayload<{ select: typeof FLIGHT_SELECT }>;
+export type FlightRow = Prisma.FlightGetPayload<{ select: typeof FLIGHT_SELECT }>;
 
 const matchFlight = (f: FlightRow): MatchFlight => ({
   ...f,
@@ -85,7 +85,7 @@ const matchFlight = (f: FlightRow): MatchFlight => ({
   departureFlightDate: dayText(f.departureFlightDate),
 });
 
-const effectFlight = (f: FlightRow): EffectFlight => ({
+export const effectFlight = (f: FlightRow): EffectFlight => ({
   sta: f.sta,
   std: f.std,
   arrivalFlightDate: dayText(f.arrivalFlightDate),

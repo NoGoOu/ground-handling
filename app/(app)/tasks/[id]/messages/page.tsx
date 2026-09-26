@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { TaskTypeBadge } from "@/components/badges";
@@ -8,13 +9,16 @@ import { flightPartAgents, getTaskView, taskAssignment } from "@/lib/data/tasks"
 import { flightLabel } from "@/lib/flight";
 import { messages } from "@/lib/messages";
 import { fmt } from "@/lib/messages/format";
-import { canViewFlightMessages, canViewTask } from "@/lib/permissions";
+import { prisma } from "@/lib/db";
+import { canSendPartMessage, canViewFlightMessages, canViewTask } from "@/lib/permissions";
 import { requireUser } from "@/lib/session";
 import { warningText } from "@/lib/telex/describe";
 import { buildInfographic, type CurrentMessage } from "@/lib/telex/infographic";
 import type { Part } from "@/lib/telex/match";
 import { formatDateTime } from "@/lib/time";
 import { TaskTabs } from "../tabs";
+import { previewMvt, sendMvt } from "./actions";
+import { MvtPanel } from "./mvt-panel";
 
 // The "Üzenetek" tab (CLAUDE.md, 7. mérföldkő): the messages of the task's
 // flight per part, with their versions, raw and parsed, and their warnings.
@@ -26,7 +30,7 @@ function sourceText(message: FlightMessage): string {
   const s = messages.inbox.source;
   if (message.source === "API") return fmt(s.API, { key: message.apiKey?.name ?? "–" });
   if (message.source === "MANUAL") return fmt(s.MANUAL, { name: message.createdBy?.name ?? "–" });
-  return s.GENERATED;
+  return message.createdBy ? fmt(messages.outbound.sentBy, { name: message.createdBy.name }) : s.GENERATED;
 }
 
 function kindLabel(message: FlightMessage): string {
@@ -61,6 +65,19 @@ function MessageCard({ message }: { message: FlightMessage }) {
         </p>
       ))}
       <MessageContent message={message} />
+      {message.deliveries.length > 0 && (
+        <ul className="flex flex-col gap-0.5 text-sm">
+          {message.deliveries.map((d) => (
+            <li key={d.id} className={d.status === "SENT" ? "text-emerald-700" : d.status === "FAILED" ? "text-red-700" : "text-orange-700"}>
+              {fmt(messages.outbound.delivery, {
+                recipient: d.recipient,
+                channel: d.channel,
+                status: d.error ? `${messages.outbound.status[d.status]} (${d.error})` : messages.outbound.status[d.status],
+              })}
+            </li>
+          ))}
+        </ul>
+      )}
       <details>
         <summary className="cursor-pointer text-sm text-neutral-600">{t.raw}</summary>
         <pre className="mt-1 overflow-x-auto rounded bg-neutral-50 p-2 font-mono text-xs">
@@ -71,7 +88,7 @@ function MessageCard({ message }: { message: FlightMessage }) {
   );
 }
 
-function PartMessages({ rows, part }: { rows: FlightMessage[]; part: Part }) {
+function PartMessages({ rows, part, children }: { rows: FlightMessage[]; part: Part; children?: ReactNode }) {
   const groups = versionGroups(rows, part);
   // The infographic sums up the part's current messages, inbound or ours.
   const current = rows
@@ -103,6 +120,7 @@ function PartMessages({ rows, part }: { rows: FlightMessage[]; part: Part }) {
           </div>
         ))
       )}
+      {children}
     </section>
   );
 }
@@ -115,6 +133,12 @@ export default async function TaskMessagesPage(props: PageProps<"/tasks/[id]/mes
   const agents = await flightPartAgents(task.flight.id);
   if (!canViewFlightMessages(user, [...agents.arrival, ...agents.departure])) notFound();
   const rows = await listFlightMessages(task.flight.id);
+  // The departure MVT: whoever may send on the departure part (7. mérföldkő).
+  const canSend = !!task.flight.std && !task.flight.departureCancelled && canSendPartMessage(user, agents.departure);
+  const departure = canSend
+    ? await prisma.flight.findUnique({ where: { id: task.flight.id }, select: { departureRegistration: true, destination: true } })
+    : null;
+  const offBlock = task.timeline.effectiveAtd;
   const parts: Part[] = [
     ...(task.flight.sta ? (["ARRIVAL_PART"] as const) : []),
     ...(task.flight.std ? (["DEPARTURE_PART"] as const) : []),
@@ -129,7 +153,26 @@ export default async function TaskMessagesPage(props: PageProps<"/tasks/[id]/mes
       <TaskTabs taskId={task.id} active="messages" />
       <p className="max-w-3xl text-sm text-neutral-600">{t.hint}</p>
       {parts.map((part) => (
-        <PartMessages key={part} rows={rows} part={part} />
+        <PartMessages key={part} rows={rows} part={part}>
+          {part === "DEPARTURE_PART" && departure && (
+            <div className="flex flex-col gap-2 border-t border-neutral-200 pt-3">
+              <h3 className="font-semibold">{messages.outbound.title}</h3>
+              <p className="text-sm text-neutral-600">{messages.outbound.hint}</p>
+              <MvtPanel
+                previewAction={previewMvt.bind(null, task.id)}
+                sendAction={sendMvt.bind(null, task.id)}
+                offBlock={offBlock ? formatDateTime(offBlock) : null}
+                initial={{
+                  registration: departure.departureRegistration ?? "",
+                  airborne: "",
+                  estimatedArrival: "",
+                  destination: departure.destination ?? "",
+                  si: "",
+                }}
+              />
+            </div>
+          )}
+        </PartMessages>
       ))}
       <Link href={`/tasks/${task.id}`} className="self-start text-sm text-sky-700 hover:underline">
         {messages.task.back}

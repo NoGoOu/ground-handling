@@ -8,11 +8,20 @@ import { prisma } from "@/lib/db";
 import { messages } from "@/lib/messages";
 import { canManageMessaging } from "@/lib/permissions";
 import { getCurrentUser } from "@/lib/session";
+import { SETTINGS_ID } from "@/lib/settings";
 import { DELAY_CODE_FIELDS, delayCodeSchema, type DelayCodeFormInput } from "@/lib/validation/delay-code";
 import { fieldErrors, formValues, type FormState } from "@/lib/validation/form";
+import {
+  ADDRESS_FIELDS,
+  addressSchema,
+  SENDER_FIELDS,
+  senderSchema,
+  type AddressFormInput,
+  type SenderFormInput,
+} from "@/lib/validation/messaging";
 
-// Messaging settings (CLAUDE.md, 7. mérföldkő): the keys of the receiving API
-// and the delay code table.
+// Messaging settings (CLAUDE.md, 7. mérföldkő): the keys of the receiving API,
+// the delay code table, the address book and the sender.
 
 const e = messages.messaging.apiKeys.errors;
 
@@ -76,4 +85,60 @@ export async function updateDelayCode(
   formData: FormData,
 ): Promise<DelayCodeFormState> {
   return saveDelayCode(id, formData);
+}
+
+export type AddressFormState = FormState<AddressFormInput>;
+
+export async function addAddress(_previous: AddressFormState, formData: FormData): Promise<AddressFormState> {
+  const user = await getCurrentUser();
+  if (!user || !canManageMessaging(user)) return { message: messages.errors.forbidden };
+  const values = formValues(formData, ADDRESS_FIELDS);
+  const parsed = addressSchema.safeParse(values);
+  if (!parsed.success) return { errors: fieldErrors(parsed.error), values };
+  try {
+    await prisma.addressBookEntry.create({ data: parsed.data });
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      return { errors: { address: messages.addressBook.errors.taken }, values };
+    }
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2003") {
+      return { errors: { airlineId: messages.addressBook.errors.airline }, values };
+    }
+    throw error;
+  }
+  refresh();
+  return { notice: messages.addressBook.added, values: { ...values, address: "" } };
+}
+
+export async function toggleAddress(id: string): Promise<ActionResult> {
+  return runAction(async () => {
+    await actionUser(canManageMessaging);
+    const entry = await prisma.addressBookEntry.findUnique({ where: { id }, select: { active: true } });
+    if (!entry) throw new ActionError(messages.errors.notFound);
+    await prisma.addressBookEntry.update({ where: { id }, data: { active: !entry.active } });
+    refresh();
+  });
+}
+
+/** An address is configuration, not a record: it may be removed. */
+export async function removeAddress(id: string): Promise<ActionResult> {
+  return runAction(async () => {
+    await actionUser(canManageMessaging);
+    const removed = await prisma.addressBookEntry.deleteMany({ where: { id } });
+    if (removed.count === 0) throw new ActionError(messages.errors.notFound);
+    refresh();
+  });
+}
+
+export type SenderFormState = FormState<SenderFormInput>;
+
+export async function saveSender(_previous: SenderFormState, formData: FormData): Promise<SenderFormState> {
+  const user = await getCurrentUser();
+  if (!user || !canManageMessaging(user)) return { message: messages.errors.forbidden };
+  const values = formValues(formData, SENDER_FIELDS);
+  const parsed = senderSchema.safeParse(values);
+  if (!parsed.success) return { errors: fieldErrors(parsed.error), values };
+  await prisma.setting.upsert({ where: { id: SETTINGS_ID }, create: { id: SETTINGS_ID, ...parsed.data }, update: parsed.data });
+  refresh();
+  return { notice: messages.addressBook.senderSaved };
 }

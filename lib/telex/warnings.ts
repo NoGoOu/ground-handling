@@ -37,6 +37,9 @@ export const WARNING_CODES = [
   "partCancelled",
   // A version received later already counts.
   "olderVersion",
+  // Generating an MVT: the sample format carries at most two delay codes.
+  "tooManyDelayCodes",
+  "delayTooLong",
 ] as const;
 
 export type WarningCode = (typeof WARNING_CODES)[number];

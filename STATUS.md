@@ -4,14 +4,14 @@
 
 ## Mi készült el
 
-- 7. mérföldkő, 10. lépés: késéskód-tábla az Admin → Üzenetküldés oldalon (kód az MVT DL-sorának alakjában, leírás, aktív; nem törölhető, csak inaktiválható). Késésrekordok a task nézetben az indulási rész alatt, a járat minden taskján ugyanazok: kód, perc, forrás (kézi/üzenet), ki és mikor; kézzel csak a tábla aktív kódja rögzíthető, a kézi rekord törölhető, minden kézi változás a járatnaplóba kerül; törölt indulási részre nem rögzíthető (17. szabály). Rögzítheti, aki járatot kezel, vagy a járat indulási ügynöke. A kódok összege és a késés (7. szabály) eltérésénél figyelmeztetés.
-- 7. mérföldkő, 0–9. lépés: tervező a terv napjára; adatmodell és jogosultságok; szétválasztás és fejléc; feldolgozók; párosítás; ellenőrzések; hatás és verziózás; API, kulcsok, bemásolás, párosítatlanok; Üzenetek fül; infografika.
+- 7. mérföldkő, 11. lépés: indulási MVT (`lib/telex/generate.ts`) a járat adataiból és rögzítéseiből: fejléc lajstrommal, AD a hatályos off-blockkal és a kézi felszállással, EA a kézi idővel és célállomással, DL a késésrekordokból (legfeljebb két kód, a többire figyelmeztetés; 99:59 fölött is), SI telex-karakterekkel. A generátor a P7 5535/16 mintát karakterre visszaadja, a saját feldolgozónk ugyanazokat az értékeket olvassa vissza (teszt). Az Üzenetek fülön előnézet, szerkeszthető szöveg, címzettek; a küldés ellenőrzi a fejlécet. Címjegyzék és feladó (Admin → Üzenetküldés). Küldés cserélhető csatornán: email SMTP-n (nodemailer, a kapcsolat adatai környezeti változókban), SITA átjáró nélkül „nem küldhető”, a Type B szöveg másolható; beállított csatorna nélkül csak naplóz. A kimenő üzenet a fülön címzettenkénti állapottal, a járat idejét nem változtatja. Az érkezési (AA) és a korrekciós MVT minta hiányában kimaradt.
+- 7. mérföldkő, 0–10. lépés: tervező a terv napjára; adatmodell és jogosultságok; szétválasztás és fejléc; feldolgozók; párosítás; ellenőrzések; hatás és verziózás; API, kulcsok, bemásolás, párosítatlanok; Üzenetek fül; infografika; késéskódok.
 - 6. mérföldkő (képzések és jogosítások) kész; pontosításai elfogadva (További eldöntött szabályok 33–40.).
 
 ## Állapot
 
-- Utolsó commit: `7104455` – feat: sum up a flight part's messages in an infographic (a 10. lépés commitja ezt követi)
-- Tesztek: `npm test` → 526 teszt, mind zöld
+- Utolsó commit: `f205853` – feat: keep a delay code table and the flight's delay records (a 11. lépés commitja ezt követi)
+- Tesztek: `npm test` → 544 teszt, mind zöld
 - Lint és build: `npm run lint` hibátlan, `npx tsc --noEmit` tiszta
 
 ## Eltérések a CLAUDE.md-től
@@ -26,4 +26,4 @@
 
 ## Következő lépés
 
-- 7. mérföldkő, 11. lépés: indulási MVT előállítása szerkeszthető előnézettel és visszaolvasási teszttel; címjegyzék; küldés email- és SITA-csatornán biztonságos alapállással; kimenő üzenetek címzettenkénti állapottal.
+- 7. mérföldkő, 12. lépés: seed (demo üzenetek, minta címjegyzék nem létező címekkel, a három késéskód), README (API-példa curl-lel, a küldés beállítása), STATUS.md.
