@@ -4,14 +4,14 @@
 
 ## Mi készült el
 
-- 7. mérföldkő, 6. lépés: hatás és verziózás. Tiszta rész (`lib/telex/effects.ts`): a BUD-i AD MVT adja az ATD-t és a késéskódokat (a késés-ellenőrzéssel), a BUD-i AA az ATA-t, a más állomásról jövő EA … BUD az ETA-t; az időket a menetrendi időhöz legközelebbi nappal oldja fel; törölt részre nincs hatás. Adatréteg (`lib/data/messages.ts`, `processText`): duplikátumszűrés hash alapján, PTM/PSM csak naplósor, tárolás a borítékkal, párosítás, verzió (járatrész + típus + fajta; a beérkezés szerint legfrissebb számít, a későn jött régebbi csak tárolódik), a lajstrom kitöltése, a késésrekordok cseréje, minden változás a járatnaplóba az üzenetre hivatkozva. Adatbázison kipróbálva a mintákkal (ET3365/12 → ATD 09. 17. 07:16 UTC).
-- 7. mérföldkő, 0–5. lépés: tervező a terv napjára; adatmodell és jogosultságok; szétválasztás és fejléc; feldolgozók; párosítás; ellenőrzések.
+- 7. mérföldkő, 7. lépés: `POST /api/messages` Bearer API-kulccsal (szöveg vagy JSON: text, source, receivedAt; 256 KB; üzenetenkénti válasz típussal, párosítással, figyelmeztetésekkel; hibák: 401, 400, 413, 422), minden hívás naplózva, a kulcs utolsó használata látszik; a proxy ezt az útvonalat nem munkamenettel védi. Admin → Üzenetküldés: kulcs létrehozása (csak egyszer látszik, hash-elve tárolva), visszavonás, hívásnapló. Új „Üzenetek” menü (Műszakvezető, Admin): kézi bemásolás ugyanazzal a feldolgozással, „Párosítatlan üzenetek” lista okkal, nyers szöveggel, hozzárendeléssel a jelölt járatrészekhez vagy elvetéssel. Élesben kipróbálva curl-lel (tárolás, párosítás, ATD és késéskód, PTM csak naplóban, duplikátum, hibás kulcs).
+- 7. mérföldkő, 0–6. lépés: tervező a terv napjára; adatmodell és jogosultságok; szétválasztás és fejléc; feldolgozók; párosítás; ellenőrzések; hatás és verziózás.
 - 6. mérföldkő (képzések és jogosítások) kész; pontosításai elfogadva (További eldöntött szabályok 33–40.).
 
 ## Állapot
 
-- Utolsó commit: `17e797e` – feat: check messages and their consistency (a 6. lépés commitja ezt követi)
-- Tesztek: `npm test` → 511 teszt, mind zöld
+- Utolsó commit: `7b8ece5` – feat: store received messages and apply them to their flights (a 7. lépés commitja ezt követi)
+- Tesztek: `npm test` → 517 teszt, mind zöld
 - Lint és build: `npm run lint` hibátlan, `npx tsc --noEmit` tiszta
 
 ## Eltérések a CLAUDE.md-től
@@ -26,4 +26,4 @@
 
 ## Következő lépés
 
-- 7. mérföldkő, 7. lépés: fogadó API (`POST /api/messages`, API-kulcs, napló, méretkorlát), API-kulcsok kezelése, kézi bemásolás, „Párosítatlan üzenetek” lista.
+- 7. mérföldkő, 8. lépés: „Üzenetek” fül a task nézetben (műszakvezető és ügynök), járatrészenként a verziókkal, nyers és feldolgozott tartalommal, figyelmeztetésekkel.

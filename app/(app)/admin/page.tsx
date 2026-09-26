@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { messages } from "@/lib/messages";
-import { canOpenAdmin } from "@/lib/permissions";
+import { canManageMessaging, canOpenAdmin } from "@/lib/permissions";
 import { requireCapability } from "@/lib/session";
 
 const t = messages.admin;
 
 export default async function AdminPage() {
-  await requireCapability(canOpenAdmin);
+  const user = await requireCapability(canOpenAdmin);
   const sections = [
     { href: "/admin/users", title: t.users, hint: t.usersHint },
     { href: "/admin/roles", title: t.roles, hint: t.rolesHint },
@@ -14,6 +14,7 @@ export default async function AdminPage() {
     { href: "/admin/airlines", title: t.airlines, hint: t.airlinesHint },
     { href: "/admin/task-types", title: messages.taskTypes.title, hint: messages.taskTypes.hint },
     { href: "/admin/settings", title: t.settings, hint: t.settingsHint },
+    ...(canManageMessaging(user) ? [{ href: "/admin/messaging", title: t.messaging, hint: t.messagingHint }] : []),
   ];
   return (
     <div className="flex flex-col gap-4">

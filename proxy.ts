@@ -23,6 +23,7 @@ export default auth(async (request) => {
   }
 });
 
+// The receiving API (/api/messages) checks its own API key instead of a session.
 export const config = {
-  matcher: ["/((?!api/auth|api/health|_next/static|_next/image|favicon.ico).*)"],
+  matcher: ["/((?!api/auth|api/health|api/messages|_next/static|_next/image|favicon.ico).*)"],
 };

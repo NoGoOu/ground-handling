@@ -358,3 +358,83 @@ export async function assignMessage(messageId: string, flightId: string, part: P
     return [...extra, ...applied.warnings];
   });
 }
+
+/** Sets an unmatched message aside; its raw text stays. */
+export async function discardMessage(messageId: string, userId: string): Promise<boolean> {
+  const updated = await prisma.message.updateMany({
+    where: { id: messageId, flightId: null, discardedAt: null, direction: "INBOUND" },
+    data: { discardedAt: new Date(), discardedById: userId },
+  });
+  return updated.count > 0;
+}
+
+export async function countUnmatched(): Promise<number> {
+  return prisma.message.count({ where: { direction: "INBOUND", flightId: null, discardedAt: null } });
+}
+
+export interface CandidatePart {
+  flightId: string;
+  part: Part;
+  flightNumber: string;
+  /** "YYYY-MM-DD" */
+  operatingDay: string;
+  scheduled: Date;
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * The flight parts an unmatched message may be hung on by hand: its flight
+ * number within three days of its operating day (or of its receipt).
+ */
+async function candidateParts(
+  message: { flightNumber: string | null; flightDate: Date | null; receivedAt: Date },
+  airlines: { id: string; code: string }[],
+): Promise<CandidatePart[]> {
+  const split = message.flightNumber ? splitFlightNumber(message.flightNumber, airlines) : null;
+  if (!split) return [];
+  const around = message.flightDate ?? new Date(`${message.receivedAt.toISOString().slice(0, 10)}T00:00:00Z`);
+  const range = { gte: new Date(around.getTime() - 3 * DAY_MS), lte: new Date(around.getTime() + 3 * DAY_MS) };
+  const flights = await prisma.flight.findMany({
+    where: {
+      airlineId: split.airline.id,
+      OR: [
+        { inboundFlightNumber: split.flightNumber, arrivalFlightDate: range },
+        { outboundFlightNumber: split.flightNumber, departureFlightDate: range },
+      ],
+    },
+    select: FLIGHT_SELECT,
+  });
+  return flights
+    .flatMap((f): CandidatePart[] => [
+      ...(f.inboundFlightNumber === split.flightNumber && f.sta && f.arrivalFlightDate
+        ? [{ flightId: f.id, part: "ARRIVAL_PART" as const, flightNumber: split.flightNumber, operatingDay: dayText(f.arrivalFlightDate)!, scheduled: f.sta }]
+        : []),
+      ...(f.outboundFlightNumber === split.flightNumber && f.std && f.departureFlightDate
+        ? [{ flightId: f.id, part: "DEPARTURE_PART" as const, flightNumber: split.flightNumber, operatingDay: dayText(f.departureFlightDate)!, scheduled: f.std }]
+        : []),
+    ])
+    .sort((a, b) => a.scheduled.getTime() - b.scheduled.getTime());
+}
+
+/** The unmatched messages, newest first, with the parts they may go to; or the discarded ones. */
+export async function listUnmatched(discarded: boolean) {
+  const rows = await prisma.message.findMany({
+    where: { direction: "INBOUND", flightId: null, discardedAt: discarded ? { not: null } : null },
+    include: {
+      apiKey: { select: { name: true } },
+      createdBy: { select: { name: true } },
+      discardedBy: { select: { name: true } },
+    },
+    orderBy: { receivedAt: "desc" },
+    take: 200,
+  });
+  const airlines = (await prisma.airline.findMany({ select: { id: true, iataCode: true } })).map((a) => ({ id: a.id, code: a.iataCode }));
+  return Promise.all(
+    rows.map(async (row) => ({
+      ...row,
+      warnings: row.warnings as unknown as TelexWarning[],
+      candidates: discarded ? [] : await candidateParts(row, airlines),
+    })),
+  );
+}
