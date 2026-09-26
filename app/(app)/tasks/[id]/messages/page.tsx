@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { TaskTypeBadge } from "@/components/badges";
+import { InfographicView } from "@/components/infographic";
 import { MessageContent } from "@/components/message-content";
 import { listFlightMessages, versionGroups, type FlightMessage } from "@/lib/data/messages";
 import { flightPartAgents, getTaskView, taskAssignment } from "@/lib/data/tasks";
@@ -10,6 +11,7 @@ import { fmt } from "@/lib/messages/format";
 import { canViewFlightMessages, canViewTask } from "@/lib/permissions";
 import { requireUser } from "@/lib/session";
 import { warningText } from "@/lib/telex/describe";
+import { buildInfographic, type CurrentMessage } from "@/lib/telex/infographic";
 import type { Part } from "@/lib/telex/match";
 import { formatDateTime } from "@/lib/time";
 import { TaskTabs } from "../tabs";
@@ -71,9 +73,15 @@ function MessageCard({ message }: { message: FlightMessage }) {
 
 function PartMessages({ rows, part }: { rows: FlightMessage[]; part: Part }) {
   const groups = versionGroups(rows, part);
+  // The infographic sums up the part's current messages, inbound or ours.
+  const current = rows
+    .filter((row) => row.part === part && row.current)
+    .map((row): CurrentMessage => ({ ...row.parsedMessage, id: row.id, receivedAt: row.receivedAt, warnings: row.warnings }));
   return (
     <section className="flex flex-col gap-3 rounded-xl border border-neutral-200 bg-white p-4">
       <h2 className="font-semibold">{messages.part[part]}</h2>
+      <h3 className="text-sm font-semibold text-neutral-700">{messages.infographic.title}</h3>
+      <InfographicView data={buildInfographic(current)} />
       {groups.length === 0 ? (
         <p className="text-sm text-neutral-600">{t.empty}</p>
       ) : (
