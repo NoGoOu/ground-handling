@@ -4,14 +4,14 @@
 
 ## Mi készült el
 
-- 7. mérföldkő, 4. lépés: párosítás (`lib/telex/match.ts`) – a légitársaság-kódot a rendszer légitársaságai alapján választja le; a fejléc napja a beérkezéshez legközelebbi azonos napú dátum; a rész MVT-nél az állomás és az AD/AA/EA, UCM-nél az IN/OUT, LDM-nél a célállomás vagy egy BUD-ról induló azonos járat, CPM-nél az útvonal szerint; a jelöltek szűkítése a másik végállomással; a lajstrom kitöltése vagy eltérésnél figyelmeztetés. Párosítatlan okok: nincs fejléc, ismeretlen légitársaság, nem érinti BUD-ot, a rész nem dönthető el, nincs vagy több járat. Teszt: az ET3365/12 a 17-i beérkezéssel a 12-i járathoz párosul, az ATD 17-én 07:16 UTC.
-- 7. mérföldkő, 0–3. lépés: tervező a terv napjára; adatmodell és jogosultságok; szétválasztás és fejléc; típusonkénti feldolgozók.
+- 7. mérföldkő, 5. lépés: ellenőrzések (`lib/telex/checks.ts`) – LDM: főfedélzet + rakterek = T, utasok = PAX; CPM: pozíciók = összsúly, TOW = ZFW + felszállási üzemanyag; LDM–CPM: főfedélzet és rakterenként (bulk esetén az alsó fedélzet egészében); UCM OUT–CPM: az E-s ULD-k = az ELD-s pozíciók, X-es ULD nincs a CPM-ben; késéskódok összege = késés (7. szabály). Mind csak figyelmeztet. A két ismert hibát (P7 5535/16 UCM–CPM, ET 3365/12 76 perc) tesztek fedik; a többi minta hibátlannak bizonyul.
+- 7. mérföldkő, 0–4. lépés: tervező a terv napjára; adatmodell és jogosultságok; szétválasztás és fejléc; feldolgozók; párosítás.
 - 6. mérföldkő (képzések és jogosítások) kész; pontosításai elfogadva (További eldöntött szabályok 33–40.).
 
 ## Állapot
 
-- Utolsó commit: `dcdd749` – feat: parse MVT, LDM, CPM and UCM messages (a 4. lépés commitja ezt követi)
-- Tesztek: `npm test` → 495 teszt, mind zöld
+- Utolsó commit: `56ff92f` – feat: match messages to a flight part (az 5. lépés commitja ezt követi)
+- Tesztek: `npm test` → 504 teszt, mind zöld
 - Lint és build: `npm run lint` hibátlan, `npx tsc --noEmit` tiszta
 
 ## Eltérések a CLAUDE.md-től
@@ -26,4 +26,4 @@
 
 ## Következő lépés
 
-- 7. mérföldkő, 5. lépés: ellenőrzések tiszta függvényként (összegek, LDM–CPM, UCM–CPM, késések összege); tesztek a két ismert hibára.
+- 7. mérföldkő, 6. lépés: hatás a járatra és verziózás (ATD/ATA, ETA, késésrekordok, lajstrom, járatnapló), a közös feldolgozó függvény; tesztek.

@@ -21,6 +21,18 @@ export const WARNING_CODES = [
   "noDirection",
   // The flight part has another registration (e.g. an aircraft change).
   "registrationMismatch",
+  // Checks (docs/messages.md): sums, LDM–CPM, UCM–CPM, delays.
+  "ldmLoadSum",
+  "ldmPaxSum",
+  "cpmWeightSum",
+  "cpmTakeOffWeight",
+  "ldmCpmMainDeck",
+  "ldmCpmHold",
+  "ldmCpmLowerDeck",
+  "ucmBaseNotInCpm",
+  "cpmStackNotInUcm",
+  "ucmEmptyInCpm",
+  "delaySum",
 ] as const;
 
 export type WarningCode = (typeof WARNING_CODES)[number];
