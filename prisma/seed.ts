@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db";
 import { BASE_TASK_TYPE } from "@/lib/data/task-types";
+import { processText } from "@/lib/data/messages";
 import { deleteStoredFile, storeFile } from "@/lib/data/training-files";
 import { DEFAULT_PLANNING_SETTINGS } from "@/lib/planning/settings";
 import { NETLINE_FINGERPRINT, NETLINE_MAPPING, NETLINE_PROFILE_NAME } from "@/lib/import/netline";
@@ -37,6 +38,7 @@ import {
   SEED_REQUIREMENTS,
   seedCertificatePdf,
 } from "./seed-training";
+import { buildSeedMessages, SEED_ADDRESSES, SEED_DELAY_CODES, SEED_SENDER } from "./seed-messages";
 
 // Usage: tsx prisma/seed.ts [--if-empty]
 // Replaces all data with the demo data set for today (Europe/Budapest).
@@ -213,6 +215,18 @@ async function main() {
     await tx.airlineTaskType.create({
       data: { airlineId: importAirline.id, taskTypeId: baseType.id, templateId: importTemplate.id, isPrimary: true },
     });
+    // Messages (7. mérföldkő): the delay codes of the samples (descriptions to
+    // come from the owner of the project), and addresses nobody can receive at.
+    for (const code of SEED_DELAY_CODES) await tx.delayCode.create({ data: { code } });
+    const airlineIds = new Map([
+      [airline.iataCode, airline.id],
+      [importAirline.iataCode, importAirline.id],
+    ]);
+    await tx.addressBookEntry.createMany({
+      data: SEED_ADDRESSES.map(({ airline: code, ...entry }) => ({ ...entry, airlineId: airlineIds.get(code)! })),
+    });
+    await tx.setting.update({ where: { id: SETTINGS_ID }, data: SEED_SENDER });
+
     await tx.importProfile.create({
       data: {
         name: NETLINE_PROFILE_NAME,
@@ -342,6 +356,18 @@ async function main() {
         storageKey: await storeFile(bytes, "application/pdf"),
         uploadedById: coordinatorId,
       },
+    });
+  }
+
+  // Demo messages go through the same processing as pasted ones, by the shift lead.
+  const lead = await prisma.user.findUniqueOrThrow({ where: { username: "vezeto" }, select: { id: true } });
+  for (const message of buildSeedMessages(buildSeedFlights(localDate))) {
+    await processText(message.text, {
+      source: "MANUAL",
+      receivedAt: message.receivedAt,
+      userId: lead.id,
+      apiKeyId: null,
+      sourceNote: null,
     });
   }
 

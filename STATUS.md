@@ -4,26 +4,27 @@
 
 ## Mi készült el
 
-- 7. mérföldkő, 11. lépés: indulási MVT (`lib/telex/generate.ts`) a járat adataiból és rögzítéseiből: fejléc lajstrommal, AD a hatályos off-blockkal és a kézi felszállással, EA a kézi idővel és célállomással, DL a késésrekordokból (legfeljebb két kód, a többire figyelmeztetés; 99:59 fölött is), SI telex-karakterekkel. A generátor a P7 5535/16 mintát karakterre visszaadja, a saját feldolgozónk ugyanazokat az értékeket olvassa vissza (teszt). Az Üzenetek fülön előnézet, szerkeszthető szöveg, címzettek; a küldés ellenőrzi a fejlécet. Címjegyzék és feladó (Admin → Üzenetküldés). Küldés cserélhető csatornán: email SMTP-n (nodemailer, a kapcsolat adatai környezeti változókban), SITA átjáró nélkül „nem küldhető”, a Type B szöveg másolható; beállított csatorna nélkül csak naplóz. A kimenő üzenet a fülön címzettenkénti állapottal, a járat idejét nem változtatja. Az érkezési (AA) és a korrekciós MVT minta hiányában kimaradt.
-- 7. mérföldkő, 0–10. lépés: tervező a terv napjára; adatmodell és jogosultságok; szétválasztás és fejléc; feldolgozók; párosítás; ellenőrzések; hatás és verziózás; API, kulcsok, bemásolás, párosítatlanok; Üzenetek fül; infografika; késéskódok.
-- 6. mérföldkő (képzések és jogosítások) kész; pontosításai elfogadva (További eldöntött szabályok 33–40.).
+- **A 7. mérföldkő (üzenetek) kész**, az érkezési (AA) és a korrekciós MVT előállítása nélkül (nincs minta).
+- 12. lépés: seed – a mintákból átírt demo üzenetek a mai demo járatokhoz (ZZ1102: AD MVT DL93-mal, LDM, CPM; ZZ1203: EA BUD MVT, későbbi ETA; ZZ1306: P7-minták ULD-kkel és az ismert UCM–CPM eltéréssel; egy párosítatlan ET 3365; egy csak naplózott PTM), a 36, 68, 93 késéskód, címjegyzék csak `@example.invalid` és kitalált SITA-címekkel, feladó. README: az üzenetek, az API `curl`-lel, a küldés beállítása. Tiszta Docker-indítás rendben.
+- 0–11. lépés: tervező a terv napjára (teszttel); adatmodell, jogosultságok, a kézi járat üzemnapjai; szétválasztás, fejléc; MVT/LDM/CPM/UCM feldolgozók (mind a nyolc minta tesztelve, a CPM mezősorrendtől függetlenül); párosítás (ET3365/12 → a 12-i járat, ATD 17-én 07:16 UTC); ellenőrzések (a két ismert hiba jelezve); hatás és verziózás; `POST /api/messages` API-kulccsal, duplikátumszűrés, PTM/PSM tartalma nem tárolódik, kézi bemásolás, párosítatlanok; Üzenetek fül és infografika (ügynöknek is); késéskódok; indulási MVT előállítása visszaolvasási teszttel, címjegyzék, küldés címzettenkénti állapottal, csatorna nélkül csak naplóz.
 
 ## Állapot
 
-- Utolsó commit: `f205853` – feat: keep a delay code table and the flight's delay records (a 11. lépés commitja ezt követi)
-- Tesztek: `npm test` → 544 teszt, mind zöld
-- Lint és build: `npm run lint` hibátlan, `npx tsc --noEmit` tiszta
+- Utolsó commit: `afa4414` – feat: generate and send the departure MVT (a 12. lépés commitja ezt követi)
+- Tesztek: `npm test` → 554 teszt, mind zöld; `npm run lint` hibátlan, `npx tsc --noEmit` tiszta, `npm run build` sikeres
+- A felületet belépés nélkül nem néztem meg; az oldalak buildelnek, az API-t és az adatréteget élesben, az infografikát statikus rendereléssel ellenőriztem.
 
 ## Eltérések a CLAUDE.md-től
 
-- nincs
+- Nincs. A tervben jóváhagyott pontosítások (felvehetők a szabályok közé): az AA sor az AD-vel azonos alakban; a kézi járat üzemnapja alapból az ütemezett idő budapesti napja; az Üzenetek fül a task nézetben; késéskódot és MVT-t a járatkezelő és a rész ügynöke (bármely taskon) rögzít, illetve küld; késés-ellenőrzés csak ATD-vel; a duplikátum-hash a normalizált szövegből, boríték nélkül, PTM/PSM-ből hash sem; törölt részre az üzenet nem hat; a verziók sorrendje a beérkezés; nodemailer; seed-címek `.invalid`. Megvalósítási döntések: a kimenő üzenetek saját verziókulcson (a járatra nem hatnak); a kézi késésrekord törölhető, naplózva; az időpontok napja a menetrendi időhöz legközelebbi, nap nélküli idő az előzőt követő első; UCM-ben IN és OUT együtt: az első számít, figyelmeztetéssel.
 
 ## Kérdések a tervezéshez
 
-- Az érkezési (AA) és a korrekciós MVT előállításához minta kell; a 11. lépésben ez a kettő kimarad. A beérkező AA sort a feldolgozó az AD-vel azonos időformátumban ismeri fel (jóváhagyott döntés).
-- A CPM `.TW/92404` sorát (docs/messages.md: célállomásonkénti összesítés) összsúlynak (total weight) vettem, mert a mintában megegyezik a BUD-ra menő súllyal; kérem megerősíteni.
+- Minták kellenek: érkezési (AA) és korrekciós MVT (az AA-t addig az AD alakjában olvassuk), a késési (ED) MVT, ha van.
+- A CPM `.TW/92404` sorát összsúlynak vettem; a `PAD`, `TB` és a CPM-fejléc `4/1` jelentése nyitott (nyersen látszanak).
+- A 36, 68, 93 késéskód leírása; a SITA-átjáró fajtája.
 - A `docs/projekt-osszefoglalo.md` nem került a repóba.
 
 ## Következő lépés
 
-- 7. mérföldkő, 12. lépés: seed (demo üzenetek, minta címjegyzék nem létező címekkel, a három késéskód), README (API-példa curl-lel, a küldés beállítása), STATUS.md.
+- A tervezés döntése szerint (a „Később” szakaszból vagy az AA/korrekciós MVT a minták után).
