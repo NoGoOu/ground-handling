@@ -17,8 +17,8 @@ import {
 } from "@/lib/planning/settings";
 import type { TakeoverItem, TakeoverResult, TakeoverTask } from "@/lib/planning/takeover";
 import { itemWindow, planDayView, type PlanDayView } from "@/lib/planning/view";
-import { covers, shortage } from "@/lib/planning/staffing";
-import { shortfalls, usableOn, windowRequirement } from "@/lib/qualifications";
+import { dayStaffing } from "@/lib/planning/staffing";
+import { usableOn, windowRequirement } from "@/lib/qualifications";
 import { SETTINGS_ID } from "@/lib/settings";
 import { addDays, localDayRange } from "@/lib/time";
 import { hasPart } from "@/lib/turnaround";
@@ -165,7 +165,7 @@ export async function createPlan(userId: string, start: string, end: string): Pr
   return plan.id;
 }
 
-/** Whether the day can be staffed with today's qualifications (6. mérföldkő), and who fits each position. */
+/** Whether the day can be staffed with the current records, valid on the plan day (rule 39), and who fits each position. */
 export interface PlanStaffing {
   /** The numbers of the positions a best staffing leaves empty. */
   unfilled: number[];
@@ -221,7 +221,7 @@ export async function getPlanDayView(
     current,
   });
 
-  // Staffing with today's qualifications and requirements (approved decision 7).
+  // Staffing with the current records and requirements (rule 39).
   const [context, agents] = await Promise.all([loadQualificationContext(null), listRosterAgents(null)]);
   const taskOf = new Map(labelled.map((task) => [task.id, task]));
   const laneNeeds = view.lanes.map((lane) =>
@@ -234,18 +234,20 @@ export async function getPlanDayView(
       ),
     ].sort(),
   );
-  const usable = agents.map((agent) => usableOn(context.recordsOf(agent.id), day));
-  // A position emptied by hand needs nobody.
-  const staffed = view.lanes.flatMap((lane, index) => (lane.boxes.length > 0 ? [index] : []));
-  const found = shortage(staffed.map((index) => laneNeeds[index]), { agents: usable });
+  // On the plan day (rule 39); a position emptied by hand needs nobody.
+  const found = dayStaffing(
+    view.lanes.map((lane, index) => (lane.boxes.length > 0 ? laneNeeds[index] : null)),
+    agents.map((agent) => context.recordsOf(agent.id)),
+    day,
+  );
   const candidates = new Map(
     view.lanes.map((lane, index) => {
       const options = agents.map((agent, a) => {
-        const missing = shortfalls(laneNeeds[index], context.recordsOf(agent.id), day);
+        const missing = found.lacks[index][a];
         return {
           id: agent.id,
           name: agent.name,
-          fits: covers(usable[a], laneNeeds[index]),
+          fits: missing.length === 0,
           missing: missing.length > 0 ? describeShortfalls(missing, context.codeOf) : null,
         };
       });
@@ -255,7 +257,7 @@ export async function getPlanDayView(
     }),
   );
   const staffing: PlanStaffing = {
-    unfilled: found.unfilled.map((index) => view.lanes[staffed[index]].number),
+    unfilled: found.unfilled.map((index) => view.lanes[index].number),
     perQualification: found.perQualification.map((row) => ({ code: context.codeOf(row.qualificationId), need: row.need, have: row.have })),
     candidates,
   };

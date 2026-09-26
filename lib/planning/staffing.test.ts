@@ -3,7 +3,14 @@ import { maxConcurrent, minimalPositions } from "@/lib/planning/assign";
 import { planDay } from "@/lib/planning/balance";
 import type { PlanWindow } from "@/lib/planning/input";
 import type { PlanningSettings } from "@/lib/planning/settings";
-import { deficiency, matchPositions, positionRequirement, shortage, type Staffing } from "@/lib/planning/staffing";
+import {
+  dayStaffing,
+  deficiency,
+  matchPositions,
+  positionRequirement,
+  shortage,
+  type Staffing,
+} from "@/lib/planning/staffing";
 
 // Whether a day's positions can be staffed (CLAUDE.md, 6. mérföldkő, "Tervező").
 
@@ -120,5 +127,30 @@ describe("the planner with qualifications", () => {
       const greedy = deficiency(needs(minimalPositions(windows, FREE, staff)), staff);
       expect(deficiency(needs(planDay(windows, FREE, staff)), staff), `seed ${seed}`).toBeLessThanOrEqual(greedy);
     }
+  });
+});
+
+describe("the staffing report of a plan day", () => {
+  // HA passed on 2025-10-10 for 12 months: valid until 2026-10-10.
+  const records = (qualificationId: string, completedOn: string, validUntil: string | null) => [
+    { id: qualificationId, qualificationId, completedOn, passed: true, validUntil, createdAt: new Date(0) },
+  ];
+  const anna = records("HA", "2025-10-10", "2026-10-10");
+
+  it("checks validity on the plan day, not on today (rule 39)", () => {
+    // Still valid on the day the plan is made, expired by the plan day.
+    const before = dayStaffing([["HA"]], [anna], "2026-10-10");
+    expect(before.unfilled).toEqual([]);
+    expect(before.lacks[0][0]).toEqual([]);
+    const after = dayStaffing([["HA"]], [anna], "2026-10-15");
+    expect(after.unfilled).toEqual([0]);
+    expect(after.lacks[0][0]).toEqual([{ qualificationId: "HA", status: "EXPIRED" }]);
+    expect(after.perQualification).toEqual([{ qualificationId: "HA", need: 1, have: 0 }]);
+  });
+
+  it("needs nobody for a position without windows", () => {
+    const report = dayStaffing([["HA"], null, []], [anna], "2026-10-01");
+    expect(report.unfilled).toEqual([2]);
+    expect(report.lacks[1][0]).toEqual([]);
   });
 });

@@ -1,3 +1,5 @@
+import { shortfalls, usableOn, type QualificationRecord, type Shortfall } from "@/lib/qualifications";
+
 // Whether a plan day's positions can be staffed (CLAUDE.md, 6. mérföldkő,
 // "Tervező"): every position needs its own agent who holds all the
 // qualifications the position needs on that day. That is a bipartite matching
@@ -68,4 +70,29 @@ export function shortage(required: readonly (readonly string[])[], staffing: Sta
 /** The union of what the windows of a position need, sorted. */
 export function positionRequirement(windows: readonly { requires?: readonly string[] }[]): string[] {
   return [...new Set(windows.flatMap((w) => w.requires ?? []))].sort();
+}
+
+export interface DayStaffing extends Shortage {
+  /** Per position, per agent: what the agent lacks for it; empty when they fit. */
+  lacks: Shortfall[][][];
+}
+
+/**
+ * The staffing report of a plan day: which positions stay empty and who fits
+ * each one. Validity is checked on the plan day, never on today (CLAUDE.md,
+ * rule 39). A position without windows (null) needs nobody.
+ */
+export function dayStaffing(
+  needs: readonly (readonly string[] | null)[],
+  agents: readonly (readonly QualificationRecord[])[],
+  day: string,
+): DayStaffing {
+  const staffing = { agents: agents.map((records) => usableOn(records, day)) };
+  const staffed = needs.flatMap((required, index) => (required ? [index] : []));
+  const found = shortage(staffed.map((index) => needs[index]!), staffing);
+  return {
+    unfilled: found.unfilled.map((index) => staffed[index]),
+    perQualification: found.perQualification,
+    lacks: needs.map((required) => agents.map((records) => shortfalls(required ?? [], records, day))),
+  };
 }
