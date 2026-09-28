@@ -8,7 +8,7 @@
 /** Type B types we recognise; a message starts at a line that is exactly one of them. */
 export const TYPE_B_TYPES = ["MVT", "LDM", "CPM", "UCM", "PSM", "PTM"] as const;
 /** Types we parse and store. */
-export const SUPPORTED_TYPES = ["MVT", "LDM", "CPM", "UCM"] as const;
+export const SUPPORTED_TYPES = ["MVT", "LDM", "CPM", "UCM", "PSM", "PTM"] as const;
 
 export type TypeBType = (typeof TYPE_B_TYPES)[number];
 export type SupportedType = (typeof SUPPORTED_TYPES)[number];

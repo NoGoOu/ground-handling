@@ -7,8 +7,8 @@ import { messages } from "@/lib/messages";
 import { fmt } from "@/lib/messages/format";
 import { canManageMessaging } from "@/lib/permissions";
 import { requireCapability } from "@/lib/session";
-import { SUPPORTED_TYPES } from "@/lib/telex/split";
 import { formatDateTime } from "@/lib/time";
+import { ADDRESS_BOOK_TYPES } from "@/lib/validation/messaging";
 import {
   addAddress,
   createDelayCode,
@@ -98,7 +98,7 @@ export default async function MessagingSettingsPage() {
         <AddressForm
           action={addAddress}
           airlines={airlines.map((airline) => ({ id: airline.id, label: `${airline.name} (${airline.iataCode})` }))}
-          types={SUPPORTED_TYPES}
+          types={ADDRESS_BOOK_TYPES}
         />
         {addresses.length === 0 ? (
           <p className="text-sm text-neutral-600">{a.empty}</p>

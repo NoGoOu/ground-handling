@@ -19,6 +19,11 @@ const plus = (date: Date, minutes: number) => new Date(date.getTime() + minutes 
 const headerDay = (date: Date) =>
   pad(Number(new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Budapest", day: "2-digit" }).format(date)));
 
+/** "26SEP": the day and month of a PSM or PTM header. */
+const MONTHS = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+const headerDayMonth = (date: Date) =>
+  `${headerDay(date)}${MONTHS[Number(new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Budapest", month: "numeric" }).format(date)) - 1]}`;
+
 /** The three delay codes of the samples; their descriptions come from the owner of the project. */
 export const SEED_DELAY_CODES = ["36", "68", "93"] as const;
 
@@ -86,7 +91,10 @@ export function buildSeedMessages(flights: readonly SeedFlight[]): SeedMessage[]
     { text: fit(SAMPLES.UCM_P7_OUT), receivedAt: plus(freight.std!, -38) },
     // Not ours: its airline is not in the system, so it waits among the unmatched.
     { text: SAMPLES.MVT_ET, receivedAt: plus(quick.std!, 60) },
-    // Recognised but not supported: only its type, flight and date are logged.
-    { text: `PTM\nZZ1408/${headerDay(byNumber("ZZ1408").std!)}.HAZZD.BUD\n-STN 12 PAX`, receivedAt: plus(quick.std!, 61) },
+    // A PTM of transfers, without names: only its counts are stored.
+    {
+      text: `PTM\nZZ1408/${headerDayMonth(byNumber("ZZ1408").std!)} BUDSTN PART1\nZZ0901 BOM 2Y 2B31K\nZZ0903 DXB 1Y 1B19K\nENDPTM`,
+      receivedAt: plus(quick.std!, 61),
+    },
   ];
 }

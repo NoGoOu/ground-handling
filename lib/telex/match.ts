@@ -1,4 +1,4 @@
-import { resolveOperatingDay } from "./day-time";
+import { resolveDayMonth, resolveOperatingDay } from "./day-time";
 import type { ParsedMessage } from "./parse";
 import { warn, type TelexWarning } from "./warnings";
 
@@ -90,6 +90,15 @@ export function partOf(
       if (message.data.legs.some((leg) => leg.destination === HOME_STATION)) return "ARRIVAL_PART";
       return departsFromHome(flightNumber) ? "DEPARTURE_PART" : "notHome";
     }
+    case "PSM": {
+      // Departing from BUD, or a block for BUD from elsewhere (docs/messages.md, "PSM").
+      if (message.data.station === HOME_STATION) return "DEPARTURE_PART";
+      return message.data.destinations.some((d) => d.destination === HOME_STATION) ? "ARRIVAL_PART" : "notHome";
+    }
+    case "PTM": {
+      if (message.data.from === HOME_STATION) return "DEPARTURE_PART";
+      return message.data.to === HOME_STATION ? "ARRIVAL_PART" : "notHome";
+    }
     case "CPM": {
       const { from, to, positions } = message.data;
       if (to === HOME_STATION) return "ARRIVAL_PART";
@@ -113,6 +122,10 @@ function otherEnd(message: ParsedMessage, part: Part): string | null {
   }
   if (message.type === "CPM") return part === "ARRIVAL_PART" ? message.data.from : message.data.to;
   if (message.type === "LDM" && part === "DEPARTURE_PART") return message.data.legs[0]?.destination ?? null;
+  if (message.type === "PSM") {
+    return part === "ARRIVAL_PART" ? message.data.station : (message.data.destinations[0]?.destination ?? null);
+  }
+  if (message.type === "PTM") return part === "ARRIVAL_PART" ? message.data.from : message.data.to;
   return null;
 }
 
@@ -127,7 +140,12 @@ export function matchMessage(
   if (!header) return { matched: false, reason: "noHeader", key: null, warnings };
   const split = splitFlightNumber(header.flightNumber, airlines);
   if (!split) return { matched: false, reason: "airline", key: null, warnings };
-  const operatingDay = "date" in header.date ? header.date.date : resolveOperatingDay(header.date.day, receivedAt);
+  const operatingDay =
+    "date" in header.date
+      ? header.date.date
+      : "month" in header.date
+        ? resolveDayMonth(header.date.day, header.date.month, receivedAt)
+        : resolveOperatingDay(header.date.day, receivedAt);
   const own = flights.filter((f) => f.airlineId === split.airline.id);
   const departs = (flightNumber: string) =>
     own.some((f) => f.outboundFlightNumber === flightNumber && f.departureFlightDate === operatingDay);

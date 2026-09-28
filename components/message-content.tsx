@@ -113,5 +113,38 @@ export function MessageContent({ message }: { message: FlightMessage }) {
     );
   }
 
+  if (parsed.type === "PSM") {
+    const { data } = parsed;
+    rows.push(<Row key="part" label={t.fields.part}>{data.part}</Row>);
+    for (const d of data.destinations) {
+      rows.push(
+        <Row key={`psm-${d.destination}`} label={t.fields.specialNeeds}>
+          {fmt(t.values.psmBlock, { destination: d.destination, pax: d.pax, ssr: d.ssr })}
+          {d.codes.map((c) => (
+            <span key={c.code} className="block">
+              {fmt(t.values.psmCode, { code: c.code, classes: c.byClass.map((x) => fmt(t.values.classCount, x)).join(", ") })}
+            </span>
+          ))}
+        </Row>,
+      );
+    }
+  }
+
+  if (parsed.type === "PTM") {
+    const { data } = parsed;
+    rows.push(<Row key="part" label={t.fields.part}>{data.part}</Row>);
+    if (data.transfers.length > 0) {
+      rows.push(
+        <Row key="ptm" label={t.fields.transfers}>
+          {data.transfers.map((x) => (
+            <span key={`${x.flight}-${x.destination}-${x.cls}`} className="block">
+              {fmt(t.values.ptmRow, x)}
+            </span>
+          ))}
+        </Row>,
+      );
+    }
+  }
+
   return rows.length > 0 ? <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-sm">{rows}</dl> : null;
 }

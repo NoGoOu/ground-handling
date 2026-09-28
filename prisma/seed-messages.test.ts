@@ -50,7 +50,7 @@ for (const date of ["2026-09-22", "2026-10-25", "2026-12-31"]) {
       expect(parsed.flatMap((p) => p?.warnings ?? [])).toEqual([]);
     });
 
-    it("matches each to its flight part, and leaves the foreign one unmatched and the PTM unsupported", () => {
+    it("matches each to its flight part, and leaves the foreign one unmatched", () => {
       expect(matched).toEqual([
         "ZZ1101 DEPARTURE_PART",
         "ZZ1101 DEPARTURE_PART",
@@ -60,7 +60,7 @@ for (const date of ["2026-09-22", "2026-10-25", "2026-12-31"]) {
         "ZZ1305 DEPARTURE_PART",
         "ZZ1305 DEPARTURE_PART",
         "airline",
-        "unsupported",
+        "ZZ1407 DEPARTURE_PART",
       ]);
     });
 

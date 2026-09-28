@@ -37,6 +37,10 @@ export const WARNING_CODES = [
   "partCancelled",
   // A version received later already counts.
   "olderVersion",
+  // PSM, PTM: counts only, never a line of the text (it may hold a name).
+  "unreadHeader",
+  "unreadLines",
+  "psmSsrSum",
   // Generating an MVT: the sample format carries at most two delay codes.
   "tooManyDelayCodes",
   "delayTooLong",

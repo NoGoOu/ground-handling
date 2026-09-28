@@ -27,3 +27,6 @@ export function resultSummary(
 export function unmatchedText(reason: UnmatchedReason | string): string {
   return (messages.telex.unmatched as Record<string, string>)[reason] ?? reason;
 }
+
+/** The texts of warnings, e.g. for an API answer. */
+export const describeWarnings = (warnings: readonly TelexWarning[]) => warnings.map(warningText);

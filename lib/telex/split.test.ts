@@ -26,11 +26,11 @@ describe("splitting a received text", () => {
     expect(messages[0].text).toBe(SAMPLES.MVT_ET);
   });
 
-  it("recognises PTM and PSM without supporting them", () => {
+  it("recognises PTM and PSM, supported since the 8. mérföldkő (counts only)", () => {
     const { messages } = splitMessages("PTM\nFR1027/16.EIDCL.BUD\nPSM\nFR1027/16\nMVT\nFR1027/16.EIDCL.BUD");
     expect(messages.map((m) => [m.type, isSupported(m.type)])).toEqual([
-      ["PTM", false],
-      ["PSM", false],
+      ["PTM", true],
+      ["PSM", true],
       ["MVT", true],
     ]);
   });

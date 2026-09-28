@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { messages } from "@/lib/messages";
-import { SUPPORTED_TYPES } from "@/lib/telex/split";
 
 // The address book and the sender (CLAUDE.md, 7. mérföldkő): an email
 // address or a SITA Type B address of 7 characters.
@@ -9,13 +8,16 @@ const e = messages.addressBook.errors;
 
 export const TYPE_B_ADDRESS = /^[A-Z0-9]{7}$/;
 
+/** The types an airline may get from us. */
+export const ADDRESS_BOOK_TYPES = ["MVT", "LDM", "CPM", "UCM"] as const;
+
 export const ADDRESS_FIELDS = ["airlineId", "messageType", "channel", "address"] as const;
 export type AddressFormInput = Record<(typeof ADDRESS_FIELDS)[number], string>;
 
 export const addressSchema = z
   .object({
     airlineId: z.string().min(1, e.airline),
-    messageType: z.enum(SUPPORTED_TYPES, { message: e.messageType }),
+    messageType: z.enum(ADDRESS_BOOK_TYPES, { message: e.messageType }),
     channel: z.enum(["EMAIL", "SITA"], { message: e.channel }),
     address: z.string().trim(),
   })

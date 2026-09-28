@@ -20,6 +20,8 @@ export function versionKind(message: ParsedMessage): string {
     return "EA";
   }
   if (message.type === "UCM") return message.data.direction ?? "UCM";
+  // Each part of a PSM or PTM is a version of its own; together they give the state.
+  if (message.type === "PSM" || message.type === "PTM") return `PART${message.data.part}`;
   return message.type;
 }
 

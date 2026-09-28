@@ -7,8 +7,8 @@ export interface Header {
   flightNumber: string;
   /** "16" or "19SEP26", as written. */
   dateText: string;
-  /** Day of the month only, or a full date "YYYY-MM-DD". */
-  date: { day: number } | { date: string };
+  /** Day of the month only, day and month (PSM, PTM), or a full date "YYYY-MM-DD". */
+  date: { day: number } | { day: number; month: number } | { date: string };
   registration: string | null;
   /** The fields after the registration, split at the dots. */
   fields: string[];

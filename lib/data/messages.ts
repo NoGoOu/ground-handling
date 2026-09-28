@@ -6,6 +6,7 @@ import { bodyLines, parseHeader, type Header } from "@/lib/telex/header";
 import { matchMessage, splitFlightNumber, type MatchFlight, type Part, type UnmatchedReason } from "@/lib/telex/match";
 import { parseMessage, type MessageData, type ParsedMessage } from "@/lib/telex/parse";
 import { isSupported, normaliseForHash, splitMessages, type MessageType, type RawMessage, type SupportedType } from "@/lib/telex/split";
+import { storedForm } from "@/lib/telex/stored";
 import { warn, type TelexWarning } from "@/lib/telex/warnings";
 
 // Receiving messages (CLAUDE.md, 7. mérföldkő): every message goes through
@@ -204,18 +205,20 @@ async function receiveOne(
   options: ReceiveOptions,
   airlines: { id: string; code: string }[],
 ): Promise<ProcessedMessage> {
-  const hash = textHash(raw.text);
+  const parsed = parseMessage(raw);
+  // PSM and PTM: their counts in place of the raw text and its hash (8. mérföldkő).
+  const stored = storedForm(raw, parsed, envelope);
+  const hash = createHash("sha256").update(stored.hashSource).digest("hex");
   const duplicate = await prisma.message.findUnique({ where: { textHash: hash }, select: { id: true } });
   if (duplicate) return { status: "duplicate", type: raw.type, messageId: duplicate.id };
 
-  const parsed = parseMessage(raw);
   const flights = await candidates(parsed, airlines);
   const match = matchMessage(parsed, options.receivedAt, airlines, flights.map(matchFlight));
   const header = parsed.header;
   const station =
-    parsed.type === "MVT" || parsed.type === "UCM"
-      ? parsed.data.station
-      : parsed.type === "CPM"
+    parsed.type === "MVT" || parsed.type === "UCM" || parsed.type === "PSM"
+      ? parsed.data.station || null
+      : parsed.type === "CPM" || parsed.type === "PTM"
         ? [parsed.data.from, parsed.data.to].filter(Boolean).join("") || null
         : null;
 
@@ -225,8 +228,8 @@ async function receiveOne(
         data: {
           direction: "INBOUND",
           type: raw.type,
-          rawText: raw.text,
-          envelope,
+          rawText: stored.rawText,
+          envelope: stored.envelope,
           textHash: hash,
           source: options.source,
           apiKeyId: options.apiKeyId,

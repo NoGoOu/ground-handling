@@ -63,6 +63,16 @@ export function resolveOperatingDay(day: number, receivedAt: Date): string {
   return new Date(nearest).toISOString().slice(0, 10);
 }
 
+/** A day and month without a year (PSM, PTM) as a date: the year nearest to the receipt. */
+export function resolveDayMonth(day: number, month: number, receivedAt: Date): string {
+  const year = receivedAt.getUTCFullYear();
+  const received = receivedAt.getTime();
+  const nearest = [year - 1, year, year + 1]
+    .map((y) => Date.UTC(y, month - 1, day))
+    .reduce((best, date) => (Math.abs(date - received) < Math.abs(best - received) ? date : best));
+  return new Date(nearest).toISOString().slice(0, 10);
+}
+
 /**
  * A time of a message as an instant (UTC). With a day, the date with that day
  * nearest to the reference, e.g. the off-block on the 17th of a flight of the
