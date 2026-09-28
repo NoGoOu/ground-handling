@@ -24,5 +24,22 @@ export function splitSi(lines: readonly string[], stop?: (line: string) => boole
   return { body: own.slice(0, siAt), si, after };
 }
 
-/** The SI text without its "SI" prefix, e.g. for a one-line SI. */
-export const siText = (si: string | null) => (si ? si.replace(/^\s*SI\b\s?/i, "") : "");
+export type SiLineKind = "frame" | "instruction" | "daa" | "plain";
+
+/** A row of asterisks opens or closes a framed operating instruction. */
+const FRAME = /^\s*\*{5,}\s*$/;
+/** "DAA/52/2/BUD//2 STROLLER.": delivery at the aircraft, for the arrival agent. */
+const DAA = /\bDAA\//;
+
+/** Each SI line with how it is shown: a frame of asterisks, a line inside one, a DAA, or plain. */
+export function siLines(text: string): { line: string; kind: SiLineKind }[] {
+  const result: { line: string; kind: SiLineKind }[] = [];
+  let framed = false;
+  for (const line of text.split("\n")) {
+    if (FRAME.test(line)) {
+      framed = !framed;
+      result.push({ line, kind: "frame" });
+    } else result.push({ line, kind: framed ? "instruction" : DAA.test(line) ? "daa" : "plain" });
+  }
+  return result;
+}

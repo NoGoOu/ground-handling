@@ -92,11 +92,15 @@ describe("the infographic of a flight part", () => {
 
   it("is empty without messages", () => {
     expect(buildInfographic([])).toEqual({
+      si: [],
       passengers: null,
       load: null,
       ulds: null,
       stacks: null,
       specialCodes: null,
+      specialNeeds: null,
+      transfers: null,
+      slot: null,
       warnings: [],
     });
   });
