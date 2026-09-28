@@ -1,6 +1,6 @@
 # Ground Handling App – projektleírás
 
-*Verzió: 28 · 2026. szeptember 28.*
+*Verzió: 29 · 2026. szeptember 28.*
 
 Nyílt forráskódú webalkalmazás repülőtéri földi kiszolgálás (ground handling) szervezésére. Minden járatfordulóhoz feladattípusonként egy task tartozik, benne mérföldkövekkel, amelyeknek van tervezett és tényleges időpontja. A mérföldkövek légitársaságonként testreszabható sablonokból jönnek. A hozzáférés szerepkör alapú.
 
@@ -566,17 +566,19 @@ Globális beállítás, a Tervező és az Admin szerkeszti. Számoláskor a terv
 
 ## 8. mérföldkő – üzenetek bővítése: pontosabb feldolgozás, érkezési és korrekciós MVT, PSM, PTM, slot
 
-**Ezt építjük most.** A formátumok, a Lufthansa-változatok, a PSM, a PTM, a slotüzenetek és az új minták: `docs/messages.md` (5. verzió). Az „Ellenőrzés a Lufthansa-mintán” táblázat a feldolgozó elvárt eredménye.
+**Ezt építjük most.** A formátumok, a Lufthansa-változatok, a PSM, a PTM, a slotüzenetek és az új minták: `docs/messages.md` (6. verzió). Az „Ellenőrzés a Lufthansa-mintán” táblázat a feldolgozó elvárt eredménye.
+
+**Az SI-t nem dolgozzuk fel.** A tartalma légitársaságonként és üzenetenként nagyon eltér, ezért ebben a mérföldkőben csak az üzenet törzsét olvassuk; az SI szabad szövegként, változatlanul marad meg és jelenik meg.
 
 ### A feldolgozó javításai
 
 A 7. mérföldkő feldolgozója a 2026. szeptember 27-i mintacsomagon ezeken a pontokon hibázik; ezeket kell javítani:
 
 1. **Szétválasztás:** a típussor előtti `COR` sor a következő üzenethez tartozik, és korrekciót jelez; a `-TITLE` sor új üzenetet kezd. Így a PTM után jövő slotüzenet nem olvad bele a PTM-be.
-2. **LDM:** az infant nem számít bele a PAX-összegbe; a Lufthansa-változat előtag nélküli főfedélzeti mezője; a `JMP`, `CRW`, `PAD` (osztályonként) és `DHC` felismerése. A `CRW`, `PAD` és `DHC` jelentése nyitott, ezek nyersen megmaradnak.
+2. **LDM:** az infant nem számít bele a PAX-összegbe; a Lufthansa-változat előtag nélküli főfedélzeti mezője; a `JMP`, `CRW` és `PAD` (osztályonként) felismerése. A `CRW` és a `PAD` jelentése nyitott, ezek nyersen megmaradnak. (A `DHC` az SI része, lásd a 4. pontot.)
 3. **CPM:** egy pozíción több tétel; a kategória utáni számjegy a szabad negyedek száma (`BY0` = BY, 0 negyed szabad); `VR` kézi rakodású pozíción; `D` a személyzet poggyásza, nem rakomány; `Q` sürgős cargo; a Lufthansa-kódok (`XOM`, `XCS`) kódként megmaradnak; állomás nélküli fejléc.
-4. **SI:** a felismert elemek (DAA, keretezett üzemi utasítás, célállomásonkénti nettó bontás, CHECKED BAGGAGE PIECES, LOAD IN CPTS, B-sorok a folytatósorral) feldolgozva; a többi SI-sor szabad szövegként látszik, **nem** „ismeretlen sor” figyelmeztetésként.
-5. **Ellenőrzések** a `docs/messages.md` szerint. A Lufthansa-minta mindegyiken figyelmeztetés nélkül megy át; a korábbi nyolc minta viselkedése nem változik (a két ismert hibát továbbra is jelzi).
+4. **SI:** nem dolgozzuk fel. Az `SI` sortól az üzenet végéig (a CPM-nél a `CPM END`-ig) minden sor szabad szöveg: változatlanul megmarad és megjelenik, és **nem** ad „ismeretlen sor” figyelmeztetést. A `docs/messages.md` leírja a mintákban látott SI-elemeket, de ezek feldolgozása későbbi.
+5. **Ellenőrzések** csak az üzenet törzséből, a `docs/messages.md` szerint: férfi + nő + gyerek = PAX (infant nélkül); főfedélzet + rakterek = T; a CPM-pozíciók rakterenként, a személyzet poggyásza (D) nélkül = az LDM rakterei. A Lufthansa-minta ezeken figyelmeztetés nélkül megy át; a korábbi nyolc minta viselkedése nem változik (a két ismert hibát továbbra is jelzi).
 
 ### Érkezési és korrekciós MVT
 
@@ -606,8 +608,8 @@ A 7. mérföldkő feldolgozója a 2026. szeptember 27-i mintacsomagon ezeken a p
 
 ### Infografika bővítése
 
-- Legfelül, kiemelve: a keretezett üzemi utasítások és a DAA-tételek.
-- Poggyász rakterenként és osztályonként; pozíciónként darab és nettó súly; a konténerek szabad negyedei.
+- Legfelül: a legutóbbi LDM és CPM SI-szövege változatlanul, jól láthatóan, feldolgozás nélkül. Így a keretezett üzemi utasítás (pl. „TAILTIPPING CRITICAL AIRCRAFT…”) és a DAA is látszik.
+- Pozíciónként a kategóriák súlya; a konténerek szabad negyedei.
 - A sürgős (Q) cargo kiemelve; a személyzet poggyásza (D) külön.
 - Érkezési részen: a PSM darabszámai kódonként és osztályonként (pl. „WCHR: 1, business”); az átszálló utasok továbbjáratonként (PTM).
 - Indulási részen: a slot és a cél off-block.
@@ -626,7 +628,7 @@ A 7. mérföldkő feldolgozója a 2026. szeptember 27-i mintacsomagon ezeken a p
 ### Lépésterv
 
 1. Szétválasztás javítása (`COR`, `-TITLE`), tesztekkel a teljes 2026. szeptember 27-i mintacsomagra egyben
-2. LDM és CPM javításai, a Lufthansa-változatok és az SI-elemek, új ellenőrzések; teszt: a Lufthansa-minta figyelmeztetés nélkül, a régi minták változatlanul
+2. LDM és CPM javításai és a Lufthansa-változatok, az SI szabad szövegként, a törzsből számolt ellenőrzések; teszt: a Lufthansa-minta figyelmeztetés nélkül, a régi minták változatlanul
 3. PSM és PTM feldolgozása, csak darabszámokkal; teszt, hogy név nem kerül a tárolt adatba és a figyelmeztetésekbe
 4. Érkezési és korrekciós MVT előállítása, a bejövő korrekció kezelése, más állomásról jövő AA; visszaolvasási tesztek
 5. ADEXP-feldolgozó (SAM, SRM), repülőtér-tábla (admin), párosítás, slot a járaton, slot-figyelmeztetés, felajánlás a késésnél és az MVT-nél
@@ -699,6 +701,7 @@ Ezeket a kérdéseket a megrendelő 2026. szeptember 22-én jóváhagyta; a kód
 - Ügynöki beosztásnézet: az ügynök lássa a saját publikált és valós beosztását.
 - A beosztás TRN részének összekötése egy konkrét képzéssel
 - További slotüzenetek (pl. slottörlés), minta után
+- Az SI elemeinek feldolgozása (DAA, célállomásonkénti nettó bontás, poggyászdarabszámok, LOAD IN CPTS, B-sorok), ha a minták alapján egységesíthető
 - Email- és SITA-átjáró a bejövő üzenetekhez (a fogadó API-ra csatlakozik)
 - A BUD-on lévő ULD-készlet követése az UCM-ekből
 - Létszámigény: számítás (egy adott időpontban az átfedő foglaltsági ablakok száma, 15 perces sávokra bontva; a sávon belüli számolás módja még nyitott) és külön nézet (idősávos táblázat vagy grafikon). A sávos idősoros nézeten nem jelenik meg: a tervezés más logika szerint működik.

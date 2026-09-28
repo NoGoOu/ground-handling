@@ -1,6 +1,6 @@
 # Üzenetformátumok – Ground Handling App
 
-*Verzió: 5 · 2026. szeptember 28.*
+*Verzió: 6 · 2026. szeptember 28.*
 
 Referencia a 7. és a 8. mérföldkőhöz (üzenetek fogadása, feldolgozása és előállítása), a CLAUDE.md ezekre a szakaszokra hivatkozik. A formátumok a projekt gazdájának gyakorlatából és valós mintákból származnak. Ha a gyakorlatban új változat bukkan fel, ide kerül, és a mintájából tesztadat lesz.
 
@@ -50,7 +50,7 @@ Referencia a 7. és a 8. mérföldkőhöz (üzenetek fogadása, feldolgozása é
   - `.JMP/0`: jump seat; `.CRW/0` és `.PAD/0/3` (osztályonként): a jelentésük megerősítendő
 - Különleges tételek: `.ELD/pozíció/súly`, `.FKT/raktér/súly`.
 - SI: kategóriánkénti bontás (`C/0.E/1983.M/0`) vagy poggyász (`BP/57` darab, `B/825` kg, `TB/2` valószínűleg transzfer poggyász, megerősítendő).
-- SI, Lufthansa-változat, soronként felismerendő elemek:
+- SI, Lufthansa-változat. **A 8. mérföldkőben nem dolgozzuk fel**, szabad szövegként, változatlanul jelenik meg; a látott elemek későbbi feldolgozáshoz:
   - `DAA/…` (lásd Kódok);
   - csillagsorok közé keretezett üzemi utasítás;
   - célállomásonkénti nettó bontás: `BUD C 327 M 0 B 143/ 2384 O 110 T 0` = cargo 327 kg, posta 0, poggyász 143 darab / 2384 kg, egyéb (other) 110 kg, tranzit 0 (a szóközök száma változó);
@@ -72,11 +72,11 @@ Referencia a 7. és a 8. mérföldkőhöz (üzenetek fogadása, feldolgozása é
 - **Egy pozíción több tétel:** `-52/BUD/47/BC/187/BY.VR3` = az 52-es pozíción 47 kg BC és 187 kg BY poggyász, 3 negyed szabad.
 - Üres pozíció: `-A1/N`, `-2/NIL`, `-11P.NIL`.
 - SI: súlyadatok (ZFW, TOW, index, súlypont, stab trim, üzemanyag).
-- SI, Lufthansa-változat: az LDM SI-jének elemei (DAA, keretezett utasítás, nettó bontás), valamint:
+- SI, Lufthansa-változat (a 8. mérföldkőben nem dolgozzuk fel, csak megjelenítjük): az LDM SI-jének elemei (DAA, keretezett utasítás, nettó bontás), valamint:
   - `LOAD IN CPTS 0/0 1/1511 3/1003 4/588 5/234` = rakomány rakterenként (a 0 a főfedélzet);
   - poggyász pozíciónként: `B11/BUD/BY/29/490` = a 11-es pozícióban BY poggyász, 29 darab, nettó 490 kg. A szóközzel kezdődő `   /BUD/BY/11/187` sor az előző pozíció (itt a 52-es) további tétele.
 - **Ellenőrzés:** a pozíciók összege = összsúly; TOW = ZFW + felszállási üzemanyag; a rakterek és a főfedélzet súlya egyezik az LDM-mel.
-- **Ellenőrzés (ha van LOAD IN CPTS és B-sor):** a pozíciók raktérenkénti összege a személyzet poggyásza (D) nélkül = LOAD IN CPTS = az LDM rakterei; a B-sorok darabszáma és nettó súlya = az LDM nettó bontásának poggyásza; a B-sorok rakterenkénti darabszáma = CHECKED BAGGAGE PIECES.
+- **Ellenőrzés az SI-ből (későbbi, amikor az SI feldolgozása sorra kerül):** a pozíciók raktérenkénti összege a személyzet poggyásza (D) nélkül = LOAD IN CPTS = az LDM rakterei; a B-sorok darabszáma és nettó súlya = az LDM nettó bontásának poggyásza; a B-sorok rakterenkénti darabszáma = CHECKED BAGGAGE PIECES.
 - A D (crew bag) a gép üzemi tömegének része, ezért nem számít bele a rakománysúlyba.
 - A Lufthansa-mintán a Q kategóriájú (sürgős) tétel nettó súlya (110 kg) az LDM nettó bontásában az O (other) alatt szerepel.
 
@@ -173,16 +173,16 @@ A fogadó API, a kézi bemásolás és a jogosultságok leírása a CLAUDE.md 7.
 
 ## Ellenőrzés a Lufthansa-mintán (tesztesetnek)
 
-A 2026. szeptember 27-i LH1338 FRA–BUD LDM-je és CPM-je mindenben egyezik. A feldolgozónak ezeket az értékeket kell kapnia, figyelmeztetés nélkül:
+A 2026. szeptember 27-i LH1338 FRA–BUD LDM-je és CPM-je mindenben egyezik. A feldolgozónak az üzenet törzséből ezeket az értékeket kell kapnia, figyelmeztetés nélkül (az SI-ből származó sorok a táblázat alatt, csak tájékoztatásul):
 
 | Ellenőrzés | Érték |
 |---|---|
 | férfi + nő + gyerek = PAX osztályonként | 96 + 48 + 2 = 146 = 12 + 134 (az 1 infant nélkül) |
 | főfedélzet + rakterek = T | 0 + 1511 + 1003 + 588 + 234 = 3336 |
-| CPM-pozíciók rakterenként, D nélkül = LOAD IN CPTS | 1: 565 + 550 + 396 = 1511; 3: 555 + 448 = 1003; 4: 409 + 179 = 588; 5: 47 + 187 = 234 (az 51-es pozíció 30 kg D-je nélkül) |
-| B-sorok = nettó bontás poggyásza | 29 + 28 + 28 + 22 + 22 + 3 + 11 = 143 darab; 490 + 473 + 473 + 371 + 343 + 47 + 187 = 2384 kg |
-| B-sorok rakterenként = CHECKED BAGGAGE PIECES | 1: Y 57; 3: Y 50; 4: C 22; 5: C 3 és Y 11 |
+| CPM-pozíciók rakterenként, D nélkül = az LDM rakterei | 1: 565 + 550 + 396 = 1511; 3: 555 + 448 = 1003; 4: 409 + 179 = 588; 5: 47 + 187 = 234 (az 51-es pozíció 30 kg D-je nélkül) |
 | PSM kódok = nSSR | WCHR: 1 = 1SSR |
+
+Az SI-ből (most nem ellenőrzött): a B-sorok 143 darab és 2384 kg, egyezik a nettó bontás poggyászával; rakterenként 1: Y 57, 3: Y 50, 4: C 22, 5: C 3 és Y 11, egyezik a CHECKED BAGGAGE PIECES sorral; a LOAD IN CPTS egyezik az LDM raktereivel.
 
 A mostani (7. mérföldkő utáni) feldolgozó ezen a mintán téves eltérést jelez (146 helyett 147 utas; az 5-ös raktér 77 kg), ezek a 8. mérföldkőben javulnak.
 

@@ -1,6 +1,6 @@
 # Ground Handling App – projekt-összefoglaló
 
-*Verzió: 24 · 2026. szeptember 28.*
+*Verzió: 25 · 2026. szeptember 28.*
 
 ## A projekt
 
@@ -102,6 +102,7 @@ A projekt gazdája a földi kiszolgálásban dolgozik, a domain-szabályok az ő
 80. **PSM és PTM csak darabszámokkal:** a PSM-ből célállomásonként, kódonként és osztályonként, a PTM-ből továbbjáratonként és osztályonként az utasszám és a poggyász. Név, ülés és nyers szöveg nem tárolódik.
 81. **Slotüzenetek (SAM, SRM):** SITA-n jönnek, a fogadó API-n keresztül dolgozzuk fel. A járaton látszik a slot és a cél off-block; figyelmeztetés, ha a tervezett off-block nem fér bele. Az ETD-t nem írja át, de a késésnél és az MVT-nél felajánlja az időt és a késéskódot.
 82. **Lufthansa-üzenetek értelmezése:** a kategória utáni számjegy és a `VR` a szabad negyedek száma; `D` a személyzet poggyásza; `Q` sürgős cargo; a DAA a gép ajtajához kiadott tétel (babakocsi, tolószék); a keretezett SI üzemi utasítás, amit kiemelve kell mutatni.
+83. **Az SI-t egyelőre nem dolgozzuk fel:** nagyon sokféle lehet, ezért csak az üzenet törzsét olvassuk; az SI szabad szövegként, változatlanul, jól látható helyen jelenik meg (így a keretezett üzemi utasítás és a DAA is látszik).
 
 ## Még ellenőrizendő feltételezések
 
@@ -142,6 +143,8 @@ A projekt gazdája a földi kiszolgálásban dolgozik, a domain-szabályok az ő
 ## Későbbi témák
 
 - Személyre szabható elrendezés (az infografika fix változata után)
+- Az SI elemeinek feldolgozása (DAA, nettó bontás, poggyászdarabszámok), ha a minták alapján egységesíthető
+- Valós tesztadat: 30 napos napi mentés az Ikarus AODB-oldaláról (az engedély és a tárolás helye tisztázandó; a nyilvános repóba nem kerülhet)
 - Email- és SITA-átjáró a bejövő üzenetekhez (a fogadó API-ra csatlakozik)
 - A BUD-on lévő ULD-készlet követése az UCM-ekből
 - Ügynöki beosztásnézet (az ügynök a saját publikált és valós beosztását látja)
