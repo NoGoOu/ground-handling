@@ -69,13 +69,21 @@ Nyílt forráskódú webalkalmazás repülőtéri földi kiszolgálás (ground h
 
 A formátumok, a párosítás és a minták: [`docs/messages.md`](docs/messages.md).
 
-- **Fogadás:** minden üzenet ugyanazon a feldolgozáson megy át, akár a fogadó API-n (`POST /api/messages`, API-kulccsal), akár kézi bemásolással (`Üzenetek` menü, Műszakvezető és Admin). Egy szövegben több üzenet is lehet; a típussor előtti sorok (Type B fejléc, email szöveg) borítékként megmaradnak. Az azonos szöveg (sorvégi szóközöktől függetlenül) nem kerül be kétszer. A PTM és a PSM tartalma nem tárolódik, csak a típusa, a járata és a dátuma.
-- **Feldolgozás:** hibatűrő, típusonként; a mezőket mintázat alapján ismeri fel (a CPM pozíciósorában a súly, a cél, a kontúr és a kategória sorrendje tetszőleges). Az ismeretlen sor figyelmeztet, a nyers szöveg mindig megmarad. Ellenőrzések (csak figyelmeztetnek): LDM- és CPM-összegek, TOW = ZFW + felszállási üzemanyag, LDM–CPM rakterenként, UCM–CPM a ULD-halmokra, a késéskódok összege a késéssel.
+- **Fogadás:** minden üzenet ugyanazon a feldolgozáson megy át, akár a fogadó API-n (`POST /api/messages`, API-kulccsal), akár kézi bemásolással (`Üzenetek` menü, Műszakvezető és Admin). Egy szövegben több üzenet is lehet; a típussor előtti sorok (Type B fejléc, email szöveg) borítékként megmaradnak. Az azonos szöveg (sorvégi szóközöktől függetlenül) nem kerül be kétszer. A PSM-ből és a PTM-ből csak a darabszámok maradnak meg (lent).
+- **Feldolgozás:** hibatűrő, típusonként; a mezőket mintázat alapján ismeri fel (a CPM pozíciósorában a súly, a cél, a kontúr és a kategória sorrendje tetszőleges). Az ismeretlen sor figyelmeztet, a nyers szöveg mindig megmarad; az SI szabad szöveg, nem dolgozzuk fel. Ellenőrzések (csak figyelmeztetnek, csak az üzenet törzséből): LDM- és CPM-összegek, LDM–CPM rakterenként (a személyzet poggyásza nélkül), UCM–CPM a ULD-halmokra, a késéskódok összege a késéssel.
 - **Párosítás:** légitársaság-kód (a rendszer légitársaságaiból) + járatszám + üzemnap + állomás; a csak napot tartalmazó fejléc a beérkezéshez legközelebbi dátum. Ami nem párosítható, az „Üzenetek → Párosítatlan üzenetek” listába kerül okkal; ott hozzárendelhető egy járatrészhez vagy elvethető.
 - **Hatás a járatra:** a BUD-i indulási MVT (AD) off-blockja a járat ATD-je, a DL sor kódjai késésrekordok; a BUD-i érkezési MVT (AA) on-blockja az ATA; a más állomásról jövő EA … BUD a járat ETA-ja (a hatályos ETA a legutóbbi, kézi vagy üzenet). Az üzenet kitölti a hiányzó lajstromot. Minden változás a járatnaplóba kerül. Ugyanarra a járatrészre érkező azonos fajtájú üzenet új verzió; a legfrissebb számít.
-- **„Üzenetek” fül** a task nézetben (az ügynök is látja a saját taskjai járataiét): részenként a verziók, a nyers és a feldolgozott tartalom, a figyelmeztetések, és egy **infografika** (utasok, rakomány rakterenként és kategóriánként, ULD-k, üres ULD-halmok, különleges kódok, súlyadatok), minden blokknál a forrásüzenettel.
+- **„Üzenetek” fül** a task nézetben (az ügynök is látja a saját taskjai járataiét): részenként a verziók, a nyers és a feldolgozott tartalom, a figyelmeztetések, és egy **infografika** (legfelül az LDM és a CPM SI-je, ahogy érkezett; utasok, rakomány rakterenként és kategóriánként, ULD-k, üres ULD-halmok, különleges kódok, PSM, PTM, slot), minden blokknál a forrásüzenettel.
 - **Késéskódok:** kódtábla (`Admin → Üzenetküldés`); a járat indulási részén kézzel vagy üzenetből rögzített kódok és percek, figyelmeztetéssel, ha az összegük eltér a késéstől.
-- **Indulási MVT küldése:** az Üzenetek fülön előnézet a járat adataiból és rögzítéseiből (szerkeszthető), majd küldés a címjegyzék címzettjeinek (`Admin → Üzenetküldés`). Email SMTP-n; SITA-átjáró még nincs, a Type B szöveg másolható. **Beállított csatorna nélkül semmi nem hagyja el a rendszert**, a küldés címzettenként „nem küldhető” állapottal naplózódik. Az érkezési (AA) és a korrekciós MVT előállítása minta hiányában még nincs meg.
+- **Indulási MVT küldése:** az Üzenetek fülön előnézet a járat adataiból és rögzítéseiből (szerkeszthető), majd küldés a címjegyzék címzettjeinek (`Admin → Üzenetküldés`). Email SMTP-n; SITA-átjáró még nincs, a Type B szöveg másolható. **Beállított csatorna nélkül semmi nem hagyja el a rendszert**, a küldés címzettenként „nem küldhető” állapottal naplózódik. Az érkezési és a korrekciós MVT a 8. mérföldkőben készült el.
+
+**8. mérföldkő – üzenetek bővítése**
+
+- **Szétválasztás:** a típussor előtti `COR` sor az üzenethez tartozik, és korrekciót jelez („Korrekció” címke); a `-TITLE` sor új (slot)üzenetet kezd, így a PTM után jövő slotüzenet nem olvad bele.
+- **Lufthansa-változatok:** az LDM előtag nélküli főfedélzete, `JMP`, `CRW`, osztályonkénti `PAD`; a CPM-ben egy pozíción több tétel, szabad negyedek (`BY0`, `VR3`), `D` a személyzet poggyásza (nem rakomány), `Q` sürgős cargo, `XOM`/`XCS` kódok, állomás nélküli fejléc. A PAX-ellenőrzésbe az infant nem számít.
+- **PSM és PTM, név nélkül:** a PSM-ből célállomásonként, kódonként és osztályonként a darabszám, a PTM-ből továbbjáratonként az utasok, a poggyász darabja és súlya. Nevet, ülést, csatlakozó járatot és nyers szöveget nem tárolunk, a figyelmeztetések és a napló sem idéznek a szövegből; teszt bizonyítja.
+- **Érkezési és korrekciós MVT:** az érkezési rész Üzenetek fülén előállítható az érkezési MVT (`AA földetérés/on-block`, az on-block a hatályos ATA); a küldött MVT-k kártyáján „Korrekció” (COR sorral, új verzió). A bejövő korrekció ATD-t vagy ATA-t frissít (naplózva); a célállomás AA sora a BUD-ról induló részhez kerül, tájékoztatásként.
+- **Slotüzenetek (SAM, SRM):** párosítás az IFPLID, különben az útvonal (repülőtér-tábla, `Admin → Üzenetküldés`) + EOBD + EOBT ±2 óra alapján. A járaton és a napi listán „Slot hh:mm”, a task nézetben a cél off-block (CTOT − gurulás), a szabályozások és az ok; figyelmeztetés, ha a tervezett off-block a cél off-block + tűrésnél (alapból 10 perc) későbbi. A slot nem írja át az ETD-t: a „Késés rögzítése” felajánlja a cél off-blockot, a késéskódok a slot okának kódját.
 
 ## Indítás Docker Compose-zal
 
@@ -125,8 +133,10 @@ A seed a mintákból átírt demo üzeneteket is betölti a mai demo járatokhoz
 - ZZ1101/ZZ1102: indulási MVT (ATD, felszállás, várható érkezés, DL 93), LDM és CPM – a task nézet „Üzenetek” fülén az infografikával; a „Késéskódok” szakaszban a 93-as kód üzenetből.
 - ZZ1203/ZZ1204: az indulóállomás MVT-je az érkezés ETA-ját a kézzel rögzítettnél későbbre teszi („Késik”).
 - ZZ1305/ZZ1306: a P7 5535/16 mintái (LDM, CPM, UCM) – ULD-k, üres ULD-halmok, és az ismert UCM–CPM eltérés figyelmeztetése.
-- Egy párosítatlan MVT (ET 3365, a légitársaság nincs a rendszerben) az `Üzenetek → Párosítatlan üzenetek` listában, és egy PTM, amelyből csak a fejléce naplózódott.
-- A címjegyzékben csak nem létező címek vannak (`@example.invalid`, kitalált SITA-cím); a három késéskód (36, 68, 93) leírását a projekt gazdája adja meg.
+- Egy párosítatlan MVT (ET 3365, a légitársaság nincs a rendszerben) az `Üzenetek → Párosítatlan üzenetek` listában.
+- A 2026. szeptember 27-i minták: a ZZ1101 érkezésén a Lufthansa LDM, CPM, PSM és érkezési MVT – az infografikán legfelül a keretezett utasítás és a DAA, a D külön, a PSM darabszámai; a ZZ1204 IST-indulásán a Turkish PSM és PTM (csak darabszámok); a ZZ1102-n a célállomás korrekciós AA-ja.
+- Slotok: a ZZ1306-on egy SAM, majd az új verziója, egy SRM; a ZZ1408-on egy SAM, amelyet a késő ETD miatt „Slot” figyelmeztetés kísér. A késéskódoknál felajánlott kód egy kattintással felvehető.
+- A címjegyzékben csak nem létező címek vannak (`@example.invalid`, kitalált SITA-cím); a késéskódok (36, 68, 81, 82, 93) leírását a projekt gazdája adja meg. A repülőtér-táblában a demo- és mintajáratok repülőterei.
 
 A fogadó API kipróbálása: `admin`-ként az `Admin → Üzenetküldés` oldalon hozz létre egy API-kulcsot (csak egyszer látszik), majd:
 
@@ -140,7 +150,7 @@ JSON is küldhető, a beérkezés idejével és a forrással:
 curl -X POST http://localhost:3000/api/messages -H "Authorization: Bearer <kulcs>" -H "Content-Type: application/json" -d '{"text":"MVT\nZZ1204/26.HAZZB.BUD\nAD261035/261044","source":"teszt","receivedAt":"2026-09-26T10:50:00Z"}'
 ```
 
-A válasz üzenetenként megadja a típust, az állapotot (tárolva, duplikátum, nem támogatott), a párosítást és a figyelmeztetéseket. (A `26` a mai nap helyére írandó.)
+A válasz üzenetenként megadja a típust, az állapotot (tárolva, duplikátum, nem támogatott), a párosítást és a figyelmeztetéseket. (A `26` a mai nap helyére írandó.) A `docs/messages.md` szeptember 27-i mintacsomagja egyben beküldve kilenc üzenetre bomlik.
 
 ### A járatrend-import kipróbálása
 
@@ -214,7 +224,7 @@ Ha a Docker nem elérhető, a Prisma saját helyi Postgrese is megfelel fejleszt
 | `lib/roster.ts` | Beosztás-segédfüggvények: publikált napok, a publikált és a valós réteg eltérései |
 | `lib/task-types.ts` | Feladattípusok: egy új járat taskjai a légitársaság aktív feladattípusai szerint, és ugyanannak az embernek két feladattípusa egy járaton |
 | `lib/planning/` | Tervezés: bemenet (napi ablakok), a pozíció szabályai, minimális pozíciószám, kiegyenlítés és mutatók, betölthetőség párosítással, a terv nézete, mentés a tervezetbe, kiosztás átvétele; tiszta függvények tesztekkel |
-| `lib/telex/` | Üzenetek: szétválasztás, fejléc, MVT/LDM/CPM/UCM feldolgozók, párosítás, ellenőrzések, hatás a járatra, infografika, MVT előállítása, kézbesítési döntések; tiszta függvények, tesztek a docs/messages.md mintáival |
+| `lib/telex/` | Üzenetek: szétválasztás (COR, -TITLE), fejléc, MVT/LDM/CPM/UCM, PSM/PTM (csak darabszámok) és ADEXP (SAM, SRM) feldolgozók, párosítás, slot, ellenőrzések, hatás a járatra, infografika, MVT-előállítás (indulási, érkezési, korrekció), kézbesítési döntések; tiszta függvények, tesztek a docs/messages.md mintáival |
 | `lib/data/messages.ts`, `lib/data/outbound.ts` | Üzenetek tárolása, verziózása, hatása a járatra; kimenő üzenetek küldése címzettenkénti állapottal |
 | `lib/qualifications.ts`, `lib/training.ts` | Jogosítások: a rekordokból számolt érvényesség és állapot, a task részeinek követelménye és teljesülése; a rekord szabályai és a fájlok ellenőrzése |
 | `lib/import/` | Járatrend-import: fájlbeolvasás, átalakítások, oszlop-párosítás, fordulók képzése, összevetés a meglévő járatokkal; tiszta függvények, tesztek a mintafájllal |

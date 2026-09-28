@@ -38,7 +38,7 @@ import {
   SEED_REQUIREMENTS,
   seedCertificatePdf,
 } from "./seed-training";
-import { buildSeedMessages, SEED_ADDRESSES, SEED_DELAY_CODES, SEED_SENDER } from "./seed-messages";
+import { buildSeedMessages, SEED_ADDRESSES, SEED_AIRPORTS, SEED_DELAY_CODES, SEED_SENDER } from "./seed-messages";
 
 // Usage: tsx prisma/seed.ts [--if-empty]
 // Replaces all data with the demo data set for today (Europe/Budapest).
@@ -68,6 +68,7 @@ async function main() {
     await tx.unsupportedMessageLog.deleteMany();
     await tx.addressBookEntry.deleteMany();
     await tx.delayCode.deleteMany();
+    await tx.airport.deleteMany();
     await tx.plan.deleteMany();
     // Training data (6. mérföldkő): records and their file rows, trainings, requirements.
     await tx.trainingRecord.deleteMany();
@@ -226,6 +227,7 @@ async function main() {
       data: SEED_ADDRESSES.map(({ airline: code, ...entry }) => ({ ...entry, airlineId: airlineIds.get(code)! })),
     });
     await tx.setting.update({ where: { id: SETTINGS_ID }, data: SEED_SENDER });
+    await tx.airport.createMany({ data: [...SEED_AIRPORTS] });
 
     await tx.importProfile.create({
       data: {

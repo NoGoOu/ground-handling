@@ -62,6 +62,9 @@ export interface SeedFlight {
   records: { code: string; time: Date; by: SeedUsername }[];
   /** Source note of the ETA/ETD, recorded with "Késés rögzítése" by the shift lead. */
   estimateNote?: string;
+  /** Where the arrival comes from and where the departure goes (8. mérföldkő: slot messages match by it). */
+  origin: string | null;
+  destination: string | null;
 }
 
 /** "HH:MM" on the given Budapest day → UTC instant. */
@@ -85,6 +88,8 @@ export function buildSeedFlights(localDate: string): SeedFlight[] {
       // that differ from the agent's own records.
       inboundFlightNumber: "ZZ1101",
       outboundFlightNumber: "ZZ1102",
+      origin: "FRA",
+      destination: "STN",
       stand: "31",
       sta: at("07:30"),
       eta: null,
@@ -112,6 +117,8 @@ export function buildSeedFlights(localDate: string): SeedFlight[] {
       // Long turnaround with two agents.
       inboundFlightNumber: "ZZ1203",
       outboundFlightNumber: "ZZ1204",
+      origin: "STN",
+      destination: "IST",
       stand: "33",
       sta: at("10:00"),
       eta: at("10:10"),
@@ -129,6 +136,8 @@ export function buildSeedFlights(localDate: string): SeedFlight[] {
       // Quick turnaround overlapping the next one.
       inboundFlightNumber: "ZZ1305",
       outboundFlightNumber: "ZZ1306",
+      origin: "CHQ",
+      destination: "CHQ",
       stand: "35",
       sta: at("16:00"),
       eta: null,
@@ -145,6 +154,8 @@ export function buildSeedFlights(localDate: string): SeedFlight[] {
       // Quick turnaround overlapping the previous one, not yet assigned.
       inboundFlightNumber: "ZZ1407",
       outboundFlightNumber: "ZZ1408",
+      origin: "BVA",
+      destination: "BVA",
       stand: "37",
       sta: at("16:20"),
       eta: null,
@@ -162,6 +173,8 @@ export function buildSeedFlights(localDate: string): SeedFlight[] {
       // Departure-only: the aircraft stayed here overnight (rule 11).
       inboundFlightNumber: null,
       outboundFlightNumber: "ZZ1612",
+      origin: null,
+      destination: "STN",
       stand: "42",
       sta: null,
       eta: null,
@@ -178,6 +191,8 @@ export function buildSeedFlights(localDate: string): SeedFlight[] {
       // Arrival-only: the aircraft stays here (rule 11).
       inboundFlightNumber: "ZZ1511",
       outboundFlightNumber: null,
+      origin: "STN",
+      destination: null,
       stand: "41",
       sta: at("13:30"),
       eta: null,

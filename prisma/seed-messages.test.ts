@@ -5,11 +5,12 @@ import { messageEffects } from "@/lib/telex/effects";
 import type { LdmData } from "@/lib/telex/ldm";
 import { matchMessage, type MatchFlight } from "@/lib/telex/match";
 import { parseMessage, type ParsedMessage } from "@/lib/telex/parse";
-import { isSupported, splitMessages, type SupportedType } from "@/lib/telex/split";
+import { matchSlot, slotLateness, slotOf } from "@/lib/telex/slot";
+import { isSupported, splitMessages } from "@/lib/telex/split";
 import type { UcmData } from "@/lib/telex/ucm";
 import { toLocalDate } from "@/lib/time";
 import { buildSeedFlights, type SeedFlight } from "./seed-data";
-import { buildSeedMessages, SEED_ADDRESSES } from "./seed-messages";
+import { buildSeedMessages, SEED_ADDRESSES, SEED_AIRPORTS } from "./seed-messages";
 
 const AIRLINES = [{ id: "zz", code: "ZZ" }];
 
@@ -21,8 +22,8 @@ function matchFlights(flights: SeedFlight[]): MatchFlight[] {
     outboundFlightNumber: f.outboundFlightNumber,
     arrivalFlightDate: f.sta ? toLocalDate(f.sta) : null,
     departureFlightDate: f.std ? toLocalDate(f.std) : null,
-    origin: null,
-    destination: null,
+    origin: f.origin,
+    destination: f.destination,
     arrivalRegistration: null,
     departureRegistration: null,
   }));
@@ -30,7 +31,21 @@ function matchFlights(flights: SeedFlight[]): MatchFlight[] {
 
 function parse(text: string): ParsedMessage | null {
   const [message] = splitMessages(text).messages;
-  return isSupported(message.type) ? parseMessage(message as typeof message & { type: SupportedType }) : null;
+  return isSupported(message.type) || message.family === "ADEXP" ? parseMessage(message) : null;
+}
+
+const iataOf = (icao: string) => SEED_AIRPORTS.find((a) => a.icaoCode === icao)?.iataCode ?? null;
+
+function slotFlights(flights: SeedFlight[]) {
+  return flights.map((f, i) => ({
+    id: f.inboundFlightNumber ?? f.outboundFlightNumber ?? String(i),
+    departureFlightDate: f.std ? f.std.toISOString().slice(0, 10) : null,
+    destination: f.destination,
+    std: f.std,
+    etd: f.etd,
+    departureIfplid: null,
+    departureCancelled: false,
+  }));
 }
 
 // Winter time ends on 25 October 2026.
@@ -42,6 +57,10 @@ for (const date of ["2026-09-22", "2026-10-25", "2026-12-31"]) {
     const matched = seed.map((m, i) => {
       const p = parsed[i];
       if (!p) return "unsupported";
+      if (p.type === "SLOT") {
+        const slot = matchSlot(p.data, iataOf, slotFlights(flights));
+        return slot.matched ? `${slot.flightId} DEPARTURE_PART` : slot.reason;
+      }
       const result = matchMessage(p, m.receivedAt, AIRLINES, matchFlights(flights));
       return result.matched ? `${result.flightId} ${result.key.part}` : result.reason;
     });
@@ -61,7 +80,30 @@ for (const date of ["2026-09-22", "2026-10-25", "2026-12-31"]) {
         "ZZ1305 DEPARTURE_PART",
         "airline",
         "ZZ1407 DEPARTURE_PART",
+        // 8. mérföldkő: the Lufthansa messages on the ZZ1101 arrival, its arrival MVT,
+        "ZZ1101 ARRIVAL_PART",
+        "ZZ1101 ARRIVAL_PART",
+        "ZZ1101 ARRIVAL_PART",
+        "ZZ1101 ARRIVAL_PART",
+        // the ZZ1102 arrival at STN, the Turkish PSM and PTM of ZZ1204,
+        "ZZ1101 DEPARTURE_PART",
+        "ZZ1203 DEPARTURE_PART",
+        "ZZ1203 DEPARTURE_PART",
+        // and the slots: SAM and SRM of ZZ1306, SAM of ZZ1408.
+        "ZZ1305 DEPARTURE_PART",
+        "ZZ1305 DEPARTURE_PART",
+        "ZZ1407 DEPARTURE_PART",
       ]);
+    });
+
+    it("warns about the slot of ZZ1408, whose ETD is too late for it, and not about ZZ1306", () => {
+      const slots = parsed.filter((p): p is ParsedMessage & { type: "SLOT" } => p?.type === "SLOT").map((p) => slotOf(p.data)!);
+      const planned = (number: string) => {
+        const f = flights.find((x) => x.outboundFlightNumber === number)!;
+        return f.etd ?? f.std;
+      };
+      expect(slotLateness(planned("ZZ1306"), slots[1], 10)).toBeNull();
+      expect(slotLateness(planned("ZZ1408"), slots[2], 10)).toBe(17);
     });
 
     it("gives ZZ1102 its ATD with a delay code that covers it, and ZZ1203 a later ETA", () => {
