@@ -1,6 +1,6 @@
 # Ground Handling App – projektleírás
 
-*Verzió: 27 · 2026. szeptember 26.*
+*Verzió: 28 · 2026. szeptember 28.*
 
 Nyílt forráskódú webalkalmazás repülőtéri földi kiszolgálás (ground handling) szervezésére. Minden járatfordulóhoz feladattípusonként egy task tartozik, benne mérföldkövekkel, amelyeknek van tervezett és tényleges időpontja. A mérföldkövek légitársaságonként testreszabható sablonokból jönnek. A hozzáférés szerepkör alapú.
 
@@ -71,7 +71,7 @@ Az alábbi táblázat az alapértelmezett szerepköröket írja le. A 2. mérfö
   - Részenként: cancelled (igen/nem), cancelledBy, cancelledAt. Az ETA-hoz és az ETD-hez: forrás (kézi | üzenet), megjegyzés (opcionális), ki és mikor rögzítette. (2. mérföldkő, 10. lépés; lásd a „Késés és törlés” szakaszt.)
 - **Task:** flight (a járat létrehozásakor automatikusan létrejön; az 5. mérföldkőig 1:1, utána feladattípusonként egy, saját sablonnal), status (PLANNED | IN_PROGRESS | COMPLETED), arrivalAgent (opcionális), departureAgent (opcionális). A két ügynök lehet ugyanaz a személy. Csak érkező járatnál csak érkezési, csak induló járatnál csak indulási ügynök van.
 - **MilestoneRecord:** task, milestoneDefinition, actualTime, recordedBy, recordedAt, updatedBy, updatedAt. Taskonként és mérföldkövenként legfeljebb egy rekord.
-- **Setting** (globális beállítások, egyetlen sor): az eltérés színküszöbei percben (alapérték: zöld legfeljebb 0, sárga legfeljebb 5); a „hamarosan lejár” napjai (6. mérföldkő); a feladó email-címe és Type B címe (7. mérföldkő). Az admin szerkeszti.
+- **Setting** (globális beállítások, egyetlen sor): az eltérés színküszöbei percben (alapérték: zöld legfeljebb 0, sárga legfeljebb 5); a „hamarosan lejár” napjai (6. mérföldkő); a feladó email-címe és Type B címe (7. mérföldkő); a slot-tűrés percben (8. mérföldkő). Az admin szerkeszti.
 - **Role** (2. mérföldkő): name, builtIn, a hozzá tartozó jogosultságok hatókörrel. Alapértelmezett szerepkörök: Admin (beépített, zárolt), Tervező, Műszakvezető, Ügynök.
 - **Team** (2. mérföldkő): name, leader (User). Minden ügynök egy csapat tagja; egy felhasználó több csapatot is vezethet.
 - **SegmentType** (2. mérföldkő): name, code, operative (igen/nem), active. A tervező bővíti; használatban lévő típus nem törölhető, csak inaktiválható.
@@ -469,7 +469,7 @@ Globális beállítás, a Tervező és az Admin szerkeszti. Számoláskor a terv
 
 ## 7. mérföldkő – üzenetek: fogadás, feldolgozás, infografika, késéskód, MVT-küldés
 
-**Ezt építjük most.** A formátumok, a kódok, az ellenőrzések, a párosítás részletei és a valós minták: `docs/messages.md`. A PTM és a PSM ebben a mérföldkőben kimarad, így itt nem kezelünk személyes adatot.
+**Kész** (2026. szeptember 26.), az érkezési és a korrekciós MVT előállítása nélkül: ezek a 8. mérföldkőben jönnek. A formátumok, a kódok, az ellenőrzések, a párosítás részletei és a valós minták: `docs/messages.md`. A PTM és a PSM ebben a mérföldkőben kimaradt.
 
 ### Fogadás
 
@@ -564,6 +564,75 @@ Globális beállítás, a Tervező és az Admin szerkeszti. Számoláskor a terv
 11. Indulási MVT előállítása előnézettel és visszaolvasási teszttel; címjegyzék; küldés email és SITA csatornán, biztonságos alapállással; kimenő üzenetek állapottal. Az érkezési és a korrekciós MVT csak minta után
 12. Seed (demo üzenetek a demo járatokhoz, a minták alapján; minta címjegyzék nem létező címekkel; a három késéskód), README (API-példa `curl`-lel, a küldés beállítása), STATUS.md
 
+## 8. mérföldkő – üzenetek bővítése: pontosabb feldolgozás, érkezési és korrekciós MVT, PSM, PTM, slot
+
+**Ezt építjük most.** A formátumok, a Lufthansa-változatok, a PSM, a PTM, a slotüzenetek és az új minták: `docs/messages.md` (5. verzió). Az „Ellenőrzés a Lufthansa-mintán” táblázat a feldolgozó elvárt eredménye.
+
+### A feldolgozó javításai
+
+A 7. mérföldkő feldolgozója a 2026. szeptember 27-i mintacsomagon ezeken a pontokon hibázik; ezeket kell javítani:
+
+1. **Szétválasztás:** a típussor előtti `COR` sor a következő üzenethez tartozik, és korrekciót jelez; a `-TITLE` sor új üzenetet kezd. Így a PTM után jövő slotüzenet nem olvad bele a PTM-be.
+2. **LDM:** az infant nem számít bele a PAX-összegbe; a Lufthansa-változat előtag nélküli főfedélzeti mezője; a `JMP`, `CRW`, `PAD` (osztályonként) és `DHC` felismerése. A `CRW`, `PAD` és `DHC` jelentése nyitott, ezek nyersen megmaradnak.
+3. **CPM:** egy pozíción több tétel; a kategória utáni számjegy a szabad negyedek száma (`BY0` = BY, 0 negyed szabad); `VR` kézi rakodású pozíción; `D` a személyzet poggyásza, nem rakomány; `Q` sürgős cargo; a Lufthansa-kódok (`XOM`, `XCS`) kódként megmaradnak; állomás nélküli fejléc.
+4. **SI:** a felismert elemek (DAA, keretezett üzemi utasítás, célállomásonkénti nettó bontás, CHECKED BAGGAGE PIECES, LOAD IN CPTS, B-sorok a folytatósorral) feldolgozva; a többi SI-sor szabad szövegként látszik, **nem** „ismeretlen sor” figyelmeztetésként.
+5. **Ellenőrzések** a `docs/messages.md` szerint. A Lufthansa-minta mindegyiken figyelmeztetés nélkül megy át; a korábbi nyolc minta viselkedése nem változik (a két ismert hibát továbbra is jelzi).
+
+### Érkezési és korrekciós MVT
+
+- **Érkezési MVT előállítása:** `AA földetérés/on-block`; a földet érést kézzel, az on-blockot a hatályos ATA-ból. Előnézettel, visszaolvasási teszttel, ugyanazzal a címjegyzékkel és küldéssel, mint az indulási.
+- **Korrekciós MVT:** egy korábban küldött MVT-ből, a javított értékekkel, előtte `COR` sorral. Az eredeti kimenő üzenet megmarad, a korrekció új verzió.
+- **Bejövő korrekció:** új verzió „Korrekció” jelöléssel. Ha ATD-t vagy ATA-t hoz, a rendszerérték a korrekció szerint frissül, a járatnaplóba kerül.
+- **Más állomásról jövő `AA`** egy BUD-ról induló részhez: célállomási érkezés, tájékoztatásként látszik, a járat idejét nem változtatja.
+
+### PSM és PTM, név nélkül
+
+- **Csak a származtatott darabszámokat tároljuk:**
+  - PSM: célállomásonként, kódonként (pl. WCHR, WCHS) és osztályonként a darabszám;
+  - PTM: továbbjáratonként (járatszám és célállomás) és osztályonként az utasszám, a poggyász darabszáma és súlya.
+- **Nem tároljuk:** a nevet, az ülést, a csatlakozó járatot az egyes utasoknál, a nyers szöveget és annak hash-ét. A feldolgozási figyelmeztetés, a napló és az API-válasz sem tartalmazhat sort a szövegből. Duplikátumszűrés a fejléc, a rész száma és a származtatott adat alapján.
+- Több rész (`PART1`, `PART2` …): részenként külön verzió, együtt adják az állapotot.
+- Unit teszt biztosítja, hogy a mintákból semmilyen név nem kerül a tárolt adatba és a figyelmeztetésekbe.
+- A PSM és a PTM a meglévő „Üzenetek megtekintése” jogosultsággal látszik, mert név nincs benne.
+
+### Slotüzenetek (SAM, SRM)
+
+- ADEXP-feldolgozó a `docs/messages.md` szerint. Más `TITLE`: felismerve, nyersen tárolva, „nem feldolgozott” jelzéssel.
+- **Repülőtér-tábla:** IATA-kód, ICAO-kód, név; az admin kezeli. Seed: BUD/LHBP és a demo- és mintajáratok repülőterei.
+- **Párosítás** a `docs/messages.md` szerint: először az `IFPLID` alapján, különben útvonal + `EOBD` + `EOBT` (±2 óra, helyőrző), pontosan egy jelölttel; egyébként párosítatlan. Kézi hozzárendeléskor az `IFPLID` a járatrészhez kötődik, így a későbbi SRM magától párosul.
+- **Az indulási részen:** CTOT, gurulási idő, cél off-block (CTOT − gurulási idő), a szabályozások, az ok és a késéskód. A napi listán és a járaton „Slot hh:mm” jelöléssel.
+- **Figyelmeztetés,** ha a tervezett off-block (indulási horgony) később van, mint a cél off-block + slot-tűrés (globális beállítás, helyőrző: 10 perc).
+- A slot nem írja át az ETD-t. A „Késés rögzítése” és az indulási MVT DL sora felajánlja a slotból adódó időt és késéskódot (pl. 81).
+
+### Infografika bővítése
+
+- Legfelül, kiemelve: a keretezett üzemi utasítások és a DAA-tételek.
+- Poggyász rakterenként és osztályonként; pozíciónként darab és nettó súly; a konténerek szabad negyedei.
+- A sürgős (Q) cargo kiemelve; a személyzet poggyásza (D) külön.
+- Érkezési részen: a PSM darabszámai kódonként és osztályonként (pl. „WCHR: 1, business”); az átszálló utasok továbbjáratonként (PTM).
+- Indulási részen: a slot és a cél off-block.
+
+### Adatmodell (kiegészítés)
+
+- **Airport:** iataCode, icaoCode, name.
+- A slot a járat indulási részéhez tartozó érvényes slotüzenetből adódik; a párosításhoz az `IFPLID` a járatrészen tárolódik.
+- **Setting:** slot-tűrés percben (helyőrző: 10).
+- A PSM és a PTM üzenetnél a nyers szöveg és a hash helyén a származtatott adat van.
+
+### Jogosultság
+
+- A repülőtér-tábla és a slot-tűrés az „Üzenetküldés beállításai” jogosultsághoz tartozik (Admin).
+
+### Lépésterv
+
+1. Szétválasztás javítása (`COR`, `-TITLE`), tesztekkel a teljes 2026. szeptember 27-i mintacsomagra egyben
+2. LDM és CPM javításai, a Lufthansa-változatok és az SI-elemek, új ellenőrzések; teszt: a Lufthansa-minta figyelmeztetés nélkül, a régi minták változatlanul
+3. PSM és PTM feldolgozása, csak darabszámokkal; teszt, hogy név nem kerül a tárolt adatba és a figyelmeztetésekbe
+4. Érkezési és korrekciós MVT előállítása, a bejövő korrekció kezelése, más állomásról jövő AA; visszaolvasási tesztek
+5. ADEXP-feldolgozó (SAM, SRM), repülőtér-tábla (admin), párosítás, slot a járaton, slot-figyelmeztetés, felajánlás a késésnél és az MVT-nél
+6. Infografika bővítése
+7. Seed (a 2026. szeptember 27-i minták a demo járatokra átírva, egy SAM és egy SRM a demo indulásokra, repülőtér-tábla), README, STATUS.md
+
 ## További eldöntött szabályok
 
 Ezeket a kérdéseket a megrendelő 2026. szeptember 22-én jóváhagyta; a kód is ezekre a számokra hivatkozik.
@@ -608,6 +677,20 @@ Ezeket a kérdéseket a megrendelő 2026. szeptember 22-én jóváhagyta; a kód
 38. **Fájl eltávolítása:** a fájl a tárhelyről törlődik, a naplósor megmarad.
 39. **Tervező és jogosítások:** a jelöltek az aktív ügynökök, a beosztástól függetlenül. A hiányjelzés megtekintéskor számolódik, a nyilvántartás aktuális adataival, de az érvényességet mindig a terv adott napjára vizsgálja, nem a mai napra.
 40. **„Hamarosan lejár”:** a napok száma globális beállítás (Admin → Beállítások).
+41. **Érkezési MVT:** az `AA` sor földet érés / on-block, ugyanabban az alakban, mint az `AD` (a projekt gazdája megerősítette).
+42. **Kézzel felvett járat üzemnapja:** alapból a menetrendi idő budapesti napja.
+43. **„Üzenetek” fül:** a task nézetben.
+44. **Késéskód és MVT:** a járat módosítására jogosult és a rész ügynöke (bármelyik taskon) rögzíti, illetve küldi.
+45. **Késés-ellenőrzés:** csak akkor, ha már van ATD.
+46. **Duplikátum:** a hash a normalizált szövegből készül, a boríték (Type B fejléc, email szöveg) nélkül.
+47. **Törölt rész:** üzenet nem hat rá.
+48. **Verziók sorrendje:** a beérkezés sorrendje.
+49. **Kimenő üzenetek:** saját verziókulcson; a járat idejére nem hatnak.
+50. **Kézi késésrekord:** törölhető, a törlés naplózott; az üzenetből jött késésrekord nem.
+51. **Időpont napjának feloldása:** a nappal megadott időpont a menetrendi időhöz legközelebbi; a nap nélküli időpont az előtte álló időt követő első.
+52. **UCM:** ha egy UCM-ben `IN` és `OUT` is van, az első számít, figyelmeztetéssel.
+53. **CPM `.TW` sor:** összsúlyként olvassuk, amíg a jelentése nem tisztázott.
+54. **Küldés:** email nodemailerrel; a seed címei csak `.invalid` doménre mutatnak.
 
 ## Később (most ne építsd)
 
@@ -615,7 +698,7 @@ Ezeket a kérdéseket a megrendelő 2026. szeptember 22-én jóváhagyta; a kód
 - A lezárt taskok utólagos javításának jogosultsága
 - Ügynöki beosztásnézet: az ügynök lássa a saját publikált és valós beosztását.
 - A beosztás TRN részének összekötése egy konkrét képzéssel
-- PTM és PSM feldolgozása (minta és az adatkezelési döntés után)
+- További slotüzenetek (pl. slottörlés), minta után
 - Email- és SITA-átjáró a bejövő üzenetekhez (a fogadó API-ra csatlakozik)
 - A BUD-on lévő ULD-készlet követése az UCM-ekből
 - Létszámigény: számítás (egy adott időpontban az átfedő foglaltsági ablakok száma, 15 perces sávokra bontva; a sávon belüli számolás módja még nyitott) és külön nézet (idősávos táblázat vagy grafikon). A sávos idősoros nézeten nem jelenik meg: a tervezés más logika szerint működik.
