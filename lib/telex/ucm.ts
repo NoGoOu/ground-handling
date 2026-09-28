@@ -1,3 +1,4 @@
+import { splitSi } from "./si";
 import { warn, type TelexWarning } from "./warnings";
 
 // UCM, the ULD control message (docs/messages.md, "UCM"): "IN" lists the ULDs
@@ -16,14 +17,17 @@ export interface UcmData {
   station: string | null;
   direction: "IN" | "OUT" | null;
   items: UcmItem[];
-  si: string[];
+  /** The SI block verbatim (not parsed). */
+  si: string | null;
 }
 
 export function parseUcm(fields: readonly string[], body: readonly string[]): { data: UcmData; warnings: TelexWarning[] } {
   const warnings: TelexWarning[] = [];
-  const data: UcmData = { station: fields.find((f) => /^[A-Z]{3}$/.test(f)) ?? null, direction: null, items: [], si: [] };
-  for (const raw of body) {
+  const { body: lines, si } = splitSi(body);
+  const data: UcmData = { station: fields.find((f) => /^[A-Z]{3}$/.test(f)) ?? null, direction: null, items: [], si };
+  for (const raw of lines) {
     const line = raw.trim().toUpperCase();
+    if (line === "") continue;
     if (line === "IN" || line === "OUT") {
       // One direction per message: its flight part hangs on it.
       if (data.direction && data.direction !== line) warnings.push(warn("mixedDirections"));
@@ -34,9 +38,6 @@ export function parseUcm(fields: readonly string[], body: readonly string[]): { 
         if (m) data.items.push({ uld: m[1], station: m[2] ?? null, category: m[3] ?? null });
         else if (item.trim() !== "") warnings.push(warn("unknownField", { field: item.trim(), line: raw.trim() }));
       }
-    } else if (/^SI\b/.test(line)) {
-      const text = raw.trim().slice(2).trim();
-      if (text) data.si.push(text);
     } else warnings.push(warn("unknownLine", { line: raw.trim() }));
   }
   if (!data.direction) warnings.push(warn("noDirection"));

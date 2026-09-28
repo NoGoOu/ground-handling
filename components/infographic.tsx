@@ -37,8 +37,8 @@ function Figure({ value, label }: { value: string | number; label: string }) {
 const categoryLabel = (key: string) => (t.categories as Record<string, string>)[key] ?? key;
 
 export function InfographicView({ data }: { data: Infographic }) {
-  const { passengers, load, ulds, stacks, specialCodes, weights, warnings } = data;
-  if (!passengers && !load && !ulds && !stacks && !specialCodes && !weights && warnings.length === 0) {
+  const { passengers, load, ulds, stacks, specialCodes, warnings } = data;
+  if (!passengers && !load && !ulds && !stacks && !specialCodes && warnings.length === 0) {
     return <p className="text-sm text-neutral-600">{t.empty}</p>;
   }
   return (
@@ -115,19 +115,6 @@ export function InfographicView({ data }: { data: Infographic }) {
             </p>
           ))}
           {stacks.ucm && <p className="text-neutral-600">{fmt(t.ucmCounts, stacks.ucm)}</p>}
-        </Card>
-      )}
-
-      {weights && (
-        <Card title={t.weights} sources={[weights.source]}>
-          <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5">
-            {weights.values.map((w) => (
-              <div key={w.name} className="contents">
-                <dt className="text-neutral-500">{w.name}</dt>
-                <dd className="tabular-nums">{w.value.toLocaleString("hu-HU")}</dd>
-              </div>
-            ))}
-          </dl>
         </Card>
       )}
 

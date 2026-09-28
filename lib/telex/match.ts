@@ -73,6 +73,7 @@ export function partOf(
   message: ParsedMessage,
   departsFromHome: (flightNumber: string) => boolean,
   flightNumber: string,
+  arrivesAtHome: (flightNumber: string) => boolean = () => false,
 ): Part | "notHome" | "part" {
   switch (message.type) {
     case "MVT": {
@@ -93,8 +94,13 @@ export function partOf(
       const { from, to, positions } = message.data;
       if (to === HOME_STATION) return "ARRIVAL_PART";
       if (from === HOME_STATION) return "DEPARTURE_PART";
-      if (!from && !to && positions.some((p) => p.destination === HOME_STATION)) return "ARRIVAL_PART";
-      return "notHome";
+      if (from || to) return "notHome";
+      // No station in the header ("LH1338/27.DAIQT"): the flight number decides.
+      const arrives = arrivesAtHome(flightNumber);
+      const departs = departsFromHome(flightNumber);
+      if (arrives !== departs) return arrives ? "ARRIVAL_PART" : "DEPARTURE_PART";
+      if (!arrives && positions.some((p) => p.destination === HOME_STATION)) return "ARRIVAL_PART";
+      return arrives ? "part" : "notHome";
     }
   }
 }
@@ -125,8 +131,10 @@ export function matchMessage(
   const own = flights.filter((f) => f.airlineId === split.airline.id);
   const departs = (flightNumber: string) =>
     own.some((f) => f.outboundFlightNumber === flightNumber && f.departureFlightDate === operatingDay);
+  const arrives = (flightNumber: string) =>
+    own.some((f) => f.inboundFlightNumber === flightNumber && f.arrivalFlightDate === operatingDay);
 
-  const part = partOf(message, departs, split.flightNumber);
+  const part = partOf(message, departs, split.flightNumber, arrives);
   const key: MatchKey = { airline: split.airline, flightNumber: split.flightNumber, operatingDay, part: null };
   if (part === "notHome" || part === "part") return { matched: false, reason: part, key, warnings };
 

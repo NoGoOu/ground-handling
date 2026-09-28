@@ -86,13 +86,16 @@ export function MessageContent({ message }: { message: FlightMessage }) {
         </Row>,
       );
     }
-    if (data.si.length > 0) rows.push(<Row key="si" label={t.fields.si}>{data.si.map((s) => s.text).join(" · ")}</Row>);
+    // Messages stored before the 8. mérföldkő have a parsed SI; only a text is shown.
+    if (typeof data.si === "string") rows.push(<Row key="si" label={t.fields.si}><span className="whitespace-pre-wrap font-mono text-xs">{data.si}</span></Row>);
   }
 
   if (parsed.type === "CPM") {
     const { data } = parsed;
     if (data.from || data.to) rows.push(<Row key="route" label={t.fields.route}>{[data.from, data.to].filter(Boolean).join(" → ")}</Row>);
     if (data.totalWeight !== null) rows.push(<Row key="total" label={t.fields.totalWeight}>{fmt(t.values.kg, { kg: data.totalWeight })}</Row>);
+    // Messages stored before the 8. mérföldkő have a parsed SI; only a text is shown.
+    if (typeof data.si === "string") rows.push(<Row key="si" label={t.fields.si}><span className="whitespace-pre-wrap font-mono text-xs">{data.si}</span></Row>);
     rows.push(
       <Row key="positions" label={t.fields.positions}>
         {fmt(t.values.positions, { used: data.positions.filter((p) => !p.empty).length, count: data.positions.length })}

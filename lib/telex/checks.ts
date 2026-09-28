@@ -1,14 +1,15 @@
-import type { CpmData } from "./cpm";
+import { loadWeight, type CpmData } from "./cpm";
 import type { LdmData } from "./ldm";
 import type { UcmData } from "./ucm";
 import { warn, type TelexWarning } from "./warnings";
 
-// Checks of the messages (docs/messages.md; CLAUDE.md, 7. mérföldkő,
-// "Feldolgozás és ellenőrzés"). They only warn: nothing is rejected.
+// Checks of the messages (docs/messages.md; CLAUDE.md, 7. and 8. mérföldkő).
+// They only warn: nothing is rejected. They read the body of the messages
+// only; the SI is free text and is not checked.
 
 const sum = (values: readonly number[]) => values.reduce((total, value) => total + value, 0);
 
-/** LDM: main deck + holds = T, and the passengers add up to PAX. */
+/** LDM: main deck + holds = T, and male + female + child = PAX (infants take no seat). */
 export function checkLdm(data: LdmData): TelexWarning[] {
   return data.legs.flatMap((leg) => {
     const warnings: TelexWarning[] = [];
@@ -17,8 +18,8 @@ export function checkLdm(data: LdmData): TelexWarning[] {
       warnings.push(warn("ldmLoadSum", { destination: leg.destination, total: leg.totalLoad, sum: load }));
     }
     if (leg.passengers && leg.paxByClass.length > 0) {
-      const { male, female, child, infant } = leg.passengers;
-      const people = male + female + child + infant;
+      const { male, female, child } = leg.passengers;
+      const people = male + female + child;
       const pax = sum(leg.paxByClass);
       if (people !== pax) warnings.push(warn("ldmPaxSum", { destination: leg.destination, pax, sum: people }));
     }
@@ -26,32 +27,24 @@ export function checkLdm(data: LdmData): TelexWarning[] {
   });
 }
 
-const weight = (name: string, data: CpmData) => data.weights.find((w) => w.name === name)?.value;
-
-/** CPM: the positions add up to the total weight, and TOW = ZFW + take-off fuel. */
+/** CPM: the positions, without the crew bags, add up to the total weight. */
 export function checkCpm(data: CpmData): TelexWarning[] {
-  const warnings: TelexWarning[] = [];
-  const positions = sum(data.positions.map((p) => p.weight ?? 0));
-  if (data.totalWeight !== null && positions !== data.totalWeight) {
-    warnings.push(warn("cpmWeightSum", { total: data.totalWeight, sum: positions }));
-  }
-  const [tow, zfw, fuel] = [weight("TOW", data), weight("ZFW", data), weight("TAKE OFF FUEL", data)];
-  if (tow !== undefined && zfw !== undefined && fuel !== undefined && tow !== zfw + fuel) {
-    warnings.push(warn("cpmTakeOffWeight", { tow, zfw, fuel }));
-  }
-  return warnings;
+  const positions = sum(data.positions.map(loadWeight));
+  return data.totalWeight !== null && positions !== data.totalWeight
+    ? [warn("cpmWeightSum", { total: data.totalWeight, sum: positions })]
+    : [];
 }
 
-/** CPM weight by deck and by hold; bulk (no hold number) separately. */
+/** CPM load by deck and by hold, without the crew bags; bulk (no hold number) separately. */
 function cpmLoad(cpm: CpmData) {
   const holds = new Map<string, number>();
   let bulk = 0;
   for (const p of cpm.positions) {
     if (p.deck !== "LOWER") continue;
-    if (p.hold) holds.set(p.hold, (holds.get(p.hold) ?? 0) + (p.weight ?? 0));
-    else bulk += p.weight ?? 0;
+    if (p.hold) holds.set(p.hold, (holds.get(p.hold) ?? 0) + loadWeight(p));
+    else bulk += loadWeight(p);
   }
-  const mainDeck = sum(cpm.positions.filter((p) => p.deck === "MAIN").map((p) => p.weight ?? 0));
+  const mainDeck = sum(cpm.positions.filter((p) => p.deck === "MAIN").map(loadWeight));
   return { mainDeck, holds, bulk };
 }
 

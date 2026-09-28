@@ -1,5 +1,5 @@
 import { compareLdmCpm, compareUcmCpm } from "./checks";
-import type { CpmData } from "./cpm";
+import { itemsOf, loadWeight, type CpmData } from "./cpm";
 import type { LdmData } from "./ldm";
 import type { MessageData } from "./parse";
 import type { UcmData } from "./ucm";
@@ -41,7 +41,6 @@ export interface Infographic {
   } | null;
   /** Special codes with their positions. */
   specialCodes: { codes: { code: string; positions: string[] }[]; source: InfographicSource } | null;
-  weights: { values: { name: string; value: number }[]; source: InfographicSource } | null;
   /** The current messages' own warnings and the checks across them. */
   warnings: TelexWarning[];
 }
@@ -55,15 +54,11 @@ function latest<T extends CurrentMessage["type"]>(messages: readonly CurrentMess
     .sort((a, b) => b.receivedAt.getTime() - a.receivedAt.getTime())[0];
 }
 
-const CATEGORY_KEYS = ["C", "B", "M", "E", "BP"];
-
 function loadFromLdm(ldm: LdmData) {
   const holds = new Map<string, number>();
   for (const h of ldm.legs.flatMap((leg) => leg.holds)) holds.set(h.hold, (holds.get(h.hold) ?? 0) + h.weight);
+  // The LDM gives the categories only in its SI, which is not parsed (8. mérföldkő).
   const byCategory = new Map<string, number>();
-  for (const e of ldm.si.flatMap((s) => s.entries)) {
-    if (CATEGORY_KEYS.includes(e.key)) byCategory.set(e.key, (byCategory.get(e.key) ?? 0) + e.value);
-  }
   const totals = ldm.legs.map((leg) => leg.totalLoad).filter((t): t is number => t !== null);
   const mainDecks = ldm.legs.map((leg) => leg.mainDeck).filter((t): t is number => t !== null);
   return {
@@ -80,16 +75,19 @@ function loadFromCpm(cpm: CpmData) {
   let bulk = 0;
   const byCategory = new Map<string, number>();
   for (const p of cpm.positions) {
-    if (p.empty || p.weight === null) continue;
+    if (p.empty) continue;
+    // Crew bags are not load.
     if (p.deck === "LOWER") {
-      if (p.hold) holds.set(p.hold, (holds.get(p.hold) ?? 0) + p.weight);
-      else bulk += p.weight;
+      if (p.hold) holds.set(p.hold, (holds.get(p.hold) ?? 0) + loadWeight(p));
+      else bulk += loadWeight(p);
     }
-    if (p.category) byCategory.set(p.category, (byCategory.get(p.category) ?? 0) + p.weight);
+    for (const item of itemsOf(p)) {
+      if (item.category && item.weight !== null) byCategory.set(item.category, (byCategory.get(item.category) ?? 0) + item.weight);
+    }
   }
-  const mainDeck = sum(cpm.positions.filter((p) => p.deck === "MAIN").map((p) => p.weight ?? 0));
+  const mainDeck = sum(cpm.positions.filter((p) => p.deck === "MAIN").map(loadWeight));
   return {
-    total: cpm.totalWeight ?? sum(cpm.positions.map((p) => p.weight ?? 0)),
+    total: cpm.totalWeight ?? sum(cpm.positions.map(loadWeight)),
     mainDeck: mainDeck > 0 ? mainDeck : null,
     holds: [...holds].sort(([a], [b]) => a.localeCompare(b)).map(([hold, weight]) => ({ hold, weight })),
     bulk: bulk > 0 ? bulk : null,
@@ -177,7 +175,6 @@ export function buildInfographic(current: readonly CurrentMessage[]): Infographi
         : null,
     stacks,
     specialCodes: special.length > 0 ? { codes: special, source: sourceOf((cpm ?? ldm)!) } : null,
-    weights: cpm && cpm.data.weights.length > 0 ? { values: cpm.data.weights, source: sourceOf(cpm) } : null,
     warnings: warnings.filter((w) => {
       const key = JSON.stringify(w);
       if (seen.has(key)) return false;

@@ -48,7 +48,7 @@ export function buildSeedMessages(flights: readonly SeedFlight[]): SeedMessage[]
   const ldm = [
     "LDM",
     `ZZ1102/${day}.HAZZA.Y189.2/4`,
-    "-STN.80/90/5/2.T1450.1/300.3/600.4/550.PAX/177",
+    "-STN.80/90/5/2.T1450.1/300.3/600.4/550.PAX/175",
     "SI STN BP/120.B/1400.C/50",
   ].join("\n");
   const cpm = [

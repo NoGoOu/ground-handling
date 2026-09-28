@@ -31,12 +31,9 @@ describe("checks of one message", () => {
     ]);
   });
 
-  it("warns when the CPM's positions or its take-off weight do not add up", () => {
+  it("warns when the CPM's positions do not add up; the SI (TOW, ZFW) is not checked since the 8. mérföldkő", () => {
     const cpm = data<CpmData>(SAMPLES.CPM_CZ.replace("-BLK/108/BUD/C", "-BLK/100/BUD/C").replace("TOW=346078", "TOW=346000"));
-    expect(checkCpm(cpm)).toEqual([
-      { code: "cpmWeightSum", params: { total: 92404, sum: 92396 } },
-      { code: "cpmTakeOffWeight", params: { tow: 346000, zfw: 234408, fuel: 111670 } },
-    ]);
+    expect(checkCpm(cpm)).toEqual([{ code: "cpmWeightSum", params: { total: 92404, sum: 92396 } }]);
   });
 });
 

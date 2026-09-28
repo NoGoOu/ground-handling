@@ -89,17 +89,8 @@ describe("LDM", () => {
       { code: "FKT", position: "3", weight: 351 },
       { code: "FKT", position: "4", weight: 277 },
     ]);
-    expect(data.si).toEqual([
-      {
-        station: "OSR",
-        entries: [
-          { key: "C", value: 0 },
-          { key: "E", value: 1983 },
-          { key: "M", value: 0 },
-        ],
-        text: "OSR C/0.E/1983.M/0",
-      },
-    ]);
+    // The SI is free text since the 8. mérföldkő.
+    expect(data.si).toBe("SI OSR C/0.E/1983.M/0");
   });
 
   it("reads the passengers and the baggage of a passenger flight (EW 2783/03)", () => {
@@ -114,11 +105,7 @@ describe("LDM", () => {
       holds: [{ hold: "4", weight: 825 }],
       paxByClass: [134],
     });
-    expect(data.si[0].entries).toEqual([
-      { key: "BP", value: 57 },
-      { key: "B", value: 825 },
-      { key: "TB", value: 2 },
-    ]);
+    expect(data.si).toBe("SI STR BP/57.B/825.TB/2");
   });
 });
 
@@ -152,6 +139,8 @@ describe("CPM", () => {
       destination: "OSR",
       contour: null,
       category: "E",
+      items: [{ weight: 335, category: "E" }],
+      freeQuarters: null,
       codes: ["ELD"],
     });
     expect(data.positions.find((p) => p.position === "1")).toMatchObject({
@@ -165,7 +154,7 @@ describe("CPM", () => {
     });
   });
 
-  it("reads a widebody freighter with sections, contours, the weight before the destination and SI weights (CZ 2557/19SEP26)", () => {
+  it("reads a widebody freighter with sections, contours and the weight before the destination (CZ 2557/19SEP26)", () => {
     const { data, warnings, header } = cpm(SAMPLES.CPM_CZ);
     expect(warnings).toEqual([]);
     expect(header?.date).toEqual({ date: "2026-09-19" });
@@ -183,22 +172,21 @@ describe("CPM", () => {
       destination: "BUD",
       contour: "Q5",
       category: "C",
+      items: [{ weight: 4765, category: "C" }],
+      freeQuarters: null,
       codes: ["ELI"],
     });
     expect(data.positions.find((p) => p.position === "R")).toMatchObject({ deck: "MAIN", side: "CENTER" });
     expect(data.positions.find((p) => p.position === "11P")).toMatchObject({ deck: "LOWER", hold: "1", empty: true });
     expect(data.positions.find((p) => p.position === "33LR")).toMatchObject({ hold: "3", uld: "FLA21075CZ", codes: ["BIG"] });
     expect(data.positions.find((p) => p.position === "BLK")).toMatchObject({ deck: "LOWER", hold: null, weight: 108, category: "C" });
-    expect(data.weights).toEqual([
-      { name: "ZFW", value: 234408 },
-      { name: "ZF INDEX", value: 41.46 },
-      { name: "ZF C.G.", value: 26.71 },
-      { name: "TOW", value: 346078 },
-      { name: "TO INDEX", value: 35.67 },
-      { name: "TO C.G.", value: 26.27 },
-      { name: "STAB TRIM", value: 5.89 },
-      { name: "TAKE OFF FUEL", value: 111670 },
-      { name: "TRIP FUEL", value: 98206 },
+    // The SI, weights included, is kept as free text up to CPM END.
+    expect(data.si?.split("\n")).toEqual([
+      "SI ALL WEIGHTS IN KG, ALL DIMENSIONS IN CM",
+      "SI ZFW=234408,ZF INDEX=41.46,ZF C.G.=26.71",
+      "SI TOW=346078,TO INDEX=35.67,TO C.G.=26.27",
+      "SI STAB TRIM=5.89",
+      "SI TAKE OFF FUEL 111670,TRIP FUEL 98206",
     ]);
   });
 

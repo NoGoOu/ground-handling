@@ -30,11 +30,8 @@ describe("the infographic of a flight part", () => {
         { hold: "3", weight: 351 },
         { hold: "4", weight: 277 },
       ],
-      byCategory: [
-        { key: "C", value: 0 },
-        { key: "E", value: 1983 },
-        { key: "M", value: 0 },
-      ],
+      // The categories come from the CPM's items; the LDM's SI is not parsed.
+      byCategory: [{ key: "E", value: 1983 }],
       source: { messageId: "ldm" },
     });
   });
@@ -56,14 +53,13 @@ describe("the infographic of a flight part", () => {
       { code: "ELD", positions: ["A9", "A10"] },
       { code: "FKT", positions: ["1", "3", "4"] },
     ]);
-    expect(p7.weights).toBeNull();
   });
 
   it("shows the checks across the messages: the known UCM–CPM error", () => {
     expect(p7.warnings.map((w) => w.code)).toEqual(["ucmBaseNotInCpm", "cpmStackNotInUcm", "ucmEmptyInCpm"]);
   });
 
-  it("builds the load from the CPM when there is no LDM, with bulk, categories, codes and weights (CZ 2557)", () => {
+  it("builds the load from the CPM when there is no LDM, with bulk, categories and codes (CZ 2557)", () => {
     const cz = buildInfographic([current(SAMPLES.CPM_CZ, "cz", "2026-09-19T20:00:00Z")]);
     expect(cz.passengers).toBeNull();
     expect(cz.load).toMatchObject({
@@ -84,18 +80,14 @@ describe("the infographic of a flight part", () => {
       { code: "ELM", positions: ["13P", "21P"] },
       { code: "BIG", positions: ["33LR", "41LR"] },
     ]);
-    expect(cz.weights?.values.find((w) => w.name === "TOW")).toEqual({ name: "TOW", value: 346078 });
     expect(cz.stacks).toBeNull();
     expect(cz.warnings).toEqual([]);
   });
 
-  it("gives the baggage in pieces and kg of a passenger flight (EW 2783)", () => {
+  it("gives the passengers of a passenger flight, without categories from its SI (EW 2783)", () => {
     const ew = buildInfographic([current(SAMPLES.LDM_EW, "ew", "2026-09-03T10:00:00Z")]);
     expect(ew.passengers).toMatchObject({ male: 82, female: 52, total: 134 });
-    expect(ew.load?.byCategory).toEqual([
-      { key: "BP", value: 57 },
-      { key: "B", value: 825 },
-    ]);
+    expect(ew.load?.byCategory).toEqual([]);
   });
 
   it("is empty without messages", () => {
@@ -105,7 +97,6 @@ describe("the infographic of a flight part", () => {
       ulds: null,
       stacks: null,
       specialCodes: null,
-      weights: null,
       warnings: [],
     });
   });
