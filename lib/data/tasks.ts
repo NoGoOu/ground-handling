@@ -352,3 +352,9 @@ export async function flightPartAgents(flightId: string): Promise<{ arrival: str
     departure: ids(views.map((view) => view.effectiveDepartureAgent?.id)),
   };
 }
+
+/** The primary task of a flight (rule 30: flight-level display follows it). */
+export async function primaryTaskView(flightId: string): Promise<TaskView | null> {
+  const primary = await prisma.task.findFirst({ where: { flightId, isPrimary: true }, select: { id: true } });
+  return primary ? getTaskView(primary.id) : null;
+}

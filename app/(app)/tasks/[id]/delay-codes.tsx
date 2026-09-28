@@ -60,3 +60,17 @@ export function RemoveDelayCodeButton({ action }: { action: () => Promise<Action
     </form>
   );
 }
+
+/** The delay code a slot offers, one click to add (8. mérföldkő). */
+export function SlotOfferButton({ label, action }: { label: string; action: () => Promise<ActionResult> }) {
+  const [result, formAction, pending] = useActionState(action, null);
+  return (
+    <form action={formAction} className="flex flex-wrap items-center gap-2 text-sm">
+      <span className="text-sky-900">{label}</span>
+      <button type="submit" disabled={pending} className="btn btn-secondary py-1 text-xs">
+        {messages.slot.offerCodeButton}
+      </button>
+      <ActionFeedback result={result} successText={t.added} />
+    </form>
+  );
+}

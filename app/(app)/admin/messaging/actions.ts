@@ -14,6 +14,10 @@ import { fieldErrors, formValues, type FormState } from "@/lib/validation/form";
 import {
   ADDRESS_FIELDS,
   addressSchema,
+  AIRPORT_FIELDS,
+  airportSchema,
+  slotToleranceSchema,
+  type AirportFormInput,
   SENDER_FIELDS,
   senderSchema,
   type AddressFormInput,
@@ -21,7 +25,8 @@ import {
 } from "@/lib/validation/messaging";
 
 // Messaging settings (CLAUDE.md, 7. mérföldkő): the keys of the receiving API,
-// the delay code table, the address book and the sender.
+// the delay code table, the address book, the sender, the airports and the
+// slot tolerance.
 
 const e = messages.messaging.apiKeys.errors;
 
@@ -141,4 +146,47 @@ export async function saveSender(_previous: SenderFormState, formData: FormData)
   await prisma.setting.upsert({ where: { id: SETTINGS_ID }, create: { id: SETTINGS_ID, ...parsed.data }, update: parsed.data });
   refresh();
   return { notice: messages.addressBook.senderSaved };
+}
+
+export type AirportFormState = FormState<AirportFormInput>;
+
+/** Creates or updates an airport; airports are never deleted (8. mérföldkő). */
+async function saveAirport(id: string | null, formData: FormData): Promise<AirportFormState> {
+  const user = await getCurrentUser();
+  if (!user || !canManageMessaging(user)) return { message: messages.errors.forbidden };
+  const values = formValues(formData, AIRPORT_FIELDS);
+  const parsed = airportSchema.safeParse(values);
+  if (!parsed.success) return { errors: fieldErrors(parsed.error), values };
+  try {
+    if (id) await prisma.airport.update({ where: { id }, data: parsed.data });
+    else await prisma.airport.create({ data: parsed.data });
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      return { errors: { iataCode: messages.airports.errors.taken }, values };
+    }
+    throw error;
+  }
+  refresh();
+  return id ? { notice: messages.airports.saved } : { notice: messages.airports.saved, values: { iataCode: "", icaoCode: "", name: "" } };
+}
+
+export async function createAirport(_previous: AirportFormState, formData: FormData): Promise<AirportFormState> {
+  return saveAirport(null, formData);
+}
+
+export async function updateAirport(id: string, _previous: AirportFormState, formData: FormData): Promise<AirportFormState> {
+  return saveAirport(id, formData);
+}
+
+export type SlotToleranceFormState = FormState<{ slotToleranceMinutes: string }>;
+
+export async function saveSlotTolerance(_previous: SlotToleranceFormState, formData: FormData): Promise<SlotToleranceFormState> {
+  const user = await getCurrentUser();
+  if (!user || !canManageMessaging(user)) return { message: messages.errors.forbidden };
+  const values = formValues(formData, ["slotToleranceMinutes"] as const);
+  const parsed = slotToleranceSchema.safeParse(values);
+  if (!parsed.success) return { errors: fieldErrors(parsed.error), values };
+  await prisma.setting.upsert({ where: { id: SETTINGS_ID }, create: { id: SETTINGS_ID, ...parsed.data }, update: parsed.data });
+  refresh();
+  return { notice: messages.slotTolerance.saved };
 }

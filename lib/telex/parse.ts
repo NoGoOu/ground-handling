@@ -1,3 +1,4 @@
+import { parseAdexp, type SlotData } from "./adexp";
 import { parseCpm, type CpmData } from "./cpm";
 import { bodyLines, parseHeader, type Header } from "./header";
 import { parseLdm, type LdmData } from "./ldm";
@@ -17,7 +18,9 @@ export type MessageData =
   | { type: "CPM"; data: CpmData }
   | { type: "UCM"; data: UcmData }
   | { type: "PSM"; data: PsmData }
-  | { type: "PTM"; data: PtmData };
+  | { type: "PTM"; data: PtmData }
+  /** An ADEXP slot message (SAM, SRM or another title); its header is its fields. */
+  | { type: "SLOT"; data: SlotData };
 
 export type ParsedMessage = MessageData & { header: Header | null; warnings: TelexWarning[] };
 
@@ -46,8 +49,14 @@ function parsePersonal(type: "PSM" | "PTM", lines: readonly string[]): ParsedMes
   return { type, header, data: parsed.data, warnings: parsed.warnings };
 }
 
-export function parseMessage(message: RawMessage & { type: SupportedType }): ParsedMessage {
-  if (message.type === "PSM" || message.type === "PTM") return parsePersonal(message.type, message.lines);
+export function parseMessage(message: RawMessage & { type: SupportedType }): ParsedMessage;
+export function parseMessage(message: RawMessage): ParsedMessage;
+export function parseMessage(message: RawMessage): ParsedMessage {
+  if (message.family === "ADEXP") {
+    const parsed = parseAdexp(message.lines);
+    return { type: "SLOT", header: null, data: parsed.data, warnings: parsed.warnings };
+  }
+  if (message.type === "PSM" || message.type === "PTM") return parsePersonal(message.type as "PSM" | "PTM", message.lines);
   const [headerLine, ...body] = bodyLines(message.lines);
   const header = headerLine === undefined ? null : parseHeader(headerLine);
   const warnings: TelexWarning[] = [];

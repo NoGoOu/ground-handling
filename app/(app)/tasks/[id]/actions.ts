@@ -5,6 +5,8 @@ import { Prisma } from "@/generated/prisma/client";
 import { TaskStatus } from "@/generated/prisma/enums";
 import { ActionError, actionUser, runAction, type ActionResult } from "@/lib/action";
 import { addDelayRecord, removeDelayRecord } from "@/lib/data/delays";
+import { currentSlots } from "@/lib/data/slots";
+import { slotDelay } from "@/lib/telex/slot";
 import { flightPartAgents, getTaskView, taskAssignment, type TaskView } from "@/lib/data/tasks";
 import { prisma } from "@/lib/db";
 import { messages } from "@/lib/messages";
@@ -168,6 +170,21 @@ export async function removeDelayCode(recordId: string): Promise<ActionResult> {
     if (!record) throw new ActionError(messages.errors.notFound);
     const user = await delayActor(record.flightId);
     if (!(await removeDelayRecord(recordId, user.id))) throw new ActionError(messages.errors.notFound);
+    refresh();
+  });
+}
+
+/** Adds the delay code the slot gives (8. mérföldkő: offered, never automatic). */
+export async function addSlotDelayCode(flightId: string): Promise<ActionResult> {
+  return runAction(async () => {
+    const user = await delayActor(flightId);
+    const flight = await prisma.flight.findUnique({ where: { id: flightId }, select: { std: true } });
+    const slot = (await currentSlots([flightId])).get(flightId);
+    const offer = slot ? slotDelay(slot, flight?.std ?? null) : null;
+    if (!offer?.code) throw new ActionError(messages.errors.notFound);
+    const known = await prisma.delayCode.findFirst({ where: { code: offer.code, active: true } });
+    if (!known) throw new ActionError(messages.delayRecords.unknownCode);
+    if (!(await addDelayRecord(flightId, offer.code, offer.minutes, user.id))) throw new ActionError(messages.delayRecords.cancelled);
     refresh();
   });
 }

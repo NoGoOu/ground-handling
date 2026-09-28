@@ -4,12 +4,14 @@ import {
   DelayBadge,
   LateBadge,
   MissingBadge,
+  SlotBadge,
   StatusBadge,
   TaskTypeBadge,
   TypeBadge,
 } from "@/components/badges";
 import { DateNav } from "@/components/date-nav";
 import { TimeStack } from "@/components/time-stack";
+import { currentSlots } from "@/lib/data/slots";
 import { groupByFlight, listTaskViewsForDay, type TaskView } from "@/lib/data/tasks";
 import { listAgentOptions } from "@/lib/data/users";
 import { flightLabel } from "@/lib/flight";
@@ -18,6 +20,8 @@ import { fmt } from "@/lib/messages/format";
 import { canManageFlights } from "@/lib/permissions";
 import { dateParam } from "@/lib/search-params";
 import { requireCapability } from "@/lib/session";
+import { getSettings } from "@/lib/settings";
+import { slotLateness } from "@/lib/telex/slot";
 import { toLocalDate } from "@/lib/time";
 import { assignAgents } from "./actions";
 import { AssignmentForm, type AgentOption } from "./assignment-form";
@@ -49,6 +53,14 @@ export default async function FlightsPage(props: PageProps<"/flights">) {
   // The list is per flight; its tasks come together, the primary one first (5. mérföldkő).
   const flights = groupByFlight(tasks);
   const agents = await listAgentOptions(tasks.flatMap((task) => [task.arrivalAgent?.id ?? null, task.departureAgent?.id ?? null]));
+  // "Slot hh:mm" (8. mérföldkő), warning against the primary task's planned off-block.
+  const [slots, settings] = await Promise.all([currentSlots(flights.map((f) => f.primary.flight.id)), getSettings()]);
+  const slotBadge = (primary: TaskView) => {
+    const slot = slots.get(primary.flight.id);
+    if (!slot) return null;
+    const late = slotLateness(primary.timeline.departureAnchor, slot, settings.slotToleranceMinutes) !== null;
+    return <SlotBadge ctot={slot.ctot} target={slot.targetOffBlock} late={late} />;
+  };
 
   return (
     <div className="flex flex-col gap-4">
@@ -121,8 +133,9 @@ export default async function FlightsPage(props: PageProps<"/flights">) {
                         { label: tt.atd, time: primary.timeline.effectiveAtd, emphasis: true },
                       ]}
                     />
-                    <div className="mt-1">
+                    <div className="mt-1 flex flex-wrap gap-1">
                       <DelayBadge minutes={primary.timeline.delayMinutes} />
+                      {slotBadge(primary)}
                     </div>
                   </td>
                   <td className="px-3 py-2">

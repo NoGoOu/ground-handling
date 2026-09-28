@@ -5,7 +5,8 @@ import { messageEffects, versionKey, versionKind, type EffectFlight, type Resolv
 import { bodyLines, parseHeader, type Header } from "@/lib/telex/header";
 import { matchMessage, splitFlightNumber, type MatchFlight, type Part, type UnmatchedReason } from "@/lib/telex/match";
 import { parseMessage, type MessageData, type ParsedMessage } from "@/lib/telex/parse";
-import { isSupported, normaliseForHash, splitMessages, type MessageType, type RawMessage, type SupportedType } from "@/lib/telex/split";
+import { matchSlot, type SlotFlight } from "@/lib/telex/slot";
+import { isSupported, normaliseForHash, splitMessages, TYPE_B_TYPES, type MessageType, type RawMessage } from "@/lib/telex/split";
 import { storedForm } from "@/lib/telex/stored";
 import { warn, type TelexWarning } from "@/lib/telex/warnings";
 
@@ -27,16 +28,16 @@ export interface ReceiveOptions {
 export type ProcessedMessage =
   | {
       status: "stored";
-      type: SupportedType;
+      type: MessageType;
       messageId: string;
       flightNumber: string | null;
       matched: { flightId: string; flightNumber: string; operatingDay: string; part: Part } | null;
-      unmatchedReason: UnmatchedReason | null;
+      unmatchedReason: UnmatchedReason | "noAirport" | null;
       /** False when a version received later already counts. */
       current: boolean;
       warnings: TelexWarning[];
     }
-  | { status: "duplicate"; type: SupportedType; messageId: string }
+  | { status: "duplicate"; type: MessageType; messageId: string }
   | { status: "unsupported"; type: MessageType; flightNumber: string | null; headerDate: string | null };
 
 /** What the Message.parsed column holds. */
@@ -55,7 +56,9 @@ const dayText = (date: Date | null) => (date ? date.toISOString().slice(0, 10) :
 /** The ParsedMessage again from a stored row. */
 export function parsedOf(row: { type: string; parsed: Prisma.JsonValue }): ParsedMessage {
   const stored = row.parsed as unknown as StoredParsed;
-  return { type: row.type, header: stored.header, data: stored.data, warnings: [] } as ParsedMessage;
+  // A slot message is stored under its TITLE (SAM, SRM…); parsed it is a SLOT.
+  const type = (TYPE_B_TYPES as readonly string[]).includes(row.type) ? row.type : "SLOT";
+  return { type, header: stored.header, data: stored.data, warnings: [] } as ParsedMessage;
 }
 
 export const FLIGHT_SELECT = {
@@ -197,12 +200,106 @@ async function candidates(parsed: ParsedMessage, airlines: { id: string; code: s
   });
 }
 
+/** The ICAO → IATA table of the airports (8. mérföldkő). */
+async function airportTable(): Promise<(icao: string) => string | null> {
+  const airports = await prisma.airport.findMany({ select: { iataCode: true, icaoCode: true } });
+  const byIcao = new Map(airports.map((a) => [a.icaoCode, a.iataCode]));
+  return (icao) => byIcao.get(icao) ?? null;
+}
+
+/** The departures a slot message may belong to: its flight plan's, or those of its EOBD. */
+async function slotCandidates(ifplid: string | null, eobd: string | null) {
+  return prisma.flight.findMany({
+    where: {
+      std: { not: null },
+      OR: [
+        ...(ifplid ? [{ departureIfplid: ifplid }] : []),
+        ...(eobd ? [{ departureFlightDate: new Date(`${eobd}T00:00:00Z`) }] : []),
+      ],
+    },
+    select: { ...FLIGHT_SELECT, etd: true, departureIfplid: true },
+  });
+}
+
+const slotFlight = (f: FlightRow & { etd: Date | null; departureIfplid: string | null }): SlotFlight => ({
+  id: f.id,
+  departureFlightDate: dayText(f.departureFlightDate),
+  destination: f.destination,
+  std: f.std,
+  etd: f.etd,
+  departureIfplid: f.departureIfplid,
+  departureCancelled: f.departureCancelled,
+});
+
+/** Where a received message goes: a flight part, or why none. */
+type Outcome =
+  | {
+      matched: true;
+      flight: FlightRow;
+      part: Part;
+      flightNumber: string;
+      operatingDay: string;
+      fillRegistration: string | null;
+      /** A slot message's flight plan id, kept on the departure for later ones. */
+      ifplid: string | null;
+      warnings: TelexWarning[];
+    }
+  | { matched: false; reason: UnmatchedReason | "noAirport"; operatingDay: string | null; warnings: TelexWarning[] };
+
+async function outcomeOf(parsed: ParsedMessage, receivedAt: Date, airlines: { id: string; code: string }[]): Promise<Outcome> {
+  if (parsed.type === "SLOT") {
+    const flights = await slotCandidates(parsed.data.ifplid, parsed.data.eobd);
+    const match = matchSlot(parsed.data, await airportTable(), flights.map(slotFlight));
+    if (!match.matched) return { matched: false, reason: match.reason, operatingDay: parsed.data.eobd, warnings: [] };
+    const flight = flights.find((f) => f.id === match.flightId)!;
+    return {
+      matched: true,
+      flight,
+      part: "DEPARTURE_PART",
+      flightNumber: flight.outboundFlightNumber ?? "",
+      operatingDay: dayText(flight.departureFlightDate) ?? "",
+      fillRegistration: null,
+      ifplid: parsed.data.ifplid,
+      warnings: [],
+    };
+  }
+  const flights = await candidates(parsed, airlines);
+  const match = matchMessage(parsed, receivedAt, airlines, flights.map(matchFlight));
+  if (!match.matched) return { matched: false, reason: match.reason, operatingDay: match.key?.operatingDay ?? null, warnings: match.warnings };
+  return {
+    matched: true,
+    flight: flights.find((f) => f.id === match.flightId)!,
+    part: match.key.part,
+    flightNumber: match.key.flightNumber,
+    operatingDay: match.key.operatingDay,
+    fillRegistration: match.fillRegistration,
+    ifplid: null,
+    warnings: match.warnings,
+  };
+}
+
+/** The header fields a message is listed by; a slot message by its call sign, EOBD and route. */
+function headerFields(parsed: ParsedMessage) {
+  if (parsed.type === "SLOT") {
+    const d = parsed.data;
+    return { flightNumber: d.arcid, headerDate: d.eobd, registration: null, station: d.adep && d.ades ? `${d.adep}-${d.ades}` : null };
+  }
+  const header = parsed.header;
+  const station =
+    parsed.type === "MVT" || parsed.type === "UCM" || parsed.type === "PSM"
+      ? parsed.data.station || null
+      : parsed.type === "CPM" || parsed.type === "PTM"
+        ? [parsed.data.from, parsed.data.to].filter(Boolean).join("") || null
+        : null;
+  return { flightNumber: header?.flightNumber ?? null, headerDate: header?.dateText ?? null, registration: header?.registration ?? null, station };
+}
+
 function isUniqueViolation(error: unknown): boolean {
   return error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002";
 }
 
 async function receiveOne(
-  raw: RawMessage & { type: SupportedType },
+  raw: RawMessage,
   envelope: string | null,
   options: ReceiveOptions,
   airlines: { id: string; code: string }[],
@@ -214,15 +311,9 @@ async function receiveOne(
   const duplicate = await prisma.message.findUnique({ where: { textHash: hash }, select: { id: true } });
   if (duplicate) return { status: "duplicate", type: raw.type, messageId: duplicate.id };
 
-  const flights = await candidates(parsed, airlines);
-  const match = matchMessage(parsed, options.receivedAt, airlines, flights.map(matchFlight));
+  const outcome = await outcomeOf(parsed, options.receivedAt, airlines);
+  const fields = headerFields(parsed);
   const header = parsed.header;
-  const station =
-    parsed.type === "MVT" || parsed.type === "UCM" || parsed.type === "PSM"
-      ? parsed.data.station || null
-      : parsed.type === "CPM" || parsed.type === "PTM"
-        ? [parsed.data.from, parsed.data.to].filter(Boolean).join("") || null
-        : null;
 
   try {
     return await prisma.$transaction(async (tx) => {
@@ -238,57 +329,53 @@ async function receiveOne(
           apiKeyId: options.apiKeyId,
           sourceNote: options.sourceNote,
           receivedAt: options.receivedAt,
-          flightNumber: header?.flightNumber ?? null,
-          headerDate: header?.dateText ?? null,
-          registration: header?.registration ?? null,
-          station,
-          flightDate: match.key ? new Date(`${match.key.operatingDay}T00:00:00Z`) : null,
+          ...fields,
+          flightDate: outcome.operatingDay ? new Date(`${outcome.operatingDay}T00:00:00Z`) : null,
           parsed: json({ header, data: parsed.data }),
-          warnings: json([...parsed.warnings, ...match.warnings]),
-          unmatchedReason: match.matched ? null : match.reason,
+          warnings: json([...parsed.warnings, ...outcome.warnings]),
+          unmatchedReason: outcome.matched ? null : outcome.reason,
           createdById: options.userId,
         },
         select: { id: true },
       });
-      if (!match.matched) {
+      if (!outcome.matched) {
         return {
           status: "stored" as const,
           type: raw.type,
           messageId: created.id,
-          flightNumber: header?.flightNumber ?? null,
+          flightNumber: fields.flightNumber,
           matched: null,
-          unmatchedReason: match.reason,
+          unmatchedReason: outcome.reason,
           current: false,
-          warnings: [...parsed.warnings, ...match.warnings],
+          warnings: [...parsed.warnings, ...outcome.warnings],
         };
       }
-      const flight = flights.find((f) => f.id === match.flightId)!;
+      const { flight } = outcome;
       const applied = await applyToFlight(
         tx,
         created.id,
         parsed,
         flight,
-        match.key.part,
+        outcome.part,
         options.receivedAt,
         options.userId,
-        match.fillRegistration,
-        [...parsed.warnings, ...match.warnings],
+        outcome.fillRegistration,
+        [...parsed.warnings, ...outcome.warnings],
         raw.correction,
       );
+      // The flight plan id stays on the departure: later slot messages match by it.
+      if (outcome.ifplid) {
+        await tx.flight.updateMany({ where: { id: flight.id, departureIfplid: null }, data: { departureIfplid: outcome.ifplid } });
+      }
       return {
         status: "stored" as const,
         type: raw.type,
         messageId: created.id,
-        flightNumber: header?.flightNumber ?? null,
-        matched: {
-          flightId: flight.id,
-          flightNumber: match.key.flightNumber,
-          operatingDay: match.key.operatingDay,
-          part: match.key.part,
-        },
+        flightNumber: fields.flightNumber,
+        matched: { flightId: flight.id, flightNumber: outcome.flightNumber, operatingDay: outcome.operatingDay, part: outcome.part },
         unmatchedReason: null,
         current: applied.current,
-        warnings: [...parsed.warnings, ...match.warnings, ...applied.warnings],
+        warnings: [...parsed.warnings, ...outcome.warnings, ...applied.warnings],
       };
     });
   } catch (error) {
@@ -328,8 +415,8 @@ export async function processText(text: string, options: ReceiveOptions): Promis
   const results: ProcessedMessage[] = [];
   for (const raw of messages) {
     results.push(
-      isSupported(raw.type)
-        ? await receiveOne(raw as RawMessage & { type: SupportedType }, envelope, options, airlines)
+      isSupported(raw.type) || raw.family === "ADEXP"
+        ? await receiveOne(raw, envelope, options, airlines)
         : await logUnsupported(raw, options),
     );
   }
@@ -363,6 +450,9 @@ export async function assignMessage(messageId: string, flightId: string, part: P
       [...(message.warnings as unknown as TelexWarning[]), ...extra],
       message.correction,
     );
+    if (parsed.type === "SLOT" && parsed.data.ifplid && part === "DEPARTURE_PART") {
+      await tx.flight.updateMany({ where: { id: flight.id, departureIfplid: null }, data: { departureIfplid: parsed.data.ifplid } });
+    }
     return [...extra, ...applied.warnings];
   });
 }
@@ -396,9 +486,10 @@ const DAY_MS = 24 * 60 * 60 * 1000;
  * number within three days of its operating day (or of its receipt).
  */
 async function candidateParts(
-  message: { flightNumber: string | null; flightDate: Date | null; receivedAt: Date },
+  message: { type: string; flightNumber: string | null; flightDate: Date | null; receivedAt: Date },
   airlines: { id: string; code: string }[],
 ): Promise<CandidatePart[]> {
+  if (!(TYPE_B_TYPES as readonly string[]).includes(message.type)) return slotCandidateParts(message.flightDate);
   const split = message.flightNumber ? splitFlightNumber(message.flightNumber, airlines) : null;
   if (!split) return [];
   const around = message.flightDate ?? new Date(`${message.receivedAt.toISOString().slice(0, 10)}T00:00:00Z`);
@@ -423,6 +514,23 @@ async function candidateParts(
         : []),
     ])
     .sort((a, b) => a.scheduled.getTime() - b.scheduled.getTime());
+}
+
+/** A slot message has no flight number: the BUD departures of its EOBD. */
+async function slotCandidateParts(eobd: Date | null): Promise<CandidatePart[]> {
+  if (!eobd) return [];
+  const flights = await prisma.flight.findMany({
+    where: { departureFlightDate: eobd, std: { not: null }, outboundFlightNumber: { not: null } },
+    select: { id: true, outboundFlightNumber: true, departureFlightDate: true, std: true },
+    orderBy: { std: "asc" },
+  });
+  return flights.map((f) => ({
+    flightId: f.id,
+    part: "DEPARTURE_PART" as const,
+    flightNumber: f.outboundFlightNumber!,
+    operatingDay: dayText(f.departureFlightDate)!,
+    scheduled: f.std!,
+  }));
 }
 
 /** The unmatched messages, newest first, with the parts they may go to; or the discarded ones. */

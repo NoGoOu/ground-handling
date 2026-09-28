@@ -7,25 +7,38 @@ import { messages } from "@/lib/messages";
 import { fmt } from "@/lib/messages/format";
 import { canManageMessaging } from "@/lib/permissions";
 import { requireCapability } from "@/lib/session";
+import { getSettings } from "@/lib/settings";
 import { formatDateTime } from "@/lib/time";
 import { ADDRESS_BOOK_TYPES } from "@/lib/validation/messaging";
 import {
   addAddress,
+  createAirport,
   createDelayCode,
   createKey,
   removeAddress,
   revokeKey,
   saveSender,
+  saveSlotTolerance,
   toggleAddress,
+  updateAirport,
   updateDelayCode,
 } from "./actions";
-import { AddressActions, AddressForm, ApiKeyForm, DelayCodeForm, RevokeKeyButton, SenderForm } from "./forms";
+import {
+  AddressActions,
+  AddressForm,
+  AirportForm,
+  ApiKeyForm,
+  DelayCodeForm,
+  RevokeKeyButton,
+  SenderForm,
+  SlotToleranceForm,
+} from "./forms";
 
 const t = messages.messaging;
 
 export default async function MessagingSettingsPage() {
   await requireCapability(canManageMessaging);
-  const [keys, calls, delayCodes, airlines, addresses, channels] = await Promise.all([
+  const [keys, calls, delayCodes, airlines, addresses, channels, airports, settings] = await Promise.all([
     listApiKeys(),
     listApiCalls(),
     listDelayCodes(),
@@ -35,6 +48,8 @@ export default async function MessagingSettingsPage() {
       orderBy: [{ airline: { name: "asc" } }, { messageType: "asc" }, { address: "asc" }],
     }),
     channelSetup(),
+    prisma.airport.findMany({ orderBy: { iataCode: "asc" } }),
+    getSettings(),
   ]);
   const a = messages.addressBook;
   const state = (on: boolean) => (on ? a.configured : a.notConfigured);
@@ -120,6 +135,33 @@ export default async function MessagingSettingsPage() {
             ))}
           </ul>
         )}
+      </section>
+
+      <section className="flex flex-col gap-3 rounded-xl border border-neutral-200 bg-white p-4">
+        <h2 className="font-semibold">{messages.airports.title}</h2>
+        <p className="max-w-3xl text-sm text-neutral-600">{messages.airports.hint}</p>
+        <AirportForm action={createAirport} initial={{ iataCode: "", icaoCode: "", name: "" }} submitLabel={messages.airports.create} />
+        {airports.length === 0 ? (
+          <p className="text-sm text-neutral-600">{messages.airports.empty}</p>
+        ) : (
+          <ul className="flex flex-col divide-y divide-neutral-100">
+            {airports.map((airport) => (
+              <li key={airport.id} className="py-2">
+                <AirportForm
+                  action={updateAirport.bind(null, airport.id)}
+                  initial={{ iataCode: airport.iataCode, icaoCode: airport.icaoCode, name: airport.name }}
+                  submitLabel={messages.airports.save}
+                />
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className="flex flex-col gap-3 rounded-xl border border-neutral-200 bg-white p-4">
+        <h2 className="font-semibold">{messages.slotTolerance.title}</h2>
+        <p className="max-w-3xl text-sm text-neutral-600">{messages.slotTolerance.hint}</p>
+        <SlotToleranceForm action={saveSlotTolerance} initial={settings.slotToleranceMinutes} />
       </section>
 
       <section className="flex flex-col gap-3 rounded-xl border border-neutral-200 bg-white p-4">

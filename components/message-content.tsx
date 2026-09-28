@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import type { FlightMessage } from "@/lib/data/messages";
 import { messages } from "@/lib/messages";
 import { fmt } from "@/lib/messages/format";
+import { slotOf } from "@/lib/telex/slot";
 import { formatDateTime } from "@/lib/time";
 
 // The parsed content of a message, in short (7. mérföldkő, "Üzenetek" fül).
@@ -128,6 +129,24 @@ export function MessageContent({ message }: { message: FlightMessage }) {
         </Row>,
       );
     }
+  }
+
+  if (parsed.type === "SLOT") {
+    const { data } = parsed;
+    const slot = slotOf(data);
+    rows.push(<Row key="plan" label={t.fields.flightPlan}>{[data.arcid, data.ifplid].filter(Boolean).join(" · ")}</Row>);
+    if (data.adep || data.ades) rows.push(<Row key="route" label={t.fields.route}>{[data.adep, data.ades].filter(Boolean).join(" → ")}</Row>);
+    if (slot) {
+      rows.push(<Row key="eobt" label="EOBT">{formatDateTime(slot.eobt)}</Row>);
+      rows.push(
+        <Row key="ctot" label="CTOT">
+          {fmt(messages.slot.details, { ctot: formatDateTime(slot.ctot), taxi: slot.taxiMinutes, target: formatDateTime(slot.targetOffBlock) })}
+        </Row>,
+      );
+    }
+    if (data.regulations.length > 0) rows.push(<Row key="regul" label="REGUL">{data.regulations.join(", ")}</Row>);
+    if (data.cause) rows.push(<Row key="cause" label="REGCAUSE">{fmt(messages.slot.cause, { reason: data.cause.reason, code: data.cause.delayCode ?? "–" })}</Row>);
+    if (data.other.length > 0) rows.push(<Row key="other" label={t.fields.other}><span className="font-mono text-xs">{data.other.join(" ")}</span></Row>);
   }
 
   if (parsed.type === "PTM") {

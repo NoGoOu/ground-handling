@@ -6,13 +6,14 @@ import {
   DeviationBadge,
   LateBadge,
   MissingBadge,
+  SlotBadge,
   StatusBadge,
   TaskTypeBadge,
   TypeBadge,
 } from "@/components/badges";
 import { EstimateNote } from "@/components/estimate-note";
 import { TimeStack } from "@/components/time-stack";
-import { flightPartAgents, getTaskView, listFlightTasks, taskAssignment, type TaskView } from "@/lib/data/tasks";
+import { flightPartAgents, getTaskView, listFlightTasks, primaryTaskView, taskAssignment, type TaskView } from "@/lib/data/tasks";
 import { flightLabel } from "@/lib/flight";
 import { dayAnchors } from "@/lib/flight-day";
 import { messages } from "@/lib/messages";
@@ -30,10 +31,13 @@ import { requireUser, type CurrentUser } from "@/lib/session";
 import { formatDateTime, formatTime, formatTimeOnDay, toLocalDate, toLocalDateTimeInput } from "@/lib/time";
 import { hasPart, isRequiredMissing, type Part, type TimelineRow } from "@/lib/turnaround";
 import { listDelayCodes, listDelayRecords, type DelayRecordRow } from "@/lib/data/delays";
+import { currentSlots, type FlightSlot } from "@/lib/data/slots";
+import { getSettings } from "@/lib/settings";
+import { slotDelay, slotLateness } from "@/lib/telex/slot";
 import { checkDelays } from "@/lib/telex/checks";
 import { warningText } from "@/lib/telex/describe";
-import { addDelayCode, changeStatus, recordNow, removeDelayCode, setMilestoneTime } from "./actions";
-import { AddDelayCodeForm, RemoveDelayCodeButton } from "./delay-codes";
+import { addDelayCode, addSlotDelayCode, changeStatus, recordNow, removeDelayCode, setMilestoneTime } from "./actions";
+import { AddDelayCodeForm, RemoveDelayCodeButton, SlotOfferButton } from "./delay-codes";
 import { MilestoneActions } from "./milestone-actions";
 import { StatusControl } from "./status-control";
 import { TaskTabs } from "./tabs";
@@ -49,15 +53,51 @@ interface ViewContext {
   now: Date;
 }
 
+/** The slot of the flight's departure (8. mérföldkő), with the planned off-block of the primary task. */
+interface SlotInfo {
+  slot: FlightSlot;
+  plannedOffBlock: Date | null;
+  lateness: number | null;
+  tolerance: number;
+}
+
+function SlotLines({ info }: { info: SlotInfo }) {
+  const { slot } = info;
+  const s = messages.slot;
+  return (
+    <div className="flex flex-col gap-0.5 text-sm">
+      <p className="text-neutral-700">
+        {fmt(s.details, { ctot: formatTime(slot.ctot), taxi: slot.taxiMinutes, target: formatTime(slot.targetOffBlock) })}
+        {slot.regulations.length > 0 && <> · {fmt(s.regulations, { list: slot.regulations.join(", ") })}</>}
+        {slot.cause && <> · {fmt(s.cause, { reason: slot.cause.reason, code: slot.cause.delayCode ?? "–" })}</>}
+      </p>
+      <p className="text-xs text-neutral-500">{fmt(s.source, { title: slot.title, time: formatDateTime(slot.receivedAt) })}</p>
+      {info.lateness !== null && info.plannedOffBlock && (
+        <p role="status" className="text-orange-700">
+          ⚠{" "}
+          {fmt(s.warning, {
+            planned: formatTime(info.plannedOffBlock),
+            minutes: info.lateness,
+            target: formatTime(slot.targetOffBlock),
+            tolerance: info.tolerance,
+          })}
+        </p>
+      )}
+    </div>
+  );
+}
+
 function Header({
   task,
   day,
   siblings,
+  slot,
 }: {
   task: TaskView;
   day: string;
   /** The flight's other tasks the user may open (5. mérföldkő). */
   siblings: { id: string; isPrimary: boolean; taskType: { name: string; code: string } }[];
+  slot: SlotInfo | null;
 }) {
   const { flight, timeline } = task;
   // Rule 11: a one-sided flight shows only the part it has.
@@ -78,6 +118,7 @@ function Header({
         <CancelBadges arrival={flight.arrivalCancelled} departure={flight.departureCancelled} />
         <MissingBadge arrival={flight.arrivalMissing} departure={flight.departureMissing} />
         <DelayBadge minutes={timeline.delayMinutes} />
+        {slot && <SlotBadge ctot={slot.slot.ctot} target={slot.slot.targetOffBlock} late={slot.lateness !== null} />}
       </div>
       <p className="text-neutral-600">
         {flight.airline.name} · {fmt(t.stand, { stand: flight.stand ?? messages.flightForm.none })} ·{" "}
@@ -127,6 +168,7 @@ function Header({
           </div>
         ))}
       </div>
+      {slot && <SlotLines info={slot} />}
       <EstimateNote label={tt.eta} info={flight.etaInfo} />
       <EstimateNote label={tt.etd} info={flight.etdInfo} />
       {timeline.shape.type === "LONG" && timeline.shape.breakMinutes !== null && (
@@ -254,11 +296,14 @@ function DelayCodes({
   records,
   codes,
   editable,
+  slotOffer,
 }: {
   task: TaskView;
   records: DelayRecordRow[];
   codes: { code: string; description: string | null; active: boolean }[];
   editable: boolean;
+  /** The delay the slot gives, offered while no record has its code (8. mérföldkő). */
+  slotOffer: { code: string | null; minutes: number } | null;
 }) {
   const d = messages.delayRecords;
   const described = new Map(codes.map((c) => [c.code, c]));
@@ -305,6 +350,16 @@ function DelayCodes({
           ⚠ {warningText(w)}
         </p>
       ))}
+      {editable && !cancelled && slotOffer?.code && !records.some((r) => r.code === slotOffer.code) && (
+        described.get(slotOffer.code)?.active ? (
+          <SlotOfferButton
+            label={fmt(messages.slot.offerCode, { code: slotOffer.code, minutes: slotOffer.minutes })}
+            action={addSlotDelayCode.bind(null, task.flight.id)}
+          />
+        ) : (
+          <p className="text-sm text-neutral-600">{fmt(messages.slot.offerCodeMissing, { code: slotOffer.code, minutes: slotOffer.minutes })}</p>
+        )
+      )}
       {cancelled ? (
         <p className="text-sm text-neutral-600">{d.cancelled}</p>
       ) : (
@@ -370,6 +425,15 @@ export default async function TaskPage(props: PageProps<"/tasks/[id]">) {
   // The messages of the flight (7. mérföldkő), for whoever may see them.
   const agents = await flightPartAgents(task.flight.id);
   const showMessages = canViewFlightMessages(user, [...agents.arrival, ...agents.departure]);
+  // The slot (8. mérföldkő): flight-level, so against the primary task's planned off-block (rule 30).
+  const slot = task.flight.std ? (await currentSlots([task.flight.id])).get(task.flight.id) : undefined;
+  let slotInfo: SlotInfo | null = null;
+  if (slot) {
+    const primary = task.isPrimary ? task : await primaryTaskView(task.flight.id);
+    const plannedOffBlock = (primary ?? task).timeline.departureAnchor;
+    const tolerance = (await getSettings()).slotToleranceMinutes;
+    slotInfo = { slot, plannedOffBlock, lateness: slotLateness(plannedOffBlock, slot, tolerance), tolerance };
+  }
   // Delay codes belong to the flight's departure part.
   const [delayRecords, delayCodes] = task.flight.std
     ? await Promise.all([listDelayRecords(task.flight.id), listDelayCodes()])
@@ -388,7 +452,7 @@ export default async function TaskPage(props: PageProps<"/tasks/[id]">) {
         )}
       </div>
       {showMessages && <TaskTabs taskId={task.id} active="task" />}
-      <Header task={task} day={ctx.day} siblings={siblings} />
+      <Header task={task} day={ctx.day} siblings={siblings} slot={slotInfo} />
       {canChangeTaskStatus(user, taskAssignment(task)) && (
         <section className="flex flex-col gap-2 rounded-xl border border-neutral-200 bg-white p-4">
           <h2 className="font-semibold">{t.statusTitle}</h2>
@@ -403,6 +467,7 @@ export default async function TaskPage(props: PageProps<"/tasks/[id]">) {
           records={delayRecords}
           codes={delayCodes}
           editable={canRecordDelayCodes(user, agents.departure)}
+          slotOffer={slot ? slotDelay(slot, task.flight.std) : null}
         />
       )}
     </div>

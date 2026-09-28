@@ -4,7 +4,9 @@ import { notFound } from "next/navigation";
 import { TaskTypeBadge } from "@/components/badges";
 import { InfographicView } from "@/components/infographic";
 import { MessageContent } from "@/components/message-content";
+import { listDelayRecords } from "@/lib/data/delays";
 import { listFlightMessages, versionGroups, type FlightMessage } from "@/lib/data/messages";
+import { currentSlots } from "@/lib/data/slots";
 import { flightPartAgents, getTaskView, taskAssignment } from "@/lib/data/tasks";
 import { prisma } from "@/lib/db";
 import { flightLabel } from "@/lib/flight";
@@ -15,6 +17,7 @@ import { requireUser } from "@/lib/session";
 import { warningText } from "@/lib/telex/describe";
 import { buildInfographic, type CurrentMessage } from "@/lib/telex/infographic";
 import type { Part } from "@/lib/telex/match";
+import { slotDelay } from "@/lib/telex/slot";
 import { formatDateTime, toLocalDateTimeInput } from "@/lib/time";
 import { TaskTabs } from "../tabs";
 import { previewMvt, sendMvt, type MvtKind, type MvtValues } from "./actions";
@@ -175,6 +178,13 @@ export default async function TaskMessagesPage(props: PageProps<"/tasks/[id]/mes
     DEPARTURE_PART: !!task.flight.std && !task.flight.departureCancelled && canSendPartMessage(user, agents.departure),
   };
   const kindOf: Record<Part, MvtKind> = { ARRIVAL_PART: "AA", DEPARTURE_PART: "AD" };
+  // The DL line comes from the delay records; the slot's delay is offered there (8. mérföldkő).
+  const slot = canSend.DEPARTURE_PART ? (await currentSlots([task.flight.id])).get(task.flight.id) : undefined;
+  const slotOffer = slot ? slotDelay(slot, task.flight.std) : null;
+  const slotHint =
+    slotOffer?.code && !(await listDelayRecords(task.flight.id)).some((r) => r.code === slotOffer.code)
+      ? fmt(messages.slot.offerMvt, { code: slotOffer.code, minutes: slotOffer.minutes })
+      : null;
   const actual: Record<Part, string | null> = {
     ARRIVAL_PART: task.timeline.effectiveAta ? formatDateTime(task.timeline.effectiveAta) : null,
     DEPARTURE_PART: task.timeline.effectiveAtd ? formatDateTime(task.timeline.effectiveAtd) : null,
@@ -210,6 +220,7 @@ export default async function TaskMessagesPage(props: PageProps<"/tasks/[id]/mes
             <div className="flex flex-col gap-2 border-t border-neutral-200 pt-3">
               <h3 className="font-semibold">{part === "DEPARTURE_PART" ? messages.outbound.title : messages.outbound.arrivalTitle}</h3>
               <p className="text-sm text-neutral-600">{part === "DEPARTURE_PART" ? messages.outbound.hint : messages.outbound.arrivalHint}</p>
+              {part === "DEPARTURE_PART" && slotHint && <p className="text-sm text-sky-900">{slotHint}</p>}
               <MvtPanel
                 {...panel(part, false, {
                   registration: (part === "DEPARTURE_PART" ? flight.departureRegistration : flight.arrivalRegistration) ?? "",

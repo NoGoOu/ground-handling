@@ -92,6 +92,9 @@ export function partOf(
       if (message.data.legs.some((leg) => leg.destination === HOME_STATION)) return "ARRIVAL_PART";
       return departsFromHome(flightNumber) ? "DEPARTURE_PART" : "notHome";
     }
+    case "SLOT":
+      // Slot messages have no flight number: matchSlot (lib/telex/slot.ts) decides.
+      return "part";
     case "PSM": {
       // Departing from BUD, or a block for BUD from elsewhere (docs/messages.md, "PSM").
       if (message.data.station === HOME_STATION) return "DEPARTURE_PART";

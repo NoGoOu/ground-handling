@@ -44,3 +44,25 @@ export const senderSchema = z.object({
     .transform((value) => value || null)
     .pipe(z.string().regex(TYPE_B_ADDRESS, e.typeB).nullable()),
 });
+
+// Airports and the slot tolerance (8. mérföldkő).
+
+const ea = messages.airports.errors;
+
+export const AIRPORT_FIELDS = ["iataCode", "icaoCode", "name"] as const;
+export type AirportFormInput = Record<(typeof AIRPORT_FIELDS)[number], string>;
+
+export const airportSchema = z.object({
+  iataCode: z.string().trim().toUpperCase().pipe(z.string().regex(/^[A-Z]{3}$/, ea.iata)),
+  icaoCode: z.string().trim().toUpperCase().pipe(z.string().regex(/^[A-Z]{4}$/, ea.icao)),
+  name: z.string().trim().min(1, ea.name).max(100, ea.name),
+});
+
+export const slotToleranceSchema = z.object({
+  slotToleranceMinutes: z
+    .string()
+    .trim()
+    .regex(/^\d{1,3}$/, messages.slotTolerance.error)
+    .transform(Number)
+    .pipe(z.number().int().min(0, messages.slotTolerance.error).max(240, messages.slotTolerance.error)),
+});

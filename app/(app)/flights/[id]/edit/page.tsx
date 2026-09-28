@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { MissingBadge } from "@/components/badges";
 import { estimateText } from "@/components/estimate-note";
+import { currentSlots } from "@/lib/data/slots";
 import { listAirlineOptions } from "@/lib/data/task-types";
 import { prisma } from "@/lib/db";
 import { flightLabel } from "@/lib/flight";
@@ -39,6 +40,8 @@ export default async function EditFlightPage(props: PageProps<"/flights/[id]/edi
     }),
   ]);
   if (!flight) notFound();
+  // The slot offers its target off-block for the ETD (8. mérföldkő).
+  const slot = flight.std ? (await currentSlots([flight.id])).get(flight.id) : undefined;
 
   const input = (d: Date | null) => (d ? toLocalDateTimeInput(d) : "");
   const current = (time: Date | null, info: Parameters<typeof estimateText>[0]) =>
@@ -143,6 +146,7 @@ export default async function EditFlightPage(props: PageProps<"/flights/[id]/edi
           action={recordDelay.bind(null, flight.id)}
           withEta={!!flight.sta && !flight.arrivalCancelled}
           withEtd={!!flight.std && !flight.departureCancelled}
+          slotTarget={slot ? { input: toLocalDateTimeInput(slot.targetOffBlock), shown: formatDateTime(slot.targetOffBlock) } : null}
         />
       </section>
 

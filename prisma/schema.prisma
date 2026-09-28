@@ -44,6 +44,8 @@ model Setting {
   /// The sender of the messages we send (7. mérföldkő).
   senderEmail               String?
   senderTypeB               String?
+  /// A slot warning when the planned off-block is later than the target off-block by more (8. mérföldkő).
+  slotToleranceMinutes      Int      @default(10)
   updatedAt                 DateTime @updatedAt
 }
 
@@ -354,6 +356,8 @@ model Flight {
   /// Per part (7. mérföldkő): a message fills it when empty.
   arrivalRegistration   String?
   departureRegistration String?
+  /// The flight plan id of the departure (8. mérföldkő): later slot messages match by it.
+  departureIfplid       String?
 
   // "Késés és törlés": where the current ETA and ETD came from.
   etaSource       EstimateSource?
@@ -388,6 +392,7 @@ model Flight {
 
   @@unique([airlineId, inboundFlightNumber, arrivalFlightDate, origin])
   @@unique([airlineId, outboundFlightNumber, departureFlightDate, destination])
+  @@index([departureIfplid])
   @@index([sta])
   @@index([std])
 }
@@ -920,4 +925,14 @@ model AddressBookEntry {
   updatedAt   DateTime        @updatedAt
 
   @@unique([airlineId, messageType, address])
+}
+
+/// Airports by IATA and ICAO code (8. mérföldkő): slot messages name them by ICAO.
+model Airport {
+  id        String   @id @default(cuid())
+  iataCode  String   @unique
+  icaoCode  String   @unique
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

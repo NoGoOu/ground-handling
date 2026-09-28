@@ -41,6 +41,10 @@ export const WARNING_CODES = [
   "unreadHeader",
   "unreadLines",
   "psmSsrSum",
+  // Slot messages (ADEXP).
+  "slotBadField",
+  "slotMissingField",
+  "slotNotProcessed",
   // Generating an MVT: the sample format carries at most two delay codes.
   "tooManyDelayCodes",
   "delayTooLong",

@@ -6,8 +6,15 @@ import { FormField, FormMessage } from "@/components/form-field";
 import type { ActionResult } from "@/lib/action";
 import { messages } from "@/lib/messages";
 import type { DelayCodeFormInput } from "@/lib/validation/delay-code";
-import type { AddressFormInput, SenderFormInput } from "@/lib/validation/messaging";
-import type { AddressFormState, ApiKeyFormState, DelayCodeFormState, SenderFormState } from "./actions";
+import type { AddressFormInput, AirportFormInput, SenderFormInput } from "@/lib/validation/messaging";
+import type {
+  AddressFormState,
+  AirportFormState,
+  ApiKeyFormState,
+  DelayCodeFormState,
+  SenderFormState,
+  SlotToleranceFormState,
+} from "./actions";
 
 const t = messages.messaging.apiKeys;
 
@@ -202,5 +209,70 @@ export function AddressActions({
       </form>
       <ActionFeedback result={toggled?.ok === false ? toggled : removed?.ok === false ? removed : null} />
     </span>
+  );
+}
+
+export function AirportForm({
+  action,
+  initial,
+  submitLabel,
+}: {
+  action: (state: AirportFormState, formData: FormData) => Promise<AirportFormState>;
+  initial: AirportFormInput;
+  submitLabel: string;
+}) {
+  const [state, formAction, pending] = useActionState(action, {});
+  const value = (key: keyof AirportFormInput) => state.values?.[key] ?? initial[key];
+  const a = messages.airports;
+  return (
+    <form action={formAction} className="flex flex-col gap-2">
+      <FormMessage message={state.message} notice={state.notice} />
+      <div className="flex flex-wrap items-end gap-3">
+        <FormField label={a.iata} error={state.errors?.iataCode}>
+          <input key={value("iataCode")} name="iataCode" defaultValue={value("iataCode")} maxLength={3} className="input w-20 font-mono uppercase" required />
+        </FormField>
+        <FormField label={a.icao} error={state.errors?.icaoCode}>
+          <input key={value("icaoCode")} name="icaoCode" defaultValue={value("icaoCode")} maxLength={4} className="input w-24 font-mono uppercase" required />
+        </FormField>
+        <FormField label={a.name} error={state.errors?.name}>
+          <input key={value("name")} name="name" defaultValue={value("name")} maxLength={100} className="input w-72" required />
+        </FormField>
+        <button type="submit" disabled={pending} className="btn btn-secondary mb-0.5">
+          {pending ? messages.form.saving : submitLabel}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+export function SlotToleranceForm({
+  action,
+  initial,
+}: {
+  action: (state: SlotToleranceFormState, formData: FormData) => Promise<SlotToleranceFormState>;
+  initial: number;
+}) {
+  const [state, formAction, pending] = useActionState(action, {});
+  const s = messages.slotTolerance;
+  return (
+    <form action={formAction} className="flex flex-col gap-2">
+      <FormMessage message={state.message} notice={state.notice} />
+      <div className="flex flex-wrap items-end gap-3">
+        <FormField label={s.label} hint={s.unit} error={state.errors?.slotToleranceMinutes}>
+          <input
+            name="slotToleranceMinutes"
+            type="number"
+            min={0}
+            max={240}
+            defaultValue={state.values?.slotToleranceMinutes ?? String(initial)}
+            className="input w-24"
+            required
+          />
+        </FormField>
+        <button type="submit" disabled={pending} className="btn btn-secondary mb-0.5">
+          {pending ? messages.form.saving : s.save}
+        </button>
+      </div>
+    </form>
   );
 }

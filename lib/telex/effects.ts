@@ -1,5 +1,6 @@
 import { delayMinutes } from "@/lib/turnaround";
 import { resolveDayTime } from "./day-time";
+import { slotVersionKind } from "./slot";
 import { checkCpm, checkDelays, checkLdm } from "./checks";
 import { HOME_STATION, type Part } from "./match";
 import type { ParsedMessage } from "./parse";
@@ -22,6 +23,8 @@ export function versionKind(message: ParsedMessage): string {
     return "EA";
   }
   if (message.type === "UCM") return message.data.direction ?? "UCM";
+  // SAM and SRM of one flight plan are versions of each other (docs/messages.md, "Verziók").
+  if (message.type === "SLOT") return slotVersionKind(message.data);
   // Each part of a PSM or PTM is a version of its own; together they give the state.
   if (message.type === "PSM" || message.type === "PTM") return `PART${message.data.part}`;
   return message.type;

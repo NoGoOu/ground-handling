@@ -49,6 +49,19 @@ export function DelayBadge({ minutes }: { minutes: number | null }) {
 }
 
 /** "Késik", with the original scheduled day and time ("Késés és törlés"). */
+/** "Slot hh:mm" (8. mérföldkő); orange when the planned off-block is too late for it. */
+export function SlotBadge({ ctot, target, late }: { ctot: Date; target: Date; late: boolean }) {
+  return (
+    <span
+      className={`${base} ${late ? "bg-orange-100 text-orange-800" : "bg-sky-100 text-sky-800"}`}
+      title={fmt(messages.slot.badgeTitle, { ctot: formatTime(ctot), target: formatTime(target) })}
+    >
+      {late && "⚠ "}
+      {fmt(messages.slot.badge, { time: formatTime(ctot) })}
+    </span>
+  );
+}
+
 export function LateBadge({ late }: { late: Lateness }) {
   if (!late.late || !late.scheduled) return null;
   const scheduled = `${formatDayShort(toLocalDate(late.scheduled))} ${formatTime(late.scheduled)}`;

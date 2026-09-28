@@ -1,10 +1,11 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useRef } from "react";
 import { ActionFeedback } from "@/components/action-feedback";
 import { FormField, FormMessage } from "@/components/form-field";
 import type { ActionResult } from "@/lib/action";
 import { messages } from "@/lib/messages";
+import { fmt } from "@/lib/messages/format";
 import type { DelayFormState } from "../../actions";
 
 const t = messages.delay;
@@ -14,12 +15,16 @@ export function DelayForm({
   action,
   withEta,
   withEtd,
+  slotTarget,
 }: {
   action: (state: DelayFormState, formData: FormData) => Promise<DelayFormState>;
   withEta: boolean;
   withEtd: boolean;
+  /** The slot's target off-block (8. mérföldkő): offered for the ETD, never set by itself. */
+  slotTarget?: { input: string; shown: string } | null;
 }) {
   const [state, formAction, pending] = useActionState(action, {});
+  const etd = useRef<HTMLInputElement>(null);
   const value = (key: "eta" | "etd" | "note") => state.values?.[key] ?? "";
   return (
     <form action={formAction} className="flex flex-col gap-3">
@@ -32,10 +37,24 @@ export function DelayForm({
         )}
         {withEtd && (
           <FormField label={t.etd} error={state.errors?.etd}>
-            <input type="datetime-local" name="etd" defaultValue={value("etd")} className="input" />
+            <input ref={etd} type="datetime-local" name="etd" defaultValue={value("etd")} className="input" />
           </FormField>
         )}
       </div>
+      {withEtd && slotTarget && (
+        <p className="flex flex-wrap items-center gap-2 text-sm text-sky-900">
+          {fmt(messages.slot.offerEtd, { time: slotTarget.shown })}
+          <button
+            type="button"
+            className="btn btn-secondary py-1 text-xs"
+            onClick={() => {
+              if (etd.current) etd.current.value = slotTarget.input;
+            }}
+          >
+            {messages.slot.offerEtdButton}
+          </button>
+        </p>
+      )}
       <FormField label={t.note} hint={messages.form.optional} error={state.errors?.note}>
         <input name="note" defaultValue={value("note")} maxLength={200} placeholder={t.notePlaceholder} className="input" />
       </FormField>
