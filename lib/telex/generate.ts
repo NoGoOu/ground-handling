@@ -41,6 +41,31 @@ export function telexText(text: string): string {
     .trim();
 }
 
+export interface ArrivalMvtInput {
+  flightNumber: string;
+  /** "YYYY-MM-DD": the header carries its day. */
+  operatingDay: string;
+  registration: string;
+  /** Typed in; without it the AA line carries the on-block only. */
+  touchdown: Date | null;
+  /** The effective on-block (ATA). */
+  onBlock: Date;
+  si: string | null;
+}
+
+/** The arrival MVT (docs/messages.md, "MVT előállítása"): "AA touchdown/on-block", e.g. AA271110/271114. */
+export function generateArrivalMvt(input: ArrivalMvtInput): { text: string; warnings: TelexWarning[] } {
+  const day = pad(Number(input.operatingDay.slice(8, 10)));
+  const lines = ["MVT", `${input.flightNumber}/${day}.${input.registration}.${HOME_STATION}`];
+  lines.push(input.touchdown ? `AA${dayTime(input.touchdown)}/${dayTime(input.onBlock)}` : `AA${dayTime(input.onBlock)}`);
+  const si = input.si ? telexText(input.si) : "";
+  if (si) lines.push(`SI ${si}`);
+  return { text: lines.join("\n"), warnings: [] };
+}
+
+/** A correction: the corrected MVT in full, with a COR line before it. */
+export const correctionOf = (text: string) => `COR\n${text}`;
+
 export function generateDepartureMvt(input: DepartureMvtInput): { text: string; warnings: TelexWarning[] } {
   const warnings: TelexWarning[] = [];
   const day = pad(Number(input.operatingDay.slice(8, 10)));

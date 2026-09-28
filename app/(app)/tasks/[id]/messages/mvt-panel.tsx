@@ -1,51 +1,61 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { FormField, FormMessage } from "@/components/form-field";
 import { messages } from "@/lib/messages";
-import type { MvtValues, PreviewState, SendState } from "./actions";
+import type { MvtKind, MvtValues, PreviewState, SendState } from "./actions";
 
 const t = messages.outbound;
 
-/** Preview, edit, then send the departure MVT (7. mérföldkő). */
+/** Preview, edit, then send an MVT we make (7. and 8. mérföldkő): departure (AD), arrival (AA), or a correction of one. */
 export function MvtPanel({
+  kind,
   previewAction,
   sendAction,
   initial,
-  offBlock,
+  actual,
 }: {
+  kind: MvtKind;
   previewAction: (state: PreviewState, formData: FormData) => Promise<PreviewState>;
   sendAction: (state: SendState, formData: FormData) => Promise<SendState>;
   initial: MvtValues;
-  /** The effective off-block in local time; null while there is no ATD. */
-  offBlock: string | null;
+  /** The effective off-block (AD) or on-block (AA) in local time; null while there is none. */
+  actual: string | null;
 }) {
   const [preview, previewForm, previewing] = useActionState(previewAction, {});
   const [sent, sendForm, sending] = useActionState(sendAction, {});
   const value = (key: keyof MvtValues) => preview.values?.[key] ?? initial[key];
 
-  if (!offBlock) return <p className="text-sm text-neutral-600">{t.noAtd}</p>;
+  if (!actual) return <p className="text-sm text-neutral-600">{kind === "AD" ? t.noAtd : t.noAta}</p>;
   return (
     <div className="flex flex-col gap-3">
       <form action={previewForm} className="flex flex-col gap-3">
         <FormMessage message={preview.error} />
         <p className="text-sm">
-          <span className="text-neutral-500">Off-block (ATD): </span>
-          <span className="font-semibold tabular-nums">{offBlock}</span>
+          <span className="text-neutral-500">{kind === "AD" ? t.offBlock : t.onBlock}: </span>
+          <span className="font-semibold tabular-nums">{actual}</span>
         </p>
         <div className="flex flex-wrap items-end gap-3">
           <FormField label={t.registration}>
             <input name="registration" defaultValue={value("registration")} className="input w-32 uppercase" required />
           </FormField>
-          <FormField label={t.airborne} hint={t.timeHint}>
-            <input type="datetime-local" name="airborne" defaultValue={value("airborne")} className="input" />
-          </FormField>
-          <FormField label={t.estimatedArrival} hint={t.timeHint}>
-            <input type="datetime-local" name="estimatedArrival" defaultValue={value("estimatedArrival")} className="input" />
-          </FormField>
-          <FormField label={t.destination}>
-            <input name="destination" defaultValue={value("destination")} maxLength={3} className="input w-20 uppercase" />
-          </FormField>
+          {kind === "AD" ? (
+            <>
+              <FormField label={t.airborne} hint={t.timeHint}>
+                <input type="datetime-local" name="airborne" defaultValue={value("airborne")} className="input" />
+              </FormField>
+              <FormField label={t.estimatedArrival} hint={t.timeHint}>
+                <input type="datetime-local" name="estimatedArrival" defaultValue={value("estimatedArrival")} className="input" />
+              </FormField>
+              <FormField label={t.destination}>
+                <input name="destination" defaultValue={value("destination")} maxLength={3} className="input w-20 uppercase" />
+              </FormField>
+            </>
+          ) : (
+            <FormField label={t.touchdown} hint={t.timeHint}>
+              <input type="datetime-local" name="touchdown" defaultValue={value("touchdown")} className="input" />
+            </FormField>
+          )}
         </div>
         <FormField label={t.si} hint={messages.form.optional}>
           <input name="si" defaultValue={value("si")} maxLength={200} className="input" />
@@ -113,5 +123,26 @@ export function MvtPanel({
         </form>
       )}
     </div>
+  );
+}
+
+/** A correction of an MVT we sent, opened from its card (8. mérföldkő). */
+export function CorrectionToggle(props: Parameters<typeof MvtPanel>[0]) {
+  const [open, setOpen] = useState(false);
+  return open ? (
+    <div className="flex flex-col gap-2 rounded-lg border border-amber-200 bg-amber-50/40 p-3">
+      <div className="flex items-baseline justify-between gap-2">
+        <h4 className="font-semibold">{t.correctionTitle}</h4>
+        <button type="button" onClick={() => setOpen(false)} className="text-sm text-sky-700 hover:underline">
+          {t.close}
+        </button>
+      </div>
+      <p className="text-sm text-neutral-600">{t.correctionHint}</p>
+      <MvtPanel {...props} />
+    </div>
+  ) : (
+    <button type="button" onClick={() => setOpen(true)} className="btn btn-secondary self-start py-1 text-xs">
+      {t.correct}
+    </button>
   );
 }

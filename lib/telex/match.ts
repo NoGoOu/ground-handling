@@ -80,7 +80,9 @@ export function partOf(
       const { station, departure, arrival, estimatedArrival } = message.data;
       if (station === HOME_STATION) return departure ? "DEPARTURE_PART" : arrival ? "ARRIVAL_PART" : "part";
       // Another station's MVT concerns us when its EA is for BUD: the ETA.
-      return estimatedArrival?.destination === HOME_STATION ? "ARRIVAL_PART" : "notHome";
+      if (estimatedArrival?.destination === HOME_STATION) return "ARRIVAL_PART";
+      // Or when it is the arrival of a flight from BUD at its destination: for information.
+      return arrival && departsFromHome(flightNumber) ? "DEPARTURE_PART" : "notHome";
     }
     case "UCM": {
       if (message.data.station !== HOME_STATION) return "notHome";
@@ -118,7 +120,7 @@ export function partOf(
 function otherEnd(message: ParsedMessage, part: Part): string | null {
   if (message.type === "MVT") {
     if (part === "ARRIVAL_PART") return message.data.station !== HOME_STATION ? message.data.station : null;
-    return message.data.estimatedArrival?.destination ?? null;
+    return message.data.estimatedArrival?.destination ?? (message.data.station !== HOME_STATION ? message.data.station : null);
   }
   if (message.type === "CPM") return part === "ARRIVAL_PART" ? message.data.from : message.data.to;
   if (message.type === "LDM" && part === "DEPARTURE_PART") return message.data.legs[0]?.destination ?? null;

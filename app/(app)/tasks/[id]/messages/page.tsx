@@ -6,23 +6,24 @@ import { InfographicView } from "@/components/infographic";
 import { MessageContent } from "@/components/message-content";
 import { listFlightMessages, versionGroups, type FlightMessage } from "@/lib/data/messages";
 import { flightPartAgents, getTaskView, taskAssignment } from "@/lib/data/tasks";
+import { prisma } from "@/lib/db";
 import { flightLabel } from "@/lib/flight";
 import { messages } from "@/lib/messages";
 import { fmt } from "@/lib/messages/format";
-import { prisma } from "@/lib/db";
 import { canSendPartMessage, canViewFlightMessages, canViewTask } from "@/lib/permissions";
 import { requireUser } from "@/lib/session";
 import { warningText } from "@/lib/telex/describe";
 import { buildInfographic, type CurrentMessage } from "@/lib/telex/infographic";
 import type { Part } from "@/lib/telex/match";
-import { formatDateTime } from "@/lib/time";
+import { formatDateTime, toLocalDateTimeInput } from "@/lib/time";
 import { TaskTabs } from "../tabs";
-import { previewMvt, sendMvt } from "./actions";
-import { MvtPanel } from "./mvt-panel";
+import { previewMvt, sendMvt, type MvtKind, type MvtValues } from "./actions";
+import { CorrectionToggle, MvtPanel } from "./mvt-panel";
 
-// The "Üzenetek" tab (CLAUDE.md, 7. mérföldkő): the messages of the task's
-// flight per part, with their versions, raw and parsed, and their warnings.
-// The shift lead and the agent see it by the message viewing permission.
+// The "Üzenetek" tab (CLAUDE.md, 7. and 8. mérföldkő): the messages of the
+// task's flight per part, with their versions, raw and parsed, and their
+// warnings; the MVTs we send and their corrections. The shift lead and the
+// agent see it by the message viewing permission.
 
 const t = messages.flightMessages;
 
@@ -38,7 +39,24 @@ function kindLabel(message: FlightMessage): string {
   return message.kind && kinds[message.kind] ? `${message.type} · ${kinds[message.kind]}` : message.type;
 }
 
-function MessageCard({ message }: { message: FlightMessage }) {
+const localInput = (iso: string | undefined) => (iso ? toLocalDateTimeInput(new Date(iso)) : "");
+
+/** The values of an MVT we sent, to start its correction from. */
+function valuesOf(message: FlightMessage): MvtValues {
+  const parsed = message.parsedMessage;
+  const times = message.stored.times ?? {};
+  const mvt = parsed.type === "MVT" ? parsed.data : null;
+  return {
+    registration: parsed.header?.registration ?? "",
+    airborne: localInput(times.airborne),
+    estimatedArrival: localInput(times.estimatedArrival),
+    destination: mvt?.estimatedArrival?.destination ?? "",
+    touchdown: localInput(times.touchdown),
+    si: mvt?.si.join(" ") ?? "",
+  };
+}
+
+function MessageCard({ message, correction }: { message: FlightMessage; correction?: ReactNode }) {
   return (
     <article className="flex flex-col gap-2">
       <p className="flex flex-wrap items-center gap-2 text-sm">
@@ -46,6 +64,7 @@ function MessageCard({ message }: { message: FlightMessage }) {
         <span className="rounded bg-neutral-100 px-1.5 text-xs text-neutral-700">
           {message.direction === "INBOUND" ? t.inbound : t.outbound}
         </span>
+        {message.correction && <span className="rounded bg-amber-100 px-1.5 text-xs text-amber-900">{t.correction}</span>}
         <span
           className={
             message.current
@@ -84,11 +103,23 @@ function MessageCard({ message }: { message: FlightMessage }) {
           {message.envelope ? `${message.envelope}\n${message.rawText}` : message.rawText}
         </pre>
       </details>
+      {correction}
     </article>
   );
 }
 
-function PartMessages({ rows, part, children }: { rows: FlightMessage[]; part: Part; children?: ReactNode }) {
+function PartMessages({
+  rows,
+  part,
+  correctionFor,
+  children,
+}: {
+  rows: FlightMessage[];
+  part: Part;
+  /** The correction of an MVT we sent, when the user may send on this part. */
+  correctionFor?: (message: FlightMessage) => ReactNode;
+  children?: ReactNode;
+}) {
   const groups = versionGroups(rows, part);
   // The infographic sums up the part's current messages, inbound or ours.
   const current = rows
@@ -104,7 +135,7 @@ function PartMessages({ rows, part, children }: { rows: FlightMessage[]; part: P
       ) : (
         groups.map(({ key, versions: [latest, ...older] }) => (
           <div key={key} className="flex flex-col gap-2 border-t border-neutral-100 pt-3 first:border-t-0 first:pt-0">
-            <MessageCard message={latest} />
+            <MessageCard message={latest} correction={correctionFor?.(latest)} />
             {older.length > 0 && (
               <details className="ml-3 border-l-2 border-neutral-100 pl-3">
                 <summary className="cursor-pointer text-sm text-neutral-600">
@@ -133,12 +164,33 @@ export default async function TaskMessagesPage(props: PageProps<"/tasks/[id]/mes
   const agents = await flightPartAgents(task.flight.id);
   if (!canViewFlightMessages(user, [...agents.arrival, ...agents.departure])) notFound();
   const rows = await listFlightMessages(task.flight.id);
-  // The departure MVT: whoever may send on the departure part (7. mérföldkő).
-  const canSend = !!task.flight.std && !task.flight.departureCancelled && canSendPartMessage(user, agents.departure);
-  const departure = canSend
-    ? await prisma.flight.findUnique({ where: { id: task.flight.id }, select: { departureRegistration: true, destination: true } })
-    : null;
-  const offBlock = task.timeline.effectiveAtd;
+  const flight = await prisma.flight.findUniqueOrThrow({
+    where: { id: task.flight.id },
+    select: { arrivalRegistration: true, departureRegistration: true, destination: true },
+  });
+
+  // The MVTs we send: whoever may send on the part (7. and 8. mérföldkő).
+  const canSend: Record<Part, boolean> = {
+    ARRIVAL_PART: !!task.flight.sta && !task.flight.arrivalCancelled && canSendPartMessage(user, agents.arrival),
+    DEPARTURE_PART: !!task.flight.std && !task.flight.departureCancelled && canSendPartMessage(user, agents.departure),
+  };
+  const kindOf: Record<Part, MvtKind> = { ARRIVAL_PART: "AA", DEPARTURE_PART: "AD" };
+  const actual: Record<Part, string | null> = {
+    ARRIVAL_PART: task.timeline.effectiveAta ? formatDateTime(task.timeline.effectiveAta) : null,
+    DEPARTURE_PART: task.timeline.effectiveAtd ? formatDateTime(task.timeline.effectiveAtd) : null,
+  };
+  const panel = (part: Part, correction: boolean, initial: MvtValues) => ({
+    kind: kindOf[part],
+    previewAction: previewMvt.bind(null, task.id, kindOf[part], correction),
+    sendAction: sendMvt.bind(null, task.id, kindOf[part]),
+    initial,
+    actual: actual[part],
+  });
+  const correctionFor = (part: Part) =>
+    function correction(message: FlightMessage) {
+      const ours = message.direction === "OUTBOUND" && message.type === "MVT" && message.current;
+      return ours && message.kind === kindOf[part] ? <CorrectionToggle {...panel(part, true, valuesOf(message))} /> : null;
+    };
   const parts: Part[] = [
     ...(task.flight.sta ? (["ARRIVAL_PART"] as const) : []),
     ...(task.flight.std ? (["DEPARTURE_PART"] as const) : []),
@@ -153,22 +205,20 @@ export default async function TaskMessagesPage(props: PageProps<"/tasks/[id]/mes
       <TaskTabs taskId={task.id} active="messages" />
       <p className="max-w-3xl text-sm text-neutral-600">{t.hint}</p>
       {parts.map((part) => (
-        <PartMessages key={part} rows={rows} part={part}>
-          {part === "DEPARTURE_PART" && departure && (
+        <PartMessages key={part} rows={rows} part={part} correctionFor={canSend[part] ? correctionFor(part) : undefined}>
+          {canSend[part] && (
             <div className="flex flex-col gap-2 border-t border-neutral-200 pt-3">
-              <h3 className="font-semibold">{messages.outbound.title}</h3>
-              <p className="text-sm text-neutral-600">{messages.outbound.hint}</p>
+              <h3 className="font-semibold">{part === "DEPARTURE_PART" ? messages.outbound.title : messages.outbound.arrivalTitle}</h3>
+              <p className="text-sm text-neutral-600">{part === "DEPARTURE_PART" ? messages.outbound.hint : messages.outbound.arrivalHint}</p>
               <MvtPanel
-                previewAction={previewMvt.bind(null, task.id)}
-                sendAction={sendMvt.bind(null, task.id)}
-                offBlock={offBlock ? formatDateTime(offBlock) : null}
-                initial={{
-                  registration: departure.departureRegistration ?? "",
+                {...panel(part, false, {
+                  registration: (part === "DEPARTURE_PART" ? flight.departureRegistration : flight.arrivalRegistration) ?? "",
                   airborne: "",
                   estimatedArrival: "",
-                  destination: departure.destination ?? "",
+                  destination: flight.destination ?? "",
+                  touchdown: "",
                   si: "",
-                }}
+                })}
               />
             </div>
           )}

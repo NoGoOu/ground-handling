@@ -17,6 +17,8 @@ export function versionKind(message: ParsedMessage): string {
     const { station, departure, arrival } = message.data;
     if (station === HOME_STATION && departure) return "AD";
     if (station === HOME_STATION && arrival) return "AA";
+    // The destination's arrival of a flight from BUD (8. mérföldkő): for information only.
+    if (arrival && message.data.estimatedArrival?.destination !== HOME_STATION) return "AA_DEST";
     return "EA";
   }
   if (message.type === "UCM") return message.data.direction ?? "UCM";

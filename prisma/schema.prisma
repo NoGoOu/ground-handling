@@ -761,8 +761,10 @@ model Message {
   direction    MessageDirection
   /// MVT, LDM, CPM or UCM.
   type         String
-  /// The message itself, from its type line, verbatim.
+  /// The message itself, verbatim (with its COR line); for PSM and PTM the counts derived from it.
   rawText      String
+  /// A COR line came before it: it corrects an earlier message (8. mérföldkő).
+  correction   Boolean          @default(false)
   /// The lines before the type line (Type B header, email text); not part of the hash.
   envelope     String?
   /// Hash of the normalised text of an inbound message, against duplicates.

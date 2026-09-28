@@ -199,6 +199,7 @@ export default async function EditFlightPage(props: PageProps<"/flights/[id]/edi
                       label: event.ata ? "ATA" : "ATD",
                       time: formatDateTime((event.ata ?? event.atd)!),
                     })}
+                    {event.note === "COR" && <> · {messages.flightMessages.correction}</>}
                   </span>
                 )}
                 {event.kind === "REGISTRATION" && event.registration && (

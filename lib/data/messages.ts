@@ -113,6 +113,8 @@ async function applyToFlight(
   fillRegistration: string | null,
   /** The warnings the message already has. */
   earlier: TelexWarning[],
+  /** A COR message: its changes are logged as a correction (8. mérföldkő). */
+  correction = false,
 ): Promise<{ current: boolean; warnings: TelexWarning[] }> {
   const key = versionKey(flight.id, part, parsed.type, versionKind(parsed));
   const previous = await tx.message.findFirst({ where: { versionKey: key, current: true, id: { not: messageId } } });
@@ -139,7 +141,7 @@ async function applyToFlight(
   });
   if (!current) return { current, warnings };
 
-  const event = { flightId: flight.id, messageId, createdById: userId, part };
+  const event = { flightId: flight.id, messageId, createdById: userId, part, note: correction ? "COR" : null };
   if (fillRegistration) {
     await tx.flight.update({
       where: { id: flight.id },
@@ -229,6 +231,7 @@ async function receiveOne(
           direction: "INBOUND",
           type: raw.type,
           rawText: stored.rawText,
+          correction: raw.correction,
           envelope: stored.envelope,
           textHash: hash,
           source: options.source,
@@ -270,6 +273,7 @@ async function receiveOne(
         options.userId,
         match.fillRegistration,
         [...parsed.warnings, ...match.warnings],
+        raw.correction,
       );
       return {
         status: "stored" as const,
@@ -357,6 +361,7 @@ export async function assignMessage(messageId: string, flightId: string, part: P
       userId,
       registration && !current ? registration : null,
       [...(message.warnings as unknown as TelexWarning[]), ...extra],
+      message.correction,
     );
     return [...extra, ...applied.warnings];
   });

@@ -95,6 +95,7 @@ export async function sendOutbound(
         direction: "OUTBOUND",
         type: parsed.type,
         rawText: raw.text,
+        correction: raw.correction,
         source: "GENERATED",
         receivedAt: sentAt,
         flightNumber: parsed.header?.flightNumber ?? null,
