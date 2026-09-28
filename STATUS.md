@@ -1,30 +1,26 @@
 # Állapot – Ground Handling App
 
-*Frissítve: 2026. szeptember 26. · CLAUDE.md verzió: 27*
+*Frissítve: 2026. szeptember 28. · CLAUDE.md verzió: 29*
 
 ## Mi készült el
 
-- **A 7. mérföldkő (üzenetek) kész**, az érkezési (AA) és a korrekciós MVT előállítása nélkül (nincs minta).
-- 12. lépés: seed – a mintákból átírt demo üzenetek a mai demo járatokhoz (ZZ1102: AD MVT DL93-mal, LDM, CPM; ZZ1203: EA BUD MVT, későbbi ETA; ZZ1306: P7-minták ULD-kkel és az ismert UCM–CPM eltéréssel; egy párosítatlan ET 3365; egy csak naplózott PTM), a 36, 68, 93 késéskód, címjegyzék csak `@example.invalid` és kitalált SITA-címekkel, feladó. README: az üzenetek, az API `curl`-lel, a küldés beállítása. Tiszta Docker-indítás rendben.
-- 0–11. lépés: tervező a terv napjára (teszttel); adatmodell, jogosultságok, a kézi járat üzemnapjai; szétválasztás, fejléc; MVT/LDM/CPM/UCM feldolgozók (mind a nyolc minta tesztelve, a CPM mezősorrendtől függetlenül); párosítás (ET3365/12 → a 12-i járat, ATD 17-én 07:16 UTC); ellenőrzések (a két ismert hiba jelezve); hatás és verziózás; `POST /api/messages` API-kulccsal, duplikátumszűrés, PTM/PSM tartalma nem tárolódik, kézi bemásolás, párosítatlanok; Üzenetek fül és infografika (ügynöknek is); késéskódok; indulási MVT előállítása visszaolvasási teszttel, címjegyzék, küldés címzettenkénti állapottal, csatorna nélkül csak naplóz.
+- 8. mérföldkő, 1. lépés: szétválasztás – a típussor előtti `COR` sor az üzenethez tartozik és korrekciót jelöl (a boríték nem viszi el), a `-TITLE` sor új (ADEXP) üzenetet kezd, a PSM és a PTM Type B típusként ismert. A szeptember 27-i csomag egyben beküldve kilenc üzenetre bomlik (üres sorokkal és anélkül is), a COR a TK1034 MVT-hez tartozik, a SAM és az SRM külön üzenet, a PTM-be nem olvad bele. A minták fixture-je a docs/messages.md 17 mintájával bővült (a régi teszt a régi nyolcat nevesítve kapja).
+- 7. mérföldkő (üzenetek) kész; pontosításai elfogadva (További eldöntött szabályok 41–54.).
 
 ## Állapot
 
-- Utolsó commit: `afa4414` – feat: generate and send the departure MVT (a 12. lépés commitja ezt követi)
-- Tesztek: `npm test` → 554 teszt, mind zöld; `npm run lint` hibátlan, `npx tsc --noEmit` tiszta, `npm run build` sikeres
-- A felületet belépés nélkül nem néztem meg; az oldalak buildelnek, az API-t és az adatréteget élesben, az infografikát statikus rendereléssel ellenőriztem.
+- Utolsó commit: `b450b6e` – feat: seed demo messages, delay codes and an address book (az 1. lépés commitja ezt követi)
+- Tesztek: `npm test` → 560 teszt, mind zöld
+- Lint és build: `npm run lint` hibátlan, `npx tsc --noEmit` tiszta
 
 ## Eltérések a CLAUDE.md-től
 
-- Nincs. A tervben jóváhagyott pontosítások (felvehetők a szabályok közé): az AA sor az AD-vel azonos alakban; a kézi járat üzemnapja alapból az ütemezett idő budapesti napja; az Üzenetek fül a task nézetben; késéskódot és MVT-t a járatkezelő és a rész ügynöke (bármely taskon) rögzít, illetve küld; késés-ellenőrzés csak ATD-vel; a duplikátum-hash a normalizált szövegből, boríték nélkül, PTM/PSM-ből hash sem; törölt részre az üzenet nem hat; a verziók sorrendje a beérkezés; nodemailer; seed-címek `.invalid`. Megvalósítási döntések: a kimenő üzenetek saját verziókulcson (a járatra nem hatnak); a kézi késésrekord törölhető, naplózva; az időpontok napja a menetrendi időhöz legközelebbi, nap nélküli idő az előzőt követő első; UCM-ben IN és OUT együtt: az első számít, figyelmeztetéssel.
+- nincs
 
 ## Kérdések a tervezéshez
 
-- Minták kellenek: érkezési (AA) és korrekciós MVT (az AA-t addig az AD alakjában olvassuk), a késési (ED) MVT, ha van.
-- A CPM `.TW/92404` sorát összsúlynak vettem; a `PAD`, `TB` és a CPM-fejléc `4/1` jelentése nyitott (nyersen látszanak).
-- A 36, 68, 93 késéskód leírása; a SITA-átjáró fajtája.
-- A `docs/projekt-osszefoglalo.md` nem került a repóba.
+- nincs
 
 ## Következő lépés
 
-- A tervezés döntése szerint (a „Később” szakaszból vagy az AA/korrekciós MVT a minták után).
+- 8. mérföldkő, 2. lépés: az LDM és a CPM javításai, Lufthansa-változatok, SI szabad szövegként, ellenőrzések a törzsből.
