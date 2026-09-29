@@ -1,6 +1,6 @@
 # Ground Handling App – projekt-összefoglaló
 
-*Verzió: 25 · 2026. szeptember 28.*
+*Verzió: 26 · 2026. szeptember 29.*
 
 ## A projekt
 
@@ -93,7 +93,7 @@ A projekt gazdája a földi kiszolgálásban dolgozik, a domain-szabályok az ő
 71. **Követelmények és figyelmeztetések:** a légitársaság feladattípusainál részenként; ha a kiosztott ügynök nem felel meg, figyelmeztetés mindenhol, tiltás nélkül. A tervező párosítással ellenőrzi a betölthetőséget, és hiánynál jelez.
 72. **Elfogadott pontosítások a 6. mérföldkőből** (CLAUDE.md 33–40.): inaktív jogosítás nem számít; a lejáró lista két csoport; gyors fordulón a követelmény a két rész uniója; a követelmény nem fagy be a taskon; a rekord az ügynök kivételével javítható; a fájl eltávolítása a tárhelyről töröl, a napló marad; a „hamarosan lejár” napjai globális beállítás. Pontosítás: a tervező hiányjelzése mindig a terv napjára vizsgálja az érvényességet.
 73. **Fogadó API mint egyetlen belépési pont:** minden üzenet egy API-kulccsal védett végponton érkezik; a kézi bemásolás ugyanazt a feldolgozást használja, a későbbi email- és SITA-átjáró is erre csatlakozik.
-74. **Nem támogatott üzenettípus** (pl. PTM, PSM): a tartalmát nem tároljuk, csak a típusát, a fejlécét és az idejét. A 7. mérföldkőben így nincs személyes adat.
+74. **Nem támogatott üzenettípus** (pl. PTM, PSM): a tartalmát nem tároljuk, csak a típusát, a fejlécét és az idejét. A 7. mérföldkőben így nincs személyes adat. (A 8. mérföldkőtől a PSM és a PTM csak darabszámokkal feldolgozva, lásd 80.)
 75. **MVT-küldés emailben vagy SITA-n,** légitársaságonkénti és üzenettípusonkénti címjegyzék alapján, előnézettel és egy gombbal. Biztonsági alapállás: beállított csatorna nélkül a küldés csak naplóz. A SITA-átjáró fajtája nyitott, ezért cserélhető csatorna.
 76. **Késéskód az MVT-vel együtt** (7. mérföldkő): az admin kezeli a kódtáblát; a késésrekord kézzel vagy az MVT-ből jön, és ellenőrizzük a késéssel.
 77. **Projektfájlok a repóban:** a CLAUDE.md, a projekt-összefoglaló (`docs/projekt-osszefoglalo.md`) és a `docs/` leírásai a repóban élnek; a Claude commitolja őket, amint a GitHub-fiók össze van kötve.
@@ -103,6 +103,7 @@ A projekt gazdája a földi kiszolgálásban dolgozik, a domain-szabályok az ő
 81. **Slotüzenetek (SAM, SRM):** SITA-n jönnek, a fogadó API-n keresztül dolgozzuk fel. A járaton látszik a slot és a cél off-block; figyelmeztetés, ha a tervezett off-block nem fér bele. Az ETD-t nem írja át, de a késésnél és az MVT-nél felajánlja az időt és a késéskódot.
 82. **Lufthansa-üzenetek értelmezése:** a kategória utáni számjegy és a `VR` a szabad negyedek száma; `D` a személyzet poggyásza; `Q` sürgős cargo; a DAA a gép ajtajához kiadott tétel (babakocsi, tolószék); a keretezett SI üzemi utasítás, amit kiemelve kell mutatni.
 83. **Az SI-t egyelőre nem dolgozzuk fel:** nagyon sokféle lehet, ezért csak az üzenet törzsét olvassuk; az SI szabad szövegként, változatlanul, jól látható helyen jelenik meg (így a keretezett üzemi utasítás és a DAA is látszik).
+84. **Elfogadott pontosítások a 8. mérföldkőből** (CLAUDE.md 55–64.): a 7. mérföldkő SI-feldolgozása megszűnt; a CPM-ben a `Q` és utána egy karakter kontúrkód, a magában álló `Q` sürgős cargo; a PSM és a PTM helyén a darabszámok szöveges alakja tárolódik; a slot párosításához a járat célállomása kell, különben kézi hozzárendelés; a slot-figyelmeztetés a napi listán és a task nézetben látszik; a korrekciós MVT a küldött MVT-ből indul; érkezési MVT csak hatályos ATA-val; repülőtér nem törölhető.
 
 ## Még ellenőrizendő feltételezések
 
@@ -135,7 +136,7 @@ A projekt gazdája a földi kiszolgálásban dolgozik, a domain-szabályok az ő
 - Törölhető legyen-e a légitársaság és a sablon? Egyelőre nem törölhetők. (A járat törlés helyett töröltre állítható, lásd 51.)
 - Melyik SITA-átjárón keresztül menjenek ki a Type B üzenetek (jelenleg milyen programmal vagy átjárón küldtök)?
 - Késési (`ED`) MVT minta, ha van; az LDM `PAD`, `CRW`, `DHC`, `TB`, a CPM `4/1` és `.TW`, valamint a Lufthansa XOM és XCS kód jelentése.
-- A 36, 68, 93 késéskód leírása; slottörlés és más slotüzenet mintája.
+- A 36, 68, 81, 82, 93 késéskód leírása; slottörlés és más slotüzenet mintája.
 - Mit csinál pontosan egy GOU- és egy HDS-ügynök a járaton, mikortól meddig? Illeszkednek-e rájuk a mostani foglaltsági képletek, vagy más paraméter kell?
 - Összekapcsolható-e utólag egy csak érkező és egy későbbi csak induló járat fordulóvá (pl. a lajstrom alapján)?
 - Meddig őrizzük meg a képzési adatokat és a feltöltött fájlokat?
@@ -144,7 +145,7 @@ A projekt gazdája a földi kiszolgálásban dolgozik, a domain-szabályok az ő
 
 - Személyre szabható elrendezés (az infografika fix változata után)
 - Az SI elemeinek feldolgozása (DAA, nettó bontás, poggyászdarabszámok), ha a minták alapján egységesíthető
-- Valós tesztadat: 30 napos napi mentés az Ikarus AODB-oldaláról (az engedély és a tárolás helye tisztázandó; a nyilvános repóba nem kerülhet)
+- Valós tesztadat: az Ikarus AODB-oldal mentése elindult (félóránként, 30 napig, a projekt gazdájának gépén, a repón kívül; a nyilvános repóba nem kerülhet). Utána importer a pillanatképekből (összefésülés rekordazonosító szerint, a nap a menetrendi időből, éjfélre figyelve).
 - Email- és SITA-átjáró a bejövő üzenetekhez (a fogadó API-ra csatlakozik)
 - A BUD-on lévő ULD-készlet követése az UCM-ekből
 - Ügynöki beosztásnézet (az ügynök a saját publikált és valós beosztását látja)
@@ -159,6 +160,6 @@ A projekt gazdája a földi kiszolgálásban dolgozik, a domain-szabályok az ő
 
 ## Következő lépés
 
-1. Az 1–7. mérföldkő kész (MVP; jogosultság, beosztás, sávos nézet; járatrend-import; tervezői nézet; feladattípusok; képzések és jogosítások; üzenetek, 554 zöld teszttel).
-2. Most: 8. mérföldkő, üzenetek bővítése: a feldolgozó javításai, érkezési és korrekciós MVT, PSM és PTM név nélkül, slotüzenetek (CLAUDE.md, `docs/messages.md` 5. verzió).
-3. A projekt gazdájánál: a Claude GitHub-alkalmazás telepítése a repóra (hogy a tervezés közvetlenül commitolhasson); a nyitott üzenetkódok; a SITA-átjáró; a valós GOU- és HDS-sablonok; a csatolt fájlok megőrzési ideje.
+1. Az 1–8. mérföldkő kész (MVP; jogosultság, beosztás, sávos nézet; járatrend-import; tervezői nézet; feladattípusok; képzések és jogosítások; üzenetek; üzenetek bővítése, 610 zöld teszttel).
+2. Most: a következő mérföldkő kiválasztása a későbbi témák közül.
+3. A projekt gazdájánál: a nyitott üzenet- és késéskódok; a SITA-átjáró; a valós GOU- és HDS-sablonok; a csatolt fájlok megőrzési ideje; az Ikarus-mentés ellenőrzése.

@@ -1,6 +1,6 @@
 # Ground Handling App – projektleírás
 
-*Verzió: 29 · 2026. szeptember 28.*
+*Verzió: 30 · 2026. szeptember 29.*
 
 Nyílt forráskódú webalkalmazás repülőtéri földi kiszolgálás (ground handling) szervezésére. Minden járatfordulóhoz feladattípusonként egy task tartozik, benne mérföldkövekkel, amelyeknek van tervezett és tényleges időpontja. A mérföldkövek légitársaságonként testreszabható sablonokból jönnek. A hozzáférés szerepkör alapú.
 
@@ -469,15 +469,15 @@ Globális beállítás, a Tervező és az Admin szerkeszti. Számoláskor a terv
 
 ## 7. mérföldkő – üzenetek: fogadás, feldolgozás, infografika, késéskód, MVT-küldés
 
-**Kész** (2026. szeptember 26.), az érkezési és a korrekciós MVT előállítása nélkül: ezek a 8. mérföldkőben jönnek. A formátumok, a kódok, az ellenőrzések, a párosítás részletei és a valós minták: `docs/messages.md`. A PTM és a PSM ebben a mérföldkőben kimaradt.
+**Kész** (2026. szeptember 26.), az érkezési és a korrekciós MVT előállítása nélkül: ezek a 8. mérföldkőben készültek el. A formátumok, a kódok, az ellenőrzések, a párosítás részletei és a valós minták: `docs/messages.md`. A PTM és a PSM ebben a mérföldkőben kimaradt; a 8. mérföldkőtől csak darabszámokkal dolgozzuk fel őket.
 
 ### Fogadás
 
 - **Egyetlen belépési pont:** minden üzenet ugyanazon a feldolgozáson megy át. A külső források (később egy email- vagy SITA-átjáró, szkriptek) a fogadó API-n keresztül küldik be az üzeneteket; a kézi bemásolás a felületen ugyanezt a feldolgozást hívja.
 - **Fogadó API:** `POST /api/messages`, API-kulccsal (`Authorization: Bearer …`). A törzs lehet nyers szöveg vagy JSON (`text`, opcionálisan `source` és `receivedAt`). A válasz üzenetenként megadja a felismert típust, a párosítás eredményét és a figyelmeztetéseket. Méretkorlát kérésenként: 256 KB (helyőrző).
 - **API-kulcsok:** az admin hozza létre (név, aktív). A kulcs csak létrehozáskor látható, hash-elve tároljuk, visszavonható; látszik az utolsó használat ideje. Minden API-hívás naplózott (kulcs, idő, eredmény).
-- **Szétválasztás:** egy szövegben több üzenet is lehet. Új üzenet ott kezdődik, ahol egy sor pontosan egy ismert típuskód (támogatott: MVT, LDM, CPM, UCM; felismert, de nem támogatott: PTM, PSM; a lista bővíthető). Az UCM `IN` és `OUT` sora nem új üzenet. A típussor előtti sorokat (pl. Type B fejléc, email szöveg) a feldolgozó átugorja.
-- **Nem támogatott típus** (pl. PTM, PSM): a tartalmát nem tároljuk. A naplóba csak a típus, a fejléc (járat, dátum) és a beérkezés ideje kerül.
+- **Szétválasztás:** egy szövegben több üzenet is lehet. Új üzenet ott kezdődik, ahol egy sor pontosan egy ismert típuskód (támogatott: MVT, LDM, CPM, UCM, a 8. mérföldkőtől a PSM és a PTM is; a lista bővíthető; az ADEXP slotüzeneteket a `-TITLE` sor kezdi, lásd a 8. mérföldkőt). Az UCM `IN` és `OUT` sora nem új üzenet. A típussor előtti sorokat (pl. Type B fejléc, email szöveg) a feldolgozó átugorja.
+- **Nem támogatott típus** (a 8. mérföldkőig a PTM és a PSM): a tartalmát nem tároljuk. A naplóba csak a típus, a fejléc (járat, dátum) és a beérkezés ideje kerül.
 - **Duplikátum:** azonos nyers szöveg nem kerül be kétszer (hash alapján), mert az átjárók újraküldhetnek; a második beküldés a meglévő üzenetre hivatkozik.
 
 ### Feldolgozás és ellenőrzés
@@ -510,13 +510,13 @@ Globális beállítás, a Tervező és az Admin szerkeszti. Számoláskor a terv
   - rakomány: összesen, rakterenként, főfedélzet; kategóriánként, ha az üzenet megadja;
   - ULD-k pozíció szerint, kategóriával és különleges kóddal; az üres ULD-halmok;
   - különleges kódok összesítése (pl. ELI, ELM, PER, BIG), pozíciókkal;
-  - súlyadatok a SI sorokból, ha vannak;
+  - az SI szabad szövegként, változatlanul (a 8. mérföldkőtől; az SI-ből nem olvasunk súlyadatot);
   - a figyelmeztetések, és minden blokknál a forrásüzenet és a beérkezés ideje.
 - A személyre szabható elrendezés később jön.
 
 ### Késéskód
 
-- **Kódtábla:** kód, leírás, aktív; az admin kezeli. A seedben csak a mintákban szereplő kódok (36, 68, 93), a leírásukat a projekt gazdája adja meg.
+- **Kódtábla:** kód, leírás, aktív; az admin kezeli. A seedben csak a mintákban szereplő kódok (36, 68, 93, a 8. mérföldkőtől a slotok miatt a 81 és a 82 is), a leírásukat a projekt gazdája adja meg.
 - **Késésrekord a járat indulási részén:** kód és perc, több is lehet; forrása kézi vagy üzenet; ki és mikor rögzítette. Rögzítheti, aki az indulási részt módosíthatja.
 - **Ellenőrzés:** ha a késések összege nem egyezik a késéssel (7. időszámítási szabály), figyelmeztetés.
 
@@ -566,7 +566,7 @@ Globális beállítás, a Tervező és az Admin szerkeszti. Számoláskor a terv
 
 ## 8. mérföldkő – üzenetek bővítése: pontosabb feldolgozás, érkezési és korrekciós MVT, PSM, PTM, slot
 
-**Ezt építjük most.** A formátumok, a Lufthansa-változatok, a PSM, a PTM, a slotüzenetek és az új minták: `docs/messages.md` (6. verzió). Az „Ellenőrzés a Lufthansa-mintán” táblázat a feldolgozó elvárt eredménye.
+**Kész** (2026. szeptember 28.). A leírás a megépült működés referenciája; a megvalósítás pontosításai a „További eldöntött szabályok” 55–64. pontjában. A formátumok, a Lufthansa-változatok, a PSM, a PTM, a slotüzenetek és az új minták: `docs/messages.md`. Az „Ellenőrzés a Lufthansa-mintán” táblázat a feldolgozó elvárt eredménye.
 
 **Az SI-t nem dolgozzuk fel.** A tartalma légitársaságonként és üzenetenként nagyon eltér, ezért ebben a mérföldkőben csak az üzenet törzsét olvassuk; az SI szabad szövegként, változatlanul marad meg és jelenik meg.
 
@@ -693,6 +693,16 @@ Ezeket a kérdéseket a megrendelő 2026. szeptember 22-én jóváhagyta; a kód
 52. **UCM:** ha egy UCM-ben `IN` és `OUT` is van, az első számít, figyelmeztetéssel.
 53. **CPM `.TW` sor:** összsúlyként olvassuk, amíg a jelentése nem tisztázott.
 54. **Küldés:** email nodemailerrel; a seed címei csak `.invalid` doménre mutatnak.
+55. **SI a 7. mérföldkő után:** a korábbi SI-feldolgozás (LDM nettó bontás, CPM-súlyok, TOW-ellenőrzés) megszűnt; az SI szabad szöveg.
+56. **CPM `Q`:** a `Q` és utána egy karakter kontúrkód (pl. `Q5`); a magában álló `Q` kategória a sürgős cargo.
+57. **PSM és PTM tárolása:** a nyers szöveg helyén a darabszámok szöveges alakja áll, boríték és az eredeti szöveg hash-e nélkül; az olvashatatlan sorból csak a darabszám marad, a tartalma nem.
+58. **Nem feldolgozott slot-`TITLE`:** nyersen tárolódik, a járatra nincs hatása.
+59. **Slot-párosítás:** az útvonalhoz a járat célállomása kell; célállomás nélkül a slotüzenet csak kézzel rendelhető hozzá. Az `IFPLID` a járat indulási részén tárolódik.
+60. **Slot-figyelmeztetés:** a task nézetben és a napi listán, az elsődleges task indulási horgonyával.
+61. **Slot-felajánlás:** a „Késés rögzítése” az ETD-hez, az MVT DL sora a késéskódhoz; a felajánlott perc = cél off-block − STD.
+62. **Korrekciós MVT:** a küldött MVT kártyájáról indítható.
+63. **Érkezési MVT:** a 44. szabály szerint küldhető, ha már van hatályos ATA.
+64. **Repülőtér:** nem törölhető.
 
 ## Később (most ne építsd)
 

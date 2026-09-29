@@ -1,6 +1,6 @@
 # Üzenetformátumok – Ground Handling App
 
-*Verzió: 6 · 2026. szeptember 28.*
+*Verzió: 7 · 2026. szeptember 29.*
 
 Referencia a 7. és a 8. mérföldkőhöz (üzenetek fogadása, feldolgozása és előállítása), a CLAUDE.md ezekre a szakaszokra hivatkozik. A formátumok a projekt gazdájának gyakorlatából és valós mintákból származnak. Ha a gyakorlatban új változat bukkan fel, ide kerül, és a mintájából tesztadat lesz.
 
@@ -65,7 +65,7 @@ Referencia a 7. és a 8. mérföldkőhöz (üzenetek fogadása, feldolgozása é
 - Célállomásonkénti összesítés: `.BUD/92404`, `.TW/92404`.
 - Szakaszok (szélestörzsű, teherszállító): `M/D RIGHT SIDE`, `M/D LEFT SIDE`, `M/D CENTER`, `L/D …`.
 - Pozíciósor, két látott változat (a súly és a cél sorrendje eltér!):
-  - `-POZ/ULD/súly/cél/kontúr/kategória[.kód]`, pl. `-GR/PMC45245CZ/4765/BUD/Q5/C.ELI`
+  - `-POZ/ULD/súly/cél/kontúr/kategória[.kód]`, pl. `-GR/PMC45245CZ/4765/BUD/Q5/C.ELI` (a `Q` és utána egy karakter kontúrkód; a magában álló `Q` kategória a sürgős cargo)
   - `-POZ/ULD/cél/súly/kategória[.kód]`, pl. `-A9/PAG72809AGH/OSR/335/E.ELD`, `-11/AKH42390LH/BUD/565/BY0` (a kategória utáni számjegy a szabad negyedek száma)
 - A pozíció súlya bruttó (a konténer önsúlyával).
 - Bulk: `-BLK/108/BUD/C` vagy raktérszámmal `-1/OSR/50/E.FKT` (itt is eltér a sorrend). ULD nélküli pozíció szabad hellyel: `-51/BUD/30/D.VR1`.
