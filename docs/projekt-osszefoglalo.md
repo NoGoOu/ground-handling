@@ -1,6 +1,6 @@
 # Ground Handling App – projekt-összefoglaló
 
-*Verzió: 26 · 2026. szeptember 29.*
+*Verzió: 27 · 2026. szeptember 30.*
 
 ## A projekt
 
@@ -104,6 +104,9 @@ A projekt gazdája a földi kiszolgálásban dolgozik, a domain-szabályok az ő
 82. **Lufthansa-üzenetek értelmezése:** a kategória utáni számjegy és a `VR` a szabad negyedek száma; `D` a személyzet poggyásza; `Q` sürgős cargo; a DAA a gép ajtajához kiadott tétel (babakocsi, tolószék); a keretezett SI üzemi utasítás, amit kiemelve kell mutatni.
 83. **Az SI-t egyelőre nem dolgozzuk fel:** nagyon sokféle lehet, ezért csak az üzenet törzsét olvassuk; az SI szabad szövegként, változatlanul, jól látható helyen jelenik meg (így a keretezett üzemi utasítás és a DAA is látszik).
 84. **Elfogadott pontosítások a 8. mérföldkőből** (CLAUDE.md 55–64.): a 7. mérföldkő SI-feldolgozása megszűnt; a CPM-ben a `Q` és utána egy karakter kontúrkód, a magában álló `Q` sürgős cargo; a PSM és a PTM helyén a darabszámok szöveges alakja tárolódik; a slot párosításához a járat célállomása kell, különben kézi hozzárendelés; a slot-figyelmeztetés a napi listán és a task nézetben látszik; a korrekciós MVT a küldött MVT-ből indul; érkezési MVT csak hatályos ATA-val; repülőtér nem törölhető.
+85. **Létszámigény (9. mérföldkő):** 15 perces sávokban a sávon belüli csúcs (a legtöbb egyszerre futó foglaltsági ablak), feladattípusonként és összesen, összevetve a valós beosztás operatív, blokkon kívüli ügynökeivel; napi nézet és legfeljebb 31 napos áttekintés.
+86. **Késéskódok légitársaságonként:** a légitársaság saját késéskód-dokumentuma (PDF) feltölthető, és a járatról megnyitható; ha nincs, az alapértelmezett, közös kódtábla látszik, IATA-leírásokkal. A kódtábla közös marad.
+87. **Kimutatások a valós adatok után:** a légitársaságonkénti kimutatások az Ikarus-mentésekből épülő adathalmazt várják meg.
 
 ## Még ellenőrizendő feltételezések
 
@@ -130,13 +133,15 @@ A projekt gazdája a földi kiszolgálásban dolgozik, a domain-szabályok az ő
 - Üzenetek: a járatrészhez lajstrom, az érkezési részhez indulóállomás, az indulásihoz célállomás kerül; az import a meglévő oszlopokból tölti.
 - Slot: a cél off-block = CTOT − gurulási idő; a slot-tűrés 10 perc és a párosítási ablak ±2 óra helyőrző; a slot az ETD-t nem írja át.
 - Lufthansa-minta: a Q (sürgős) tétel az LDM nettó bontásában az O (other) alatt szerepel; az LDM összsúlya a konténerek önsúlyával együtt értendő.
+- Létszámigény: az igény a kiosztástól független; a beosztás sávértéke a sávon belüli legkisebb létszám; a beosztás nincs feladattípusra bontva.
+- Késéskód-dokumentum: csak PDF, legfeljebb 10 MB (helyőrző); légitársaságonként egy, az új feltöltés cseréli a régit.
 
 ## Nyitott kérdések
 
 - Törölhető legyen-e a légitársaság és a sablon? Egyelőre nem törölhetők. (A járat törlés helyett töröltre állítható, lásd 51.)
 - Melyik SITA-átjárón keresztül menjenek ki a Type B üzenetek (jelenleg milyen programmal vagy átjárón küldtök)?
 - Késési (`ED`) MVT minta, ha van; az LDM `PAD`, `CRW`, `DHC`, `TB`, a CPM `4/1` és `.TW`, valamint a Lufthansa XOM és XCS kód jelentése.
-- A 36, 68, 81, 82, 93 késéskód leírása; slottörlés és más slotüzenet mintája.
+- Slottörlés és más slotüzenet mintája.
 - Mit csinál pontosan egy GOU- és egy HDS-ügynök a járaton, mikortól meddig? Illeszkednek-e rájuk a mostani foglaltsági képletek, vagy más paraméter kell?
 - Összekapcsolható-e utólag egy csak érkező és egy későbbi csak induló járat fordulóvá (pl. a lajstrom alapján)?
 - Meddig őrizzük meg a képzési adatokat és a feltöltött fájlokat?
@@ -150,16 +155,15 @@ A projekt gazdája a földi kiszolgálásban dolgozik, a domain-szabályok az ő
 - A BUD-on lévő ULD-készlet követése az UCM-ekből
 - Ügynöki beosztásnézet (az ügynök a saját publikált és valós beosztását látja)
 - A beosztás TRN részének összekötése egy konkrét képzéssel
-- A létszámigény számítása és külön nézete
 - A lezárt taskok utólagos javításának jogosultsága
 - Járatinfó: egyedi mezők taskonként (utaslétszám, különleges igények)
 - Szolgáltatások rögzítése időpontokkal
-- Kimutatások légitársaságonként
+- Kimutatások légitársaságonként (a valós adatok után)
 - Licenc kiválasztása
 - Többnyelvűség
 
 ## Következő lépés
 
 1. Az 1–8. mérföldkő kész (MVP; jogosultság, beosztás, sávos nézet; járatrend-import; tervezői nézet; feladattípusok; képzések és jogosítások; üzenetek; üzenetek bővítése, 610 zöld teszttel).
-2. Most: a következő mérföldkő kiválasztása a későbbi témák közül.
+2. Most: a késéskód-dokumentumok utómunkája, majd a 9. mérföldkő, létszámigény (CLAUDE.md 31. verzió).
 3. A projekt gazdájánál: a nyitott üzenet- és késéskódok; a SITA-átjáró; a valós GOU- és HDS-sablonok; a csatolt fájlok megőrzési ideje; az Ikarus-mentés ellenőrzése.

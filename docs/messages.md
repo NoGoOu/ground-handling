@@ -1,6 +1,6 @@
 # Üzenetformátumok – Ground Handling App
 
-*Verzió: 7 · 2026. szeptember 29.*
+*Verzió: 8 · 2026. szeptember 30.*
 
 Referencia a 7. és a 8. mérföldkőhöz (üzenetek fogadása, feldolgozása és előállítása), a CLAUDE.md ezekre a szakaszokra hivatkozik. A formátumok a projekt gazdájának gyakorlatából és valós mintákból származnak. Ha a gyakorlatban új változat bukkan fel, ide kerül, és a mintájából tesztadat lesz.
 
@@ -168,7 +168,6 @@ A fogadó API, a kézi bemásolás és a jogosultságok leírása a CLAUDE.md 7.
 - Az LDM `PAD`, `CRW`, `DHC` és `TB`, a CPM-fejléc `4/1` és a `.TW` sor jelentése. Addig nyersen látszanak.
 - A Lufthansa XOM és XCS kódjának pontos jelentése.
 - Slottörlés és más `TITLE`-ű slotüzenet mintája.
-- A 36, 68, 93 késéskód leírása.
 - A SITA-küldés átjárója: jelenleg milyen programmal vagy átjárón keresztül megy ki a Type B üzenet.
 
 ## Ellenőrzés a Lufthansa-mintán (tesztesetnek)

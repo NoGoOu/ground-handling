@@ -1,6 +1,6 @@
 # Ground Handling App – projektleírás
 
-*Verzió: 30 · 2026. szeptember 29.*
+*Verzió: 31 · 2026. szeptember 30.*
 
 Nyílt forráskódú webalkalmazás repülőtéri földi kiszolgálás (ground handling) szervezésére. Minden járatfordulóhoz feladattípusonként egy task tartozik, benne mérföldkövekkel, amelyeknek van tervezett és tényleges időpontja. A mérföldkövek légitársaságonként testreszabható sablonokból jönnek. A hozzáférés szerepkör alapú.
 
@@ -55,7 +55,7 @@ Az alábbi táblázat az alapértelmezett szerepköröket írja le. A 2. mérfö
 
 - **User:** name, username, passwordHash, roles (egy vagy több szerepkör, 2. mérföldkő), egyéni jogosultságok (2. mérföldkő), team (opcionális, 2. mérföldkő), active
 - **TaskType** (5. mérföldkő): name, code. **AirlineTaskType** (5. mérföldkő): airline, taskType, template, active, primary. A sablon feladattípushoz tartozik.
-- **Airline:** name, iataCode, defaultTemplate (3. mérföldkő)
+- **Airline:** name, iataCode, defaultTemplate (3. mérföldkő), késéskód-dokumentum (opcionális; a 8. mérföldkő utómunkája)
 - **TurnaroundTemplate:** airline, name, és a paraméterek:
   - `minTurnaroundMinutes` (gyors forduló ATA-tól off-blockig): 25
   - `travelMinutes` (kiutazás / visszautazás): 5
@@ -149,7 +149,7 @@ Ezt a logikát egy külön modulba kell tenni (`lib/turnaround.ts`), tiszta füg
 
 ## Ügynök-foglaltság
 
-A foglaltsági ablakokra már most legyen függvény és teszt (a forduló típusához is kell). A létszámigény-számítás és a felület később jön.
+A foglaltsági ablakokra már most legyen függvény és teszt (a forduló típusához is kell). A létszámigény-számítás és a felülete a 9. mérföldkőben épül meg.
 
 - **Gyors forduló:** egy foglaltsági ablak, érkezési horgony − `travelMinutes`-tól tervezett off-block + `postDepartureMinutes`-ig. (A demo sablonnal ez 45 perc.)
 - **Hosszú forduló, két ablak:**
@@ -516,7 +516,7 @@ Globális beállítás, a Tervező és az Admin szerkeszti. Számoláskor a terv
 
 ### Késéskód
 
-- **Kódtábla:** kód, leírás, aktív; az admin kezeli. A seedben csak a mintákban szereplő kódok (36, 68, 93, a 8. mérföldkőtől a slotok miatt a 81 és a 82 is), a leírásukat a projekt gazdája adja meg.
+- **Kódtábla:** kód, leírás, aktív; az admin kezeli. A seedben csak a mintákban szereplő kódok (36, 68, 93, a 8. mérföldkőtől a slotok miatt a 81 és a 82 is), a leírásuk az IATA-szabvány szerinti. A légitársaság saját kódjai dokumentumként tölthetők fel (a 8. mérföldkő utómunkája).
 - **Késésrekord a járat indulási részén:** kód és perc, több is lehet; forrása kézi vagy üzenet; ki és mikor rögzítette. Rögzítheti, aki az indulási részt módosíthatja.
 - **Ellenőrzés:** ha a késések összege nem egyezik a késéssel (7. időszámítási szabály), figyelmeztetés.
 
@@ -540,7 +540,7 @@ Globális beállítás, a Tervező és az Admin szerkeszti. Számoláskor a terv
 - „Üzenetek megtekintése” hatókörrel (Ügynök: a saját taskjai járatai; Műszakvezető és Admin: összes).
 - „Üzenetek rögzítése” (kézi bemásolás, párosítatlanok kezelése): Műszakvezető, Admin.
 - „Üzenetek küldése” hatókörrel (Ügynök: a saját indulási, illetve érkezési része; Műszakvezető és Admin: összes).
-- „Üzenetküldés beállításai” (API-kulcsok, címjegyzék, késéskód-tábla): Admin.
+- „Üzenetküldés beállításai” (API-kulcsok, címjegyzék, késéskód-tábla, a légitársaságok késéskód-dokumentuma): Admin.
 
 ### Adatmodell (kiegészítés)
 
@@ -635,6 +635,47 @@ A 7. mérföldkő feldolgozója a 2026. szeptember 27-i mintacsomagon ezeken a p
 6. Infografika bővítése
 7. Seed (a 2026. szeptember 27-i minták a demo járatokra átírva, egy SAM és egy SRM a demo indulásokra, repülőtér-tábla), README, STATUS.md
 
+### Utómunka (a 9. mérföldkő előtt)
+
+1. **Késéskódok légitársaságonként:** a légitársasághoz feltölthető a saját késéskód-dokumentuma (PDF, legfeljebb 10 MB, helyőrző), amely a járatról megnyitható: a késésrekordoknál, a „Késés rögzítése” műveletnél és az indulási MVT DL sorának szerkesztésénél. Ha a légitársaságnak nincs dokumentuma, ugyanott az alapértelmezett, közös kódtábla nyílik meg (kód és leírás). A kódtábla közös marad; a benne nem szereplő kód továbbra is megmarad, figyelmeztetéssel.
+   - Légitársaságonként egy dokumentum. Az új feltöltés cseréli a régit, a régi fájl a tárhelyről törlődik; a dokumentum el is távolítható. A feltöltés, a csere és az eltávolítás naplózott (ki, mikor, milyen fájl).
+   - Feltölteni az „Üzenetküldés beállításai” jogosultsággal lehet (Admin); megnyitni az is, aki a járat valamelyik taskját látja. A fájl a képzési csatolmányok tárhelyén (Docker-kötet) van, a letöltés jogosultságát a szerver ellenőrzi.
+   - Seed: az alapértelmezett tábla leírásai az IATA-szabvány szerint: 36 tankolás vagy üzemanyag-leeresztés (üzemanyag-szállító); 68 a kabinszemélyzet hibája vagy külön kérése; 81 útvonali légiforgalmi korlátozás vagy kapacitás; 82 útvonali légiforgalmi korlátozás létszámhiány vagy berendezéshiba miatt; 93 gépforgás: a gép késve érkezett egy másik járatról vagy az előző szakaszról. A demo légitársasághoz egy saját készítésű minta-PDF (nem valódi légitársasági dokumentum).
+
+## 9. mérföldkő – létszámigény
+
+**Ezt építjük most.** Hány ügynök kell egyszerre, 15 perces sávokban, a foglaltsági ablakokból, és ez hogyan viszonyul a valós beosztáshoz. Tiszta függvények, külső AI nélkül. A sávos idősoros nézeten továbbra sem jelenik meg, mert a tervezés más logika szerint működik. A légitársaságonkénti kimutatások később jönnek, a valós adatokkal.
+
+### Számítás
+
+- **Sáv:** 15 perc, a naptári napon (00:00–24:00, Europe/Budapest), a nap elejétől számolva. Óraátállítás napján a sávok a valós időt követik (92 vagy 100 sáv).
+- **Igény egy sávban:** a sávon belül a legtöbb egyszerre futó foglaltsági ablak (lásd Ügynök-foglaltság), félig nyitott intervallumokkal: a sáv elejével végződő és a sáv végével kezdődő ablak nem számít bele.
+- **Bemenet:** minden task foglaltsági ablaka, minden feladattípusból, a hatályos időkből, így a késéssel együtt mozog. A törölt részek és a „nincs teendő” taskok kimaradnak. Az éjfélen átnyúló ablak mindkét nap sávjaiba beleszámít. Az igény a kiosztástól független.
+- **Bontás:** feladattípusonként és összesen. Az összesen a minden ablakból együtt számolt csúcs, nem a feladattípusonkénti csúcsok összege.
+- **Beosztás:** sávonként azoknak az ügynököknek a száma, akik a valós rétegben operatív részben vannak, és éppen nincsenek egy nem operatív rész blokkjában; a sáv értéke a sávon belüli legkisebb szám. A beosztás nincs feladattípusra és jogosításra bontva, mert az ügynökök nincsenek feladattípushoz kötve.
+- **Hiány és többlet:** az összesített igény és a beosztás különbsége sávonként; a hiány kiemelve.
+
+### Nézet
+
+Külön oldal, asztali gépre; telefonon ne törjön el, de nem arra optimalizált. Minden idő helyi időben (Europe/Budapest).
+
+- **Napi nézet** napválasztóval: lépcsős grafikon (a sáv értéke állandó) az összesített és a feladattípusonkénti igénnyel, a beosztás vonalával és a hiányos sávok kiemelésével; alatta táblázat sávonként: idő, igény feladattípusonként és összesen, beosztás, hiány vagy többlet.
+- **Többnapos áttekintés:** legfeljebb 31 napos időszak; nap × sáv táblázat az összesített igénnyel, színezve, a hiányos sávok kiemelve; naponként a napi csúcs és az ideje, valamint a legnagyobb hiány. Egy napra kattintva a napi nézet nyílik.
+
+### Jogosultság
+
+- Új jogosultság: „létszámigény megtekintése”, alapértelmezés szerint a Tervező, a Műszakvezető és az Admin szerepkörben. Hatókör nélkül: mindig az összes járatból számol.
+
+### Lépésterv
+
+1. Utómunka: késéskód-dokumentum légitársaságonként, az alapértelmezett tábla IATA-leírásai (lásd fent)
+2. Tiszta függvények (`lib/staffing/`): a nap sávjai óraátállítással, csúcs a sávban, feladattípusonként és összesen; tesztek (félig nyitott határ, egyperces ablak, éjfélen átnyúló ablak, óraátállítás napja, törölt rész, az összesen nem a típusok összege)
+3. Beosztás és hiány: operatív részek a blokkok nélkül, a sáv legkisebb értéke; tesztek (részben lefedett sáv, blokk a sáv közepén, éjfélen átnyúló műszak)
+4. Adatréteg: a nappal átfedő ablakok (nem csak az aznap kezdődők, mint a tervezőnél), a valós réteg műszakjai és blokkjai, a sávos nézet meglévő adatrétegére építve; a „létszámigény megtekintése” jogosultság, szerveroldali ellenőrzéssel
+5. Napi nézet: grafikon és táblázat
+6. Többnapos áttekintés
+7. Seed (a demo napon legalább egy hiányos sáv), README, STATUS.md
+
 ## További eldöntött szabályok
 
 Ezeket a kérdéseket a megrendelő 2026. szeptember 22-én jóváhagyta; a kód is ezekre a számokra hivatkozik.
@@ -714,10 +755,9 @@ Ezeket a kérdéseket a megrendelő 2026. szeptember 22-én jóváhagyta; a kód
 - Az SI elemeinek feldolgozása (DAA, célállomásonkénti nettó bontás, poggyászdarabszámok, LOAD IN CPTS, B-sorok), ha a minták alapján egységesíthető
 - Email- és SITA-átjáró a bejövő üzenetekhez (a fogadó API-ra csatlakozik)
 - A BUD-on lévő ULD-készlet követése az UCM-ekből
-- Létszámigény: számítás (egy adott időpontban az átfedő foglaltsági ablakok száma, 15 perces sávokra bontva; a sávon belüli számolás módja még nyitott) és külön nézet (idősávos táblázat vagy grafikon). A sávos idősoros nézeten nem jelenik meg: a tervezés más logika szerint működik.
 - Járatinfó: a sablonban definiált egyedi mezők taskonként (pl. utaslétszám, különleges igények)
 - Szolgáltatások rögzítése taskonként, időpontokkal
-- Kimutatások légitársaságonként (kiszállítás és beszállítás hossza, földi idő, késések)
+- Kimutatások légitársaságonként (kiszállítás és beszállítás hossza, földi idő, késések), a valós adatok után
 - Több nyelv támogatása
 
 ## Állapotjelentés (`STATUS.md`)
