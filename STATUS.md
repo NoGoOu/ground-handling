@@ -4,20 +4,21 @@
 
 ## Mi készült el
 
-- **9. mérföldkő, 1. lépés kész: a 8. mérföldkő utómunkája (késéskódok légitársaságonként).**
-  - Tárolás és feltöltés (`4ffa147`): légitársaságonként egy PDF (legfeljebb 10 MB, a tartalom alapján ellenőrizve) a meglévő kötet `delay-codes` mappájában; feltöltés, csere, eltávolítás és napló az `Admin → Üzenetküldés` oldalon.
-  - Megnyitás a járatról: „Késéskódok” hivatkozás a késésrekordoknál, a „Késés rögzítése” műveletnél és az indulási MVT DL soránál. Ha van dokumentum, új lapon nyílik; ha nincs, helyben lenyílik a közös kódtábla (aktív kódok, leírással).
-  - Seed: a 36, 68, 81, 82, 93 kód IATA szerinti leírása; a Demo Fapadoshoz saját készítésű minta-PDF (a Ryanairnek nincs, ott a közös tábla látszik). README frissítve.
+- **9. mérföldkő, 2. lépés:** `lib/staffing/` – az igény tiszta függvényei.
+  - `dayBands`: a budapesti nap 15 perces sávjai a nap elejétől, valós időben (96; óraátállításkor 92 vagy 100).
+  - `peakWithin`: a sávon belül a legtöbb egyszerre futó ablak, félig nyitott határokkal.
+  - `demandOfBands`: sávonként az igény feladattípusonként és összesen; az összesen a minden ablakból együtt számolt csúcs.
+  - Tesztek: félig nyitott határ, egyperces ablak, éjfélen átnyúló ablak, mindkét óraátállítási nap, törölt rész, „nincs teendő” task, késés, és hogy az összesen nem a típusok összege.
+- 1. lépés (a 8. mérföldkő utómunkája, `4ffa147`, `24bf6f3`): késéskód-dokumentum légitársaságonként, megnyitás a járatról, az alapértelmezett tábla IATA-leírásai.
 
 ## Állapot
 
-- Utolsó commit: `feat: open the delay codes from the flight` (ez a commit; előtte `4ffa147`)
-- Tesztek: `npm test` → 619 teszt, mind zöld; `npm run lint` hibátlan, `npx tsc --noEmit` tiszta, `npm run build` sikeres
-- Ellenőrizve: adatbázison a feltöltés, a csere, az egyidejű feltöltés és az eltávolítás; a minta-PDF megnyitható; belépés nélkül mindkét letöltési útvonal a belépéshez irányít. A felületet belépés nélkül nem néztem meg.
+- Utolsó commit: `feat: count the staffing demand per 15-minute band` (ez a commit; előtte `24bf6f3`)
+- Tesztek: `npm test` → 639 teszt, mind zöld; `npm run lint` hibátlan, `npx tsc --noEmit` tiszta
 
 ## Eltérések a CLAUDE.md-től
 
-- Nincs. Jóváhagyott döntés: a közös kódtábla helyben nyílik le. Pontosítás: a dokumentumot a járat taskjainak látóin kívül az is megnyithatja, aki járatot kezel (a „Késés rögzítése” űrlap miatt) vagy a dokumentumokat feltölti.
+- nincs
 
 ## Kérdések a tervezéshez
 
@@ -25,4 +26,4 @@
 
 ## Következő lépés
 
-- 2. lépés: `lib/staffing/` – a nap 15 perces sávjai óraátállítással, a sáv csúcsa feladattípusonként és összesen, tesztekkel.
+- 3. lépés: beosztás és hiány – operatív részek a blokkok nélkül, a sáv legkisebb értéke; hiány és többlet az összesített igényhez képest.
