@@ -1,6 +1,6 @@
 # Ground Handling App – projekt-összefoglaló
 
-*Verzió: 27 · 2026. szeptember 30.*
+*Verzió: 28 · 2026. szeptember 30.*
 
 ## A projekt
 
@@ -107,6 +107,8 @@ A projekt gazdája a földi kiszolgálásban dolgozik, a domain-szabályok az ő
 85. **Létszámigény (9. mérföldkő):** 15 perces sávokban a sávon belüli csúcs (a legtöbb egyszerre futó foglaltsági ablak), feladattípusonként és összesen, összevetve a valós beosztás operatív, blokkon kívüli ügynökeivel; napi nézet és legfeljebb 31 napos áttekintés.
 86. **Késéskódok légitársaságonként:** a légitársaság saját késéskód-dokumentuma (PDF) feltölthető, és a járatról megnyitható; ha nincs, az alapértelmezett, közös kódtábla látszik, IATA-leírásokkal. A kódtábla közös marad.
 87. **Kimutatások a valós adatok után:** a légitársaságonkénti kimutatások az Ikarus-mentésekből épülő adathalmazt várják meg.
+88. **Elfogadott pontosítások a 9. mérföldkőből** (CLAUDE.md 65–70.): a közös kódtábla helyben, a légitársaság PDF-je új lapon nyílik; minden task beleszámít az igénybe, a státuszától függetlenül; beosztás nélküli napon hiány nem jelölődik; az áttekintés a helyi óra negyedóráit mutatja, alapból egy hétre; a beosztásba mindenki beleszámít, akinek operatív része van.
+89. **Tervezet a létszámigényben:** a még nem publikált napokon a tervezet műszakjaival vetjük össze az igényt, „tervezet” jelöléssel; csak az látja, aki a tervezetet is láthatja.
 
 ## Még ellenőrizendő feltételezések
 
@@ -164,6 +166,6 @@ A projekt gazdája a földi kiszolgálásban dolgozik, a domain-szabályok az ő
 
 ## Következő lépés
 
-1. Az 1–8. mérföldkő kész (MVP; jogosultság, beosztás, sávos nézet; járatrend-import; tervezői nézet; feladattípusok; képzések és jogosítások; üzenetek; üzenetek bővítése, 610 zöld teszttel).
-2. Most: a késéskód-dokumentumok utómunkája, majd a 9. mérföldkő, létszámigény (CLAUDE.md 31. verzió).
+1. Az 1–9. mérföldkő kész (MVP; jogosultság, beosztás, sávos nézet; járatrend-import; tervezői nézet; feladattípusok; képzések és jogosítások; üzenetek; üzenetek bővítése; létszámigény, 689 zöld teszttel), a késéskód-dokumentumokkal együtt.
+2. Most: a 9. mérföldkő utómunkája, a tervezet a létszámigényben (CLAUDE.md 32. verzió); utána a következő mérföldkő kiválasztása.
 3. A projekt gazdájánál: a nyitott üzenet- és késéskódok; a SITA-átjáró; a valós GOU- és HDS-sablonok; a csatolt fájlok megőrzési ideje; az Ikarus-mentés ellenőrzése.

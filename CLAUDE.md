@@ -1,6 +1,6 @@
 # Ground Handling App – projektleírás
 
-*Verzió: 31 · 2026. szeptember 30.*
+*Verzió: 32 · 2026. szeptember 30.*
 
 Nyílt forráskódú webalkalmazás repülőtéri földi kiszolgálás (ground handling) szervezésére. Minden járatfordulóhoz feladattípusonként egy task tartozik, benne mérföldkövekkel, amelyeknek van tervezett és tényleges időpontja. A mérföldkövek légitársaságonként testreszabható sablonokból jönnek. A hozzáférés szerepkör alapú.
 
@@ -566,7 +566,7 @@ Globális beállítás, a Tervező és az Admin szerkeszti. Számoláskor a terv
 
 ## 8. mérföldkő – üzenetek bővítése: pontosabb feldolgozás, érkezési és korrekciós MVT, PSM, PTM, slot
 
-**Kész** (2026. szeptember 28.). A leírás a megépült működés referenciája; a megvalósítás pontosításai a „További eldöntött szabályok” 55–64. pontjában. A formátumok, a Lufthansa-változatok, a PSM, a PTM, a slotüzenetek és az új minták: `docs/messages.md`. Az „Ellenőrzés a Lufthansa-mintán” táblázat a feldolgozó elvárt eredménye.
+**Kész** (2026. szeptember 28.); az utómunkával együtt (2026. szeptember 30.). A leírás a megépült működés referenciája; a megvalósítás pontosításai a „További eldöntött szabályok” 55–65. pontjában. A formátumok, a Lufthansa-változatok, a PSM, a PTM, a slotüzenetek és az új minták: `docs/messages.md`. Az „Ellenőrzés a Lufthansa-mintán” táblázat a feldolgozó elvárt eredménye.
 
 **Az SI-t nem dolgozzuk fel.** A tartalma légitársaságonként és üzenetenként nagyon eltér, ezért ebben a mérföldkőben csak az üzenet törzsét olvassuk; az SI szabad szövegként, változatlanul marad meg és jelenik meg.
 
@@ -644,7 +644,7 @@ A 7. mérföldkő feldolgozója a 2026. szeptember 27-i mintacsomagon ezeken a p
 
 ## 9. mérföldkő – létszámigény
 
-**Ezt építjük most.** Hány ügynök kell egyszerre, 15 perces sávokban, a foglaltsági ablakokból, és ez hogyan viszonyul a valós beosztáshoz. Tiszta függvények, külső AI nélkül. A sávos idősoros nézeten továbbra sem jelenik meg, mert a tervezés más logika szerint működik. A légitársaságonkénti kimutatások később jönnek, a valós adatokkal.
+**Kész** (2026. szeptember 30.), az utómunka kivételével: **most az utómunkát építjük** (lásd a szakasz végén). A leírás a megépült működés referenciája; a megvalósítás pontosításai a „További eldöntött szabályok” 66–70. pontjában. Hány ügynök kell egyszerre, 15 perces sávokban, a foglaltsági ablakokból, és ez hogyan viszonyul a valós beosztáshoz. Tiszta függvények, külső AI nélkül. A sávos idősoros nézeten továbbra sem jelenik meg, mert a tervezés más logika szerint működik. A légitársaságonkénti kimutatások később jönnek, a valós adatokkal.
 
 ### Számítás
 
@@ -675,6 +675,10 @@ Külön oldal, asztali gépre; telefonon ne törjön el, de nem arra optimalizá
 5. Napi nézet: grafikon és táblázat
 6. Többnapos áttekintés
 7. Seed (a demo napon legalább egy hiányos sáv), README, STATUS.md
+
+### Utómunka (a 10. mérföldkő előtt)
+
+1. **Tervezet a létszámigényben:** a még nem publikált napokon a tervezet réteg műszakjai adják a beosztást, ugyanazzal a számítással (operatív rész, blokkon kívül, a sáv legkisebb értéke), „tervezet” jelöléssel; a hiány és a többlet ugyanúgy látszik. A napi nézetben és a többnapos áttekintésben is jelölve van, melyik nap számol a tervezetből. A tervezetből számolt beosztást csak az látja, aki a beosztás tervezetét is láthatja (alapból a Tervező és az Admin); a többieknek ezeken a napokon csak az igény látszik, mint eddig. Tesztekkel; README, STATUS.md.
 
 ## További eldöntött szabályok
 
@@ -744,6 +748,12 @@ Ezeket a kérdéseket a megrendelő 2026. szeptember 22-én jóváhagyta; a kód
 62. **Korrekciós MVT:** a küldött MVT kártyájáról indítható.
 63. **Érkezési MVT:** a 44. szabály szerint küldhető, ha már van hatályos ATA.
 64. **Repülőtér:** nem törölhető.
+65. **Késéskód-dokumentum megnyitása:** a közös kódtábla helyben nyílik le, a légitársaság PDF-je új lapon. Megnyithatja az is, aki járatot kezel, vagy a dokumentumokat feltöltheti.
+66. **Létszámigény és státusz:** minden task beleszámít az igénybe, a státuszától függetlenül.
+67. **Beosztás nélküli nap:** az igény látszik, hiány nem jelölődik (a még nem publikált napokra lásd a 9. mérföldkő utómunkáját).
+68. **Többnapos áttekintés:** az oszlopok a helyi óra negyedórái; óraátállításkor tavasszal üres cellák, ősszel a két azonos negyedóra közül a nagyobb igény és a nagyobb hiány, megjelölve. Alapból mától egy hét; a 31 napnál hosszabb időszakot elutasítja.
+69. **Beosztás a létszámigényhez:** mindenki beleszámít, akinek a valós rétegben operatív része van.
+70. **Nappal átfedő ablakok:** az előző és a következő nap járatai is betöltődnek; feltevés, mint a tervezőnél: egy ablak legfeljebb a szomszédos napra nyúlik át.
 
 ## Később (most ne építsd)
 
