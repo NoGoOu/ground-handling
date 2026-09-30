@@ -210,6 +210,8 @@ export const canEditActualRoster = (actor: Actor) => can(actor, "ROSTER_ACTUAL_E
 export const canManageSegmentTypes = (actor: Actor) => can(actor, "SEGMENT_TYPE_MANAGE");
 /** Planner view: calculating, settings, names and saving into the draft (4. mérföldkő). */
 export const canPlan = (actor: Actor) => can(actor, "PLANNING");
+/** The staffing demand (9. mérföldkő): without a scope, it always counts every flight. */
+export const canViewStaffing = (actor: Actor) => can(actor, "STAFFING_VIEW");
 /** Qualifications, trainings, records and files (6. mérföldkő). */
 export const canManageTraining = (actor: Actor) => can(actor, "TRAINING_MANAGE");
 export const canViewTraining = (actor: Actor) => can(actor, "TRAINING_VIEW") || can(actor, "TRAINING_MANAGE");
@@ -295,6 +297,7 @@ const ROUTE_PERMISSIONS: [prefix: string, permissions: Permission[]][] = [
   ["/shifts/types", ["SEGMENT_TYPE_MANAGE"]],
   ["/shifts", ["ROSTER_VIEW", "ROSTER_DRAFT"]],
   ["/board", ["BOARD_VIEW"]],
+  ["/staffing", ["STAFFING_VIEW"]],
   ["/agent", ["TASK_VIEW"]],
 ];
 

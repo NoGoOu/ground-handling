@@ -69,7 +69,11 @@ export function toRosterShift(shift: ShiftWithRelations): RosterShift {
 
 /** Shifts of one layer with a segment overlapping the given Budapest day. */
 export async function listShiftsForDay(localDate: string, layer: RosterLayer): Promise<RosterShift[]> {
-  const { start, end } = localDayRange(localDate);
+  return listShiftsOverlapping(localDayRange(localDate), layer);
+}
+
+/** Shifts of one layer with a segment overlapping the window, each with all its segments. */
+export async function listShiftsOverlapping({ start, end }: { start: Date; end: Date }, layer: RosterLayer): Promise<RosterShift[]> {
   const shifts = await prisma.shift.findMany({
     where: { layer, segments: { some: { start: { lt: end }, end: { gt: start } } } },
     include: shiftInclude,

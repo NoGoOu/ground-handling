@@ -36,6 +36,7 @@ export const PERMISSIONS = {
   ROSTER_ACTUAL_EDIT: { label: "Valós beosztás szerkesztése", scoped: false, group: "Beosztás" },
   SEGMENT_TYPE_MANAGE: { label: "Műszakrész-típusok kezelése", scoped: false, group: "Beosztás" },
   PLANNING: { label: "Tervezés", scoped: false, group: "Beosztás" },
+  STAFFING_VIEW: { label: "Létszámigény megtekintése", scoped: false, group: "Beosztás" },
   TRAINING_MANAGE: { label: "Képzések kezelése", scoped: false, group: "Képzések" },
   TRAINING_VIEW: { label: "Képzési adatok megtekintése", scoped: true, group: "Képzések" },
   MESSAGE_VIEW: { label: "Üzenetek megtekintése", scoped: true, group: "Üzenetek" },
@@ -96,6 +97,8 @@ export const DEFAULT_ROLES: { name: string; builtIn: boolean; permissions: Parti
       SEGMENT_TYPE_MANAGE: "ALL",
       SCHEDULE_IMPORT: "ALL",
       PLANNING: "ALL",
+      // The staffing demand against the actual roster (9. mérföldkő).
+      STAFFING_VIEW: "ALL",
     },
   },
   {
@@ -110,6 +113,7 @@ export const DEFAULT_ROLES: { name: string; builtIn: boolean; permissions: Parti
       BOARD_VIEW: "ALL",
       ROSTER_VIEW: "ALL",
       ROSTER_ACTUAL_EDIT: "ALL",
+      STAFFING_VIEW: "ALL",
       // The shift lead leads the team: its members' training data (6. mérföldkő).
       TRAINING_VIEW: "TEAM",
       // Messages (7. mérföldkő).

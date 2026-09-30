@@ -20,6 +20,7 @@ import {
   canViewPlans,
   canViewLayerOf,
   canViewRosterOf,
+  canViewStaffing,
   canViewTask,
   canViewTrainingOf,
   DEFAULT_ROLES,
@@ -351,6 +352,20 @@ describe("messages (7. mérföldkő)", () => {
     expect(canRecordDelayCodes(bela, ["bela"])).toBe(true);
     expect(canRecordDelayCodes(anna, ["bela"])).toBe(false);
     expect(canRecordDelayCodes(planner, ["planner"])).toBe(false);
+  });
+
+  it("shows the staffing demand to the planner, the shift lead and the admin", () => {
+    for (const actor of [planner, lead, admin]) {
+      expect(canViewStaffing(actor)).toBe(true);
+      expect(canAccessPath(actor, "/staffing")).toBe(true);
+      expect(canAccessPath(actor, "/staffing/overview")).toBe(true);
+    }
+    for (const actor of [anna, teamLeader]) {
+      expect(canViewStaffing(actor)).toBe(false);
+      expect(canAccessPath(actor, "/staffing")).toBe(false);
+    }
+    // It has no scope: it always counts every flight.
+    expect(scopeOf(planner, "STAFFING_VIEW")).toBe("ALL");
   });
 
   it("opens the airline's delay code document for whoever sees a task of the flight", () => {
