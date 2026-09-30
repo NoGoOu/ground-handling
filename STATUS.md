@@ -4,21 +4,22 @@
 
 ## Mi készült el
 
-- **9. mérföldkő, 5. lépés:** napi nézet – új `Létszámigény` oldal (`/staffing`, a menüben is), napválasztóval.
-  - Lépcsős grafikon (saját SVG, külső könyvtár nélkül): az összesített igény területként, a feladattípusok vonalai, a beosztás szaggatott vonala, a hiányos sávok pirossal, a hiány mértéke kitöltve.
-  - Fölötte a napi csúcs és az ideje, a legnagyobb hiány és a hiányos sávok száma; alatta táblázat sávonként: idő, igény feladattípusonként és összesen, beosztás, hiány vagy többlet.
-  - Valós beosztás nélküli napon az igény látszik, hiány nem jelölődik, és erről üzenet szól; óraátállítás napján a 92, illetve 100 sáv jelenik meg.
-- 4. lépés (`8602a2d`): adatréteg és jogosultság. 3. lépés (`2def19f`): beosztás és hiány. 2. lépés (`8fda5cb`): sávok és igény. 1. lépés (`4ffa147`, `24bf6f3`): késéskód-dokumentum.
+- **9. mérföldkő, 6. lépés:** többnapos áttekintés (`/staffing/overview`).
+  - Időszak kezdő és záró nappal (alapból mától egy hét), előző / következő időszak; 31 napnál hosszabb vagy fordított időszakot az oldal elutasít, nem vág le.
+  - Nap × negyedóra táblázat az összesített igénnyel, az időszak legnagyobb igényéhez színezve; a hiányos sávok pirosak; a cellán az idő, az igény, a beosztás és a hiány.
+  - Naponként a csúcs és az ideje, a legnagyobb hiány és az ideje; a napra kattintva a napi nézet nyílik. Valós beosztás nélküli napon ∅ jel, hiány nélkül.
+  - Óraátállítás: az oszlopok a helyi óra negyedórái; tavasszal a nem létező óra cellái üresek (×), ősszel a kétszer előforduló óra cellája a nagyobb igényt és a nagyobb hiányt mutatja, megjelölve.
+- 5. lépés (`945a1cc`): napi nézet. 4. lépés (`8602a2d`): adatréteg és jogosultság. 3. lépés (`2def19f`): beosztás és hiány. 2. lépés (`8fda5cb`): sávok és igény. 1. lépés (`4ffa147`, `24bf6f3`): késéskód-dokumentum.
 
 ## Állapot
 
-- Utolsó commit: `feat: show the staffing demand of a day` (ez a commit; előtte `8602a2d`)
-- Tesztek: `npm test` → 670 teszt, mind zöld; `npm run lint` hibátlan, `npx tsc --noEmit` tiszta, `npm run build` sikeres, figyelmeztetés nélkül
-- A nézetet a demo nap adataival statikusan renderelve néztem meg (grafikon és táblázat); bejelentkezve nem, mert jelszót nem írok be.
+- Utolsó commit: `feat: show the staffing demand of up to 31 days` (ez a commit; előtte `945a1cc`)
+- Tesztek: `npm test` → 682 teszt, mind zöld; `npm run lint` hibátlan, `npx tsc --noEmit` tiszta, `npm run build` sikeres
+- Az áttekintést a demo adatokkal és mindkét óraátállítási nappal statikusan renderelve néztem meg; a 96 oszlop a lap szélességébe belefér. Bejelentkezve nem néztem meg; belépés nélkül az oldalak a belépéshez irányítanak.
 
 ## Eltérések a CLAUDE.md-től
 
-- Nincs. Megvalósításban: a feladattípusok vonalai csak ott látszanak, ahol van igényük, és egymáshoz képest kissé eltolva, hogy az azonos értékek ne takarják egymást. A tárhely útvonalánál megszűnt egy build-figyelmeztetés (a feltöltött fájlok futásidejű adatok, nem a build részei).
+- Nincs. A jóváhagyott döntések szerint készült (alapidőszak egy hét; óraátállítás az áttekintésben; nap valós beosztás nélkül).
 
 ## Kérdések a tervezéshez
 
@@ -26,4 +27,4 @@
 
 ## Következő lépés
 
-- 6. lépés: többnapos áttekintés – legfeljebb 31 nap, nap × sáv táblázat színezve, naponként a csúcs és a legnagyobb hiány.
+- 7. lépés: seed (teszt arra, hogy a demo napon van hiányos sáv), README, STATUS.md, tiszta Docker-indítás.
