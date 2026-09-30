@@ -4,21 +4,22 @@
 
 ## Mi készült el
 
-- **9. mérföldkő, 2. lépés:** `lib/staffing/` – az igény tiszta függvényei.
-  - `dayBands`: a budapesti nap 15 perces sávjai a nap elejétől, valós időben (96; óraátállításkor 92 vagy 100).
-  - `peakWithin`: a sávon belül a legtöbb egyszerre futó ablak, félig nyitott határokkal.
-  - `demandOfBands`: sávonként az igény feladattípusonként és összesen; az összesen a minden ablakból együtt számolt csúcs.
-  - Tesztek: félig nyitott határ, egyperces ablak, éjfélen átnyúló ablak, mindkét óraátállítási nap, törölt rész, „nincs teendő” task, késés, és hogy az összesen nem a típusok összege.
-- 1. lépés (a 8. mérföldkő utómunkája, `4ffa147`, `24bf6f3`): késéskód-dokumentum légitársaságonként, megnyitás a járatról, az alapértelmezett tábla IATA-leírásai.
+- **9. mérföldkő, 3. lépés:** beosztás és hiány (`lib/staffing/roster.ts`).
+  - Ügynökönként a rendelkezésre állás: az operatív részek, levonva a nem operatív részek blokkjait (az utazási idő az operatív részbe is belenyúlhat).
+  - A sáv beosztása a sávon belüli legkisebb létszám: aki a sávnak csak egy részében van bent, nem számít.
+  - Hiány és többlet: beosztás − összesített igény, sávonként.
+  - Tesztek: részben lefedett sáv, blokk a sáv közepén, utazási idős blokk, váltás réssel és rés nélkül, éjfélen átnyúló műszak, beosztás nélküli nap.
+- 2. lépés (`8fda5cb`): a nap sávjai óraátállítással, a sáv csúcsa feladattípusonként és összesen.
+- 1. lépés (a 8. mérföldkő utómunkája, `4ffa147`, `24bf6f3`): késéskód-dokumentum légitársaságonként.
 
 ## Állapot
 
-- Utolsó commit: `feat: count the staffing demand per 15-minute band` (ez a commit; előtte `24bf6f3`)
-- Tesztek: `npm test` → 639 teszt, mind zöld; `npm run lint` hibátlan, `npx tsc --noEmit` tiszta
+- Utolsó commit: `feat: set the roster against the staffing demand` (ez a commit; előtte `8fda5cb`)
+- Tesztek: `npm test` → 652 teszt, mind zöld; `npm run lint` hibátlan, `npx tsc --noEmit` tiszta
 
 ## Eltérések a CLAUDE.md-től
 
-- nincs
+- Nincs. Megvalósításban: a sávos nézet blokk-szabálya közös függvénybe került (`blockWindow`, `castsBlock`), hogy a létszámigény ugyanazt használja.
 
 ## Kérdések a tervezéshez
 
@@ -26,4 +27,4 @@
 
 ## Következő lépés
 
-- 3. lépés: beosztás és hiány – operatív részek a blokkok nélkül, a sáv legkisebb értéke; hiány és többlet az összesített igényhez képest.
+- 4. lépés: adatréteg (a nappal átfedő ablakok, a valós réteg műszakjai és blokkjai) és a „Létszámigény megtekintése” jogosultság.

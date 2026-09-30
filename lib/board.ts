@@ -59,15 +59,29 @@ export interface BoardBlock extends TimeWindow {
 
 const MINUTE_MS = 60_000;
 
+/** What decides whether a segment casts a block, and how long it is. */
+export type BlockSource = Pick<BoardSegment, "start" | "end" | "operative" | "createBlock" | "travelBeforeMinutes" | "travelAfterMinutes">;
+
+/** Only a non-operative segment marked for it casts a block (rule 15). */
+export function castsBlock(segment: Pick<BlockSource, "operative" | "createBlock">): boolean {
+  return !segment.operative && segment.createBlock;
+}
+
 /** Block: segment start − travel there → segment end + travel back. */
+export function blockWindow(segment: Pick<BlockSource, "start" | "end" | "travelBeforeMinutes" | "travelAfterMinutes">): TimeWindow {
+  return {
+    start: new Date(segment.start.getTime() - segment.travelBeforeMinutes * MINUTE_MS),
+    end: new Date(segment.end.getTime() + segment.travelAfterMinutes * MINUTE_MS),
+  };
+}
+
 export function blockOf(segment: BoardSegment): BoardBlock {
   return {
     id: segment.id,
     label: segment.typeName,
     location: segment.location,
     description: segment.description,
-    start: new Date(segment.start.getTime() - segment.travelBeforeMinutes * MINUTE_MS),
-    end: new Date(segment.end.getTime() + segment.travelAfterMinutes * MINUTE_MS),
+    ...blockWindow(segment),
     segment: { start: segment.start, end: segment.end },
   };
 }
@@ -75,7 +89,7 @@ export function blockOf(segment: BoardSegment): BoardBlock {
 /** The blocks of one agent's day, in time order. */
 export function blocksOf(segments: readonly BoardSegment[]): BoardBlock[] {
   return segments
-    .filter((segment) => !segment.operative && segment.createBlock)
+    .filter(castsBlock)
     .map(blockOf)
     .sort((a, b) => a.start.getTime() - b.start.getTime());
 }
