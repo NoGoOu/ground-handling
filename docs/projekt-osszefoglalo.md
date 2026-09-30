@@ -1,6 +1,6 @@
 # Ground Handling App – projekt-összefoglaló
 
-*Verzió: 28 · 2026. szeptember 30.*
+*Verzió: 29 · 2026. szeptember 30.*
 
 ## A projekt
 
@@ -109,6 +109,12 @@ A projekt gazdája a földi kiszolgálásban dolgozik, a domain-szabályok az ő
 87. **Kimutatások a valós adatok után:** a légitársaságonkénti kimutatások az Ikarus-mentésekből épülő adathalmazt várják meg.
 88. **Elfogadott pontosítások a 9. mérföldkőből** (CLAUDE.md 65–70.): a közös kódtábla helyben, a légitársaság PDF-je új lapon nyílik; minden task beleszámít az igénybe, a státuszától függetlenül; beosztás nélküli napon hiány nem jelölődik; az áttekintés a helyi óra negyedóráit mutatja, alapból egy hétre; a beosztásba mindenki beleszámít, akinek operatív része van.
 89. **Tervezet a létszámigényben:** a még nem publikált napokon a tervezet műszakjaival vetjük össze az igényt, „tervezet” jelöléssel; csak az látja, aki a tervezetet is láthatja.
+90. **Oktatás (10. mérföldkő):** a képzésnek képzésenként beállíthatóan elméleti része (e-vizsga) és gyakorlati része (OJT és gyakorlati vizsga) van. Ha minden előírt rész sikeres, a jogosult ember kibocsátja az ügynököt; ettől dolgozhat önállóan, mert a kibocsátás hozza létre a sikeres képzési rekordot.
+91. **E-vizsga:** központi kérdésbank és szabadon szerkeszthető vizsgalapok, a megfelelő jogosultsággal; választós kérdések automatikus javítással és szöveges válaszok, amelyeket a vizsgáztató értékel.
+92. **OJT:** a gyakornok a mentor mellé kerül a task részén; a mentor a rész kiosztott ügynöke. A gyakorlás minősége a mentor értékeléséből és a rögzítésekből számolt mutatókból adódik, a mennyiség és a minőség követelménye képzésenként állítható.
+93. **Visszajelzés és belső megjegyzés** külön mező: a visszajelzést a vizsgázó is látja, a belső megjegyzést (mi nem sikerült) csak a vizsgáztatók, a kibocsátásra jogosultak és a koordinátor.
+94. **Mentor és vizsgáztató:** jogosultság kell hozzá, és neki magának is érvényes legyen az adott jogosítás.
+95. **Járművek és hibajegy** (ötlet, a 10. mérföldkő után): a járművek műszaki nyilvántartása, meghibásodáskor hibajegy, amelyet a megfelelő emberek látnak.
 
 ## Még ellenőrizendő feltételezések
 
@@ -137,6 +143,7 @@ A projekt gazdája a földi kiszolgálásban dolgozik, a domain-szabályok az ő
 - Lufthansa-minta: a Q (sürgős) tétel az LDM nettó bontásában az O (other) alatt szerepel; az LDM összsúlya a konténerek önsúlyával együtt értendő.
 - Létszámigény: az igény a kiosztástól független; a beosztás sávértéke a sávon belüli legkisebb létszám; a beosztás nincs feladattípusra bontva.
 - Késéskód-dokumentum: csak PDF, legfeljebb 10 MB (helyőrző); légitársaságonként egy, az új feltöltés cseréli a régit.
+- Oktatás: az e-vizsgát a vizsgáztató vagy a koordinátor nyitja meg a vizsgázónak; a vizsgázó a helyes válaszokat nem látja; több helyes válasznál csak a teljesen helyes ér pontot; az OJT-követelmény helyőrzői (10 megfelelő gyakorlás, a kötelező mérföldkövek 100%-ban, eltérés-küszöb nélkül); a gyakorlati vizsga OJT nélkül is indítható, figyelmeztetéssel; új Mentor és Vizsgáztató szerepkör; a gyakornok a sávos nézetben és az ütközésvizsgálatban látszik, a létszámigényben nem.
 
 ## Nyitott kérdések
 
@@ -146,7 +153,8 @@ A projekt gazdája a földi kiszolgálásban dolgozik, a domain-szabályok az ő
 - Slottörlés és más slotüzenet mintája.
 - Mit csinál pontosan egy GOU- és egy HDS-ügynök a járaton, mikortól meddig? Illeszkednek-e rájuk a mostani foglaltsági képletek, vagy más paraméter kell?
 - Összekapcsolható-e utólag egy csak érkező és egy későbbi csak induló járat fordulóvá (pl. a lajstrom alapján)?
-- Meddig őrizzük meg a képzési adatokat és a feltöltött fájlokat?
+- Meddig őrizzük meg a képzési adatokat, a feltöltött fájlokat, a vizsgakísérleteket és az értékeléseket?
+- Járművek és hibajegy: milyen járművek és eszközök (pl. pushback, szalagkocsi, lépcső, GPU, busz); milyen műszaki adatok kellenek (műszaki vizsga, szerviz esedékessége, üzemóra); ki jelenthet hibát, ki kezeli a hibajegyet, milyen állapotai vannak; kell-e értesítés; hibás jármű esetén mi történjen.
 
 ## Későbbi témák
 
@@ -167,5 +175,5 @@ A projekt gazdája a földi kiszolgálásban dolgozik, a domain-szabályok az ő
 ## Következő lépés
 
 1. Az 1–9. mérföldkő kész (MVP; jogosultság, beosztás, sávos nézet; járatrend-import; tervezői nézet; feladattípusok; képzések és jogosítások; üzenetek; üzenetek bővítése; létszámigény, 689 zöld teszttel), a késéskód-dokumentumokkal együtt.
-2. Most: a 9. mérföldkő utómunkája, a tervezet a létszámigényben (CLAUDE.md 32. verzió); utána a következő mérföldkő kiválasztása.
+2. Most: a 9. mérföldkő utómunkája, a tervezet a létszámigényben; utána a 10. mérföldkő, oktatás: e-vizsga, OJT és kibocsátás (CLAUDE.md 33. verzió). A 11. mérföldkő a járművek és a hibajegy, egyeztetés után.
 3. A projekt gazdájánál: a nyitott üzenet- és késéskódok; a SITA-átjáró; a valós GOU- és HDS-sablonok; a csatolt fájlok megőrzési ideje; az Ikarus-mentés ellenőrzése.

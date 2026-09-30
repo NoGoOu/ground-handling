@@ -1,6 +1,6 @@
 # Ground Handling App – projektleírás
 
-*Verzió: 32 · 2026. szeptember 30.*
+*Verzió: 33 · 2026. szeptember 30.*
 
 Nyílt forráskódú webalkalmazás repülőtéri földi kiszolgálás (ground handling) szervezésére. Minden járatfordulóhoz feladattípusonként egy task tartozik, benne mérföldkövekkel, amelyeknek van tervezett és tényleges időpontja. A mérföldkövek légitársaságonként testreszabható sablonokból jönnek. A hozzáférés szerepkör alapú.
 
@@ -680,6 +680,74 @@ Külön oldal, asztali gépre; telefonon ne törjön el, de nem arra optimalizá
 
 1. **Tervezet a létszámigényben:** a még nem publikált napokon a tervezet réteg műszakjai adják a beosztást, ugyanazzal a számítással (operatív rész, blokkon kívül, a sáv legkisebb értéke), „tervezet” jelöléssel; a hiány és a többlet ugyanúgy látszik. A napi nézetben és a többnapos áttekintésben is jelölve van, melyik nap számol a tervezetből. A tervezetből számolt beosztást csak az látja, aki a beosztás tervezetét is láthatja (alapból a Tervező és az Admin); a többieknek ezeken a napokon csak az igény látszik, mint eddig. Tesztekkel; README, STATUS.md.
 
+## 10. mérföldkő – oktatás: e-vizsga, on the job gyakorlás (OJT) és kibocsátás
+
+**Tervezett: a 9. mérföldkő utómunkája után jön,** a szokásos terv-jóváhagyással. A 6. mérföldkő képzéseire épül. Egy képzésnek lehet elméleti és gyakorlati része, mindkettő vizsgával. Akinek minden előírt része sikeres, azt egy jogosult ember kibocsátja: ettől dolgozhat önállóan, mert a kibocsátás hozza létre a sikeres képzési rekordot, és abból adódik a jogosítás (6. mérföldkő). A meglévő működés nem változik: a képzési rekord kézi rögzítése megmarad (pl. papíron vagy korábban teljesített képzésekhez), és ez adja az első mentorok és vizsgáztatók jogosítását is.
+
+### A képzés részei
+
+- Képzésenként beállítható: elméleti rész (e-vizsgával), gyakorlati rész (OJT és gyakorlati vizsga), vagy mindkettő. Például az első képzés elmélet, OJT és gyakorlati vizsga; egy ismétlő képzés csak elmélet.
+- Az elméleti vizsga sikerességi határa a képzés meglévő határa.
+- **OJT-követelmény** képzésenként: legalább hány megfelelő gyakorlás kell (helyőrző: 10). Megfelelő az a gyakorlás, amelyet a mentor megfeleltnek értékelt, és amelynek automatikus mutatói elérik a képzés küszöbeit: a kötelező mérföldkövek teljessége (helyőrző: 100%) és a zöld vagy sárga eltérésű rögzítések aránya (helyőrző: 0%, vagyis nincs küszöb).
+
+### Képzési folyamat
+
+- Egy ügynök részvétele egy képzésben, a koordinátor indítja. Részenként látszik az állapota (elméleti vizsga, OJT, gyakorlati vizsga), a kísérletek és az értékelések. Állapot: folyamatban, kibocsátható, kibocsátva, megszakítva.
+- Egy ügynöknek egy képzésből egyszerre egy nyitott folyamata lehet.
+
+### Elméleti e-vizsga
+
+- **Kérdésbank:** a kérdés szövege és típusa (egy helyes válasz, több helyes válasz, szöveges válasz), a válaszlehetőségek és a helyesek, pontszám, témakör (opcionális), aktív.
+- **Vizsgalap:** név, képzés, a kérdések sorrendben, időkorlát (opcionális). A kérdésbank és a vizsgalap szabadon létrehozható és szerkeszthető a „vizsgák szerkesztése” jogosultsággal.
+- **Kitöltés:** a vizsgáztató vagy a koordinátor megnyitja a kísérletet a vizsgázónak, aki a saját belépésével tölti ki, telefonon is. A kísérlet megnyitáskor elmenti a vizsgalap és a kérdések másolatát, így a későbbi szerkesztés nem változtatja meg (mint a lezárt task pillanatképe).
+- **Javítás:** a választós kérdéseket a rendszer javítja (több helyes válasznál csak a teljesen helyes válasz ér pontot, helyőrző), a szöveges válaszokat a vizsgáztató pontozza, megjegyzéssel. Amíg van javítatlan szöveges válasz, a kísérlet „javításra vár”. Az eredmény a pontok aránya százalékban; sikeres, ha eléri a határt.
+- **Visszajelzés és belső megjegyzés,** két külön mező. A visszajelzést a vizsgázó is látja. A belső megjegyzést (mi nem sikerült, mire figyeljen a következő vizsgáztató) csak a vizsgáztatók, a kibocsátásra jogosultak és a koordinátor látják; a következő kísérletnél a korábbiak látszanak.
+- A vizsgázó a saját eredményét, pontjait és a visszajelzést látja, a helyes válaszokat nem, hogy a kérdésbank újrahasznosítható maradjon.
+- A vizsga ismételhető; minden kísérlet megmarad.
+
+### On the job gyakorlás (OJT)
+
+- **Gyakornok a mentor mellett:** a task részéhez (érkezési, indulási) egy gyakornok vehető fel; a rész kiosztott ügynöke a mentor. Gyors fordulónál mindkét rész az érkezési gyakornoké, ahogy az ügynöknél (8. időszámítási szabály). Felvételkor meg kell adni a gyakornok nyitott képzési folyamatát, amelybe a gyakorlás számít.
+- Felveheti, aki taskot oszthat ki. Csak olyan rész mellé vehető fel, amelynek ügynöke mentor lehet; ha az ügynök később olyanra változik, aki nem lehet mentor, figyelmeztetés.
+- A gyakornok a taskot az ügynök nézetében „OJT” jelöléssel látja, és a rész mérföldköveit rögzítheti; a rögzítésnél látszik, hogy gyakornok rögzítette. A mentor a gyakornok rögzítéseit javíthatja. A számításokban ezek ugyanúgy számítanak, mint az ügynök rögzítései.
+- A gyakornok foglaltsága a sávos nézetben a saját sávján „OJT” jelöléssel látszik, és az ütközésvizsgálatba beleszámít; a létszámigénybe nem.
+- **Értékelés gyakorlásonként:** a mentor a task után megfelelt vagy nem felelt meg, szöveges megjegyzéssel. Mellette az automatikus mutatók a rész rögzítéseiből: a kötelező mérföldkövek teljessége, a gyakornok által rögzített mérföldkövek aránya, az eltérések színek szerint. A folyamatban látszik, hány gyakorlás megfelelő, és teljesül-e a követelmény.
+
+### Gyakorlati vizsga
+
+- Valódi járaton, egy task részén, a vizsgáztató értékel. Értékelési szempontok képzésenként (a „vizsgák szerkesztése” jogosultsággal szerkeszthetők), mindegyik megfelelt vagy nem felelt meg, megjegyzéssel; a végeredmény sikeres vagy sikertelen; visszajelzés és belső megjegyzés, mint az e-vizsgánál.
+- Ha az OJT-követelmény még nem teljesül, figyelmeztet, de engedi.
+
+### Kibocsátás
+
+- Ha a képzés minden előírt része sikeres (elméleti vizsga, OJT-követelmény, gyakorlati vizsga), a folyamat „kibocsátható”. A kibocsátásra jogosult egy gombbal kibocsátja: létrejön a sikeres képzési rekord (a teljesítés napja a kibocsátás napja, az érvényesség a jogosítás szerint, a dolgozat eredménye az elméleti vizsgáé), hivatkozással a folyamatra. Ettől érvényes a jogosítás.
+- A kibocsátás naplózott (ki, mikor).
+
+### Mentor és vizsgáztató
+
+- Mentor az lehet, akinek „mentorálás” jogosultsága van, és a képzés jogosítása nála érvényes a gyakorlás napján. Vizsgáztató az, akinek „vizsgáztatás” jogosultsága van, és a képzés jogosítása nála érvényes a vizsga napján. Jogosítást nem adó képzésnél elég a jogosultság.
+
+### Jogosultságok
+
+- „Vizsgák szerkesztése” (kérdésbank, vizsgalapok, gyakorlati szempontok, a képzés részei és OJT-követelménye): Oktatási koordinátor, Admin.
+- „Mentorálás”: új alapértelmezett Mentor szerepkör, Admin.
+- „Vizsgáztatás” (e-vizsga megnyitása és javítása, gyakorlati vizsga): új alapértelmezett Vizsgáztató szerepkör, Oktatási koordinátor, Admin.
+- „Kibocsátás”: Oktatási koordinátor, Admin. A folyamat indítása és megszakítása a meglévő „képzések kezelése” jogosultsággal.
+- A gyakornok felvétele a taskok kiosztására vonatkozó jogosultsággal.
+- A folyamat, az eredmények és a visszajelzések a meglévő „képzési adatok megtekintése” jogosultsággal és hatókörével látszanak (ügynök: saját; csapatvezető: csapat; koordinátor és admin: összes). A belső megjegyzést csak a vizsgáztatás, a kibocsátás vagy a képzések kezelése jogosultsággal lehet látni.
+
+### Lépésterv
+
+1. Adatmodell és migráció: a képzés részei és OJT-követelménye; kérdésbank, vizsgalap, vizsgakísérlet másolattal; képzési folyamat; gyakornok a task részén, gyakorlás-értékelés; gyakorlati vizsga szempontokkal; kibocsátás; új jogosultságok, a Mentor és a Vizsgáztató alapértelmezett szerepkör. A meglévő működés változatlan, a tesztek zöldek
+2. Tiszta függvények: az e-vizsga pontozása és eredménye; az OJT-mutatók és a követelmény teljesülése; a folyamat állapota; mentor és vizsgáztató alkalmassága; tesztek
+3. Kérdésbank, vizsgalap, gyakorlati szempontok és a képzés részeinek szerkesztése
+4. E-vizsga: megnyitás, kitöltés (telefonon is), automatikus javítás, a szöveges válaszok javítása, visszajelzés és belső megjegyzés
+5. Képzési folyamat: indítás, megszakítás, áttekintés részenként (koordinátor, vizsgáztató, csapatvezető, ügynök)
+6. OJT a taskon: a gyakornok felvétele, nézete és rögzítései, a mentor javítása és értékelése, a mutatók, a sávos nézet
+7. Gyakorlati vizsga
+8. Kibocsátás: „kibocsátható” jelzés, jóváhagyás, a képzési rekord létrehozása
+9. Seed (egy Mentor és egy Vizsgáztató felhasználó; egy képzés mindkét résszel, rövid kérdésbankkal; egy félúton lévő és egy kibocsátható folyamat), README, STATUS.md
+
 ## További eldöntött szabályok
 
 Ezeket a kérdéseket a megrendelő 2026. szeptember 22-én jóváhagyta; a kód is ezekre a számokra hivatkozik.
@@ -761,6 +829,8 @@ Ezeket a kérdéseket a megrendelő 2026. szeptember 22-én jóváhagyta; a kód
 - A lezárt taskok utólagos javításának jogosultsága
 - Ügynöki beosztásnézet: az ügynök lássa a saját publikált és valós beosztását.
 - A beosztás TRN részének összekötése egy konkrét képzéssel
+- Járművek és hibajegy (külön mérföldkő, a 10. után): a járművek műszaki nyilvántartása; meghibásodáskor hibajegy adható, amelyet a megfelelő emberek látnak és kezelnek. A részletek egyeztetendők.
+- E-vizsga: véletlen kérdéshúzás a kérdésbankból, képek a kérdésekben
 - További slotüzenetek (pl. slottörlés), minta után
 - Az SI elemeinek feldolgozása (DAA, célállomásonkénti nettó bontás, poggyászdarabszámok, LOAD IN CPTS, B-sorok), ha a minták alapján egységesíthető
 - Email- és SITA-átjáró a bejövő üzenetekhez (a fogadó API-ra csatlakozik)
