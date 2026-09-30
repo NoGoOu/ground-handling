@@ -4,7 +4,9 @@ import { refresh } from "next/cache";
 import { Prisma } from "@/generated/prisma/client";
 import { ActionError, actionUser, runAction, type ActionResult } from "@/lib/action";
 import { createApiKey, revokeApiKey } from "@/lib/data/api-keys";
+import { removeDelayDocument, saveDelayDocument } from "@/lib/data/delay-documents";
 import { prisma } from "@/lib/db";
+import { MAX_DELAY_DOCUMENT_BYTES } from "@/lib/delay-document";
 import { messages } from "@/lib/messages";
 import { canManageMessaging } from "@/lib/permissions";
 import { getCurrentUser } from "@/lib/session";
@@ -189,4 +191,29 @@ export async function saveSlotTolerance(_previous: SlotToleranceFormState, formD
   await prisma.setting.upsert({ where: { id: SETTINGS_ID }, create: { id: SETTINGS_ID, ...parsed.data }, update: parsed.data });
   refresh();
   return { notice: messages.slotTolerance.saved };
+}
+
+// The airlines' delay code documents (8. mérföldkő, utómunka): one PDF per
+// airline; a new upload replaces the old one.
+
+export async function uploadDelayDocument(airlineId: string, _previous: ActionResult | null, formData: FormData): Promise<ActionResult> {
+  return runAction(async () => {
+    const actor = await actionUser(canManageMessaging);
+    const d = messages.delayDocuments.errors;
+    const file = formData.get("file");
+    if (!(file instanceof File) || file.size === 0) throw new ActionError(d.empty);
+    // Before the bytes are read: a file this large is refused by its size alone.
+    if (file.size > MAX_DELAY_DOCUMENT_BYTES) throw new ActionError(d.tooLarge);
+    const saved = await saveDelayDocument(airlineId, file, actor.id);
+    if (!saved.ok) throw new ActionError(d[saved.problem]);
+    refresh();
+  });
+}
+
+export async function removeDelayDocumentOf(airlineId: string): Promise<ActionResult> {
+  return runAction(async () => {
+    const actor = await actionUser(canManageMessaging);
+    if (!(await removeDelayDocument(airlineId, actor.id))) throw new ActionError(messages.errors.notFound);
+    refresh();
+  });
 }

@@ -89,6 +89,8 @@ model User {
   delayRecords       DelayRecord[]     @relation("DelayRecordsCreated")
   delayUpdates       DelayRecord[]     @relation("DelayRecordsUpdated")
   apiKeys            ApiKey[]
+  delayDocsUploaded  DelayCodeDocument[] @relation("DelayCodeDocumentsUploaded")
+  delayDocsRemoved   DelayCodeDocument[] @relation("DelayCodeDocumentsRemoved")
 }
 
 /// A role is a name plus the permissions ticked for it (CLAUDE.md, "Jogosultsági rendszer").
@@ -237,6 +239,8 @@ model Airline {
   taskTypes AirlineTaskType[]
   /// Who gets its messages (7. mérföldkő).
   addresses AddressBookEntry[]
+  /// Its own delay code document and the log of the earlier ones (8. mérföldkő, utómunka).
+  delayCodeDocuments DelayCodeDocument[]
 }
 
 /// A kind of work on a flight, e.g. GOU or HDS (5. mérföldkő). Every flight has
@@ -843,6 +847,29 @@ model DelayCode {
   active      Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+/// An airline's own delay code document (8. mérföldkő, utómunka): one PDF per
+/// airline, opened from its flights. The row is also the log: a replaced or
+/// removed file is deleted from the storage and its row stays.
+model DelayCodeDocument {
+  id           String    @id @default(cuid())
+  airlineId    String
+  airline      Airline   @relation(fields: [airlineId], references: [id], onDelete: Cascade)
+  fileName     String
+  size         Int
+  /// The file's name in the upload directory; null once replaced or removed.
+  storageKey   String?   @unique
+  uploadedById String
+  uploadedBy   User      @relation("DelayCodeDocumentsUploaded", fields: [uploadedById], references: [id])
+  uploadedAt   DateTime  @default(now())
+  removedById  String?
+  removedBy    User?     @relation("DelayCodeDocumentsRemoved", fields: [removedById], references: [id])
+  removedAt    DateTime?
+  /// Whether a new upload took its place (else it was removed by hand).
+  replaced     Boolean   @default(false)
+
+  @@index([airlineId])
 }
 
 /// A delay code and its minutes on the departure part of a flight.

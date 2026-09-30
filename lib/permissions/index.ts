@@ -255,6 +255,15 @@ export function canRecordDelayCodes(actor: Actor, departureAgentIds: readonly (s
   return can(actor, "FLIGHT_MANAGE") || inScope(actor, "TASK_RECORD", departureAgentIds);
 }
 
+/**
+ * The airline's delay code document, opened from a flight (8. mérföldkő,
+ * utómunka): whoever sees one of the flight's tasks, whoever manages flights
+ * (the "Késés rögzítése" form shows it) and whoever uploads the documents.
+ */
+export function canOpenDelayDocument(actor: Actor, flightTasks: readonly TaskAssignment[]): boolean {
+  return canManageMessaging(actor) || canManageFlights(actor) || flightTasks.some((task) => canViewTask(actor, task));
+}
+
 /** The plan is read by whoever plans or takes its assignment over onto the tasks. */
 export const canViewPlans = (actor: Actor) => can(actor, "PLANNING") || can(actor, "TASK_ASSIGN");
 export const canManageUsers = (actor: Actor) => can(actor, "USER_MANAGE");

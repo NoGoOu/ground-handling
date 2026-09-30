@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { listApiCalls, listApiKeys } from "@/lib/data/api-keys";
+import { listAirlineDelayDocuments } from "@/lib/data/delay-documents";
 import { listDelayCodes } from "@/lib/data/delays";
 import { channelSetup } from "@/lib/data/outbound";
 import { prisma } from "@/lib/db";
@@ -16,12 +17,14 @@ import {
   createDelayCode,
   createKey,
   removeAddress,
+  removeDelayDocumentOf,
   revokeKey,
   saveSender,
   saveSlotTolerance,
   toggleAddress,
   updateAirport,
   updateDelayCode,
+  uploadDelayDocument,
 } from "./actions";
 import {
   AddressActions,
@@ -29,6 +32,8 @@ import {
   AirportForm,
   ApiKeyForm,
   DelayCodeForm,
+  DelayDocumentForm,
+  RemoveDelayDocumentButton,
   RevokeKeyButton,
   SenderForm,
   SlotToleranceForm,
@@ -36,9 +41,13 @@ import {
 
 const t = messages.messaging;
 
+function formatSize(bytes: number): string {
+  return bytes < 1024 * 1024 ? `${(bytes / 1024).toFixed(1)} kB` : `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+}
+
 export default async function MessagingSettingsPage() {
   await requireCapability(canManageMessaging);
-  const [keys, calls, delayCodes, airlines, addresses, channels, airports, settings] = await Promise.all([
+  const [keys, calls, delayCodes, airlines, addresses, channels, airports, settings, delayDocuments] = await Promise.all([
     listApiKeys(),
     listApiCalls(),
     listDelayCodes(),
@@ -50,6 +59,7 @@ export default async function MessagingSettingsPage() {
     channelSetup(),
     prisma.airport.findMany({ orderBy: { iataCode: "asc" } }),
     getSettings(),
+    listAirlineDelayDocuments(),
   ]);
   const a = messages.addressBook;
   const state = (on: boolean) => (on ? a.configured : a.notConfigured);
@@ -188,6 +198,67 @@ export default async function MessagingSettingsPage() {
           </ul>
         )}
         <p className="text-sm text-neutral-500">{messages.delayCodes.noDelete}</p>
+      </section>
+
+      <section className="flex flex-col gap-3 rounded-xl border border-neutral-200 bg-white p-4">
+        <h2 className="font-semibold">{messages.delayDocuments.title}</h2>
+        <p className="max-w-3xl text-sm text-neutral-600">{messages.delayDocuments.hint}</p>
+        <p className="text-xs text-neutral-500">{messages.delayDocuments.uploadHint}</p>
+        <ul className="flex flex-col divide-y divide-neutral-100">
+          {delayDocuments.map(({ airline, document, log }) => (
+            <li key={airline.id} className="flex flex-col gap-2 py-3 text-sm">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span>
+                  <span className="font-medium">
+                    {airline.name} ({airline.iataCode})
+                  </span>
+                  {" · "}
+                  {document ? (
+                    fmt(messages.delayDocuments.current, {
+                      name: document.fileName,
+                      size: formatSize(document.size),
+                      by: document.uploadedBy,
+                      at: formatDateTime(document.uploadedAt),
+                    })
+                  ) : (
+                    <span className="text-neutral-500">{messages.delayDocuments.none}</span>
+                  )}
+                </span>
+                {document && (
+                  <span className="inline-flex items-center gap-2">
+                    <a
+                      href={`/api/airlines/${airline.id}/delay-codes`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sky-700 hover:underline"
+                    >
+                      {messages.delayDocuments.open}
+                    </a>
+                    <RemoveDelayDocumentButton action={removeDelayDocumentOf.bind(null, airline.id)} />
+                  </span>
+                )}
+              </div>
+              <DelayDocumentForm action={uploadDelayDocument.bind(null, airline.id)} hasDocument={!!document} />
+              {log.length > 0 && (
+                <details className="text-xs text-neutral-600">
+                  <summary className="cursor-pointer">{messages.delayDocuments.log}</summary>
+                  <ul className="mt-1 flex flex-col gap-0.5">
+                    {log.map((event) => (
+                      <li key={event.key}>
+                        {fmt(messages.delayDocuments.event, {
+                          time: formatDateTime(event.at),
+                          kind: messages.delayDocuments.events[event.kind],
+                          name: event.fileName,
+                          by: event.by,
+                        })}
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              )}
+            </li>
+          ))}
+        </ul>
       </section>
 
       <section className="flex flex-col gap-3 rounded-xl border border-neutral-200 bg-white p-4">

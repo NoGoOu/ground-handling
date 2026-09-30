@@ -276,3 +276,46 @@ export function SlotToleranceForm({
     </form>
   );
 }
+
+/** The airline's delay code document: a new file takes the place of the old one (8. mérföldkő, utómunka). */
+export function DelayDocumentForm({
+  action,
+  hasDocument,
+}: {
+  action: (state: ActionResult | null, formData: FormData) => Promise<ActionResult>;
+  hasDocument: boolean;
+}) {
+  const [result, formAction, pending] = useActionState(action, null);
+  const d = messages.delayDocuments;
+  return (
+    <form action={formAction} className="flex flex-col gap-1">
+      <div className="flex flex-wrap items-center gap-2">
+        <input type="file" name="file" accept=".pdf,application/pdf" className="text-sm" required />
+        <button type="submit" disabled={pending} className="btn btn-secondary py-1 text-xs">
+          {pending ? messages.form.saving : hasDocument ? d.replace : d.upload}
+        </button>
+      </div>
+      <ActionFeedback result={result} successText={d.uploaded} />
+    </form>
+  );
+}
+
+export function RemoveDelayDocumentButton({ action }: { action: () => Promise<ActionResult> }) {
+  const [result, formAction, pending] = useActionState(action, null);
+  const d = messages.delayDocuments;
+  return (
+    <form action={formAction} className="inline-flex items-center gap-2">
+      <button
+        type="submit"
+        disabled={pending}
+        className="btn btn-secondary py-1 text-xs"
+        onClick={(event) => {
+          if (!window.confirm(d.confirmRemove)) event.preventDefault();
+        }}
+      >
+        {d.remove}
+      </button>
+      <ActionFeedback result={result} successText={d.removedDone} />
+    </form>
+  );
+}

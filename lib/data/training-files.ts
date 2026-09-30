@@ -1,35 +1,22 @@
-import { randomUUID } from "node:crypto";
-import { mkdir, readFile, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
+import * as storage from "@/lib/data/storage";
 import { prisma } from "@/lib/db";
-import { checkUpload, UPLOAD_TYPES, type UploadProblem, type UploadType } from "@/lib/training";
+import { checkUpload, type UploadProblem, type UploadType } from "@/lib/training";
 
 // Files of the training records (CLAUDE.md, 6. mérföldkő, "Fájlok"): kept in
 // our own storage, a Docker volume in production. A removed file is deleted
 // from the disk; its row stays as the log of who removed it and when.
 
-/** The upload directory: UPLOAD_DIR, or "uploads" next to the app. */
-export function uploadDir(): string {
-  return process.env.UPLOAD_DIR ?? path.join(process.cwd(), "uploads");
-}
-
-function filePath(storageKey: string): string {
-  // The key is ours (a UUID and an extension); the check keeps any other value out.
-  if (!/^[0-9a-f-]{36}\.(pdf|png|jpg)$/.test(storageKey)) throw new Error("Bad storage key");
-  return path.join(uploadDir(), "training", storageKey);
-}
+const FOLDER = "training";
 
 /** Writes checked bytes under a new name of ours; returns that name (the storage key). */
 export async function storeFile(bytes: Uint8Array, type: UploadType): Promise<string> {
-  const storageKey = `${randomUUID()}.${UPLOAD_TYPES[type].extension}`;
-  await mkdir(path.dirname(filePath(storageKey)), { recursive: true });
-  await writeFile(filePath(storageKey), bytes);
-  return storageKey;
+  return storage.storeFile(FOLDER, bytes, type);
 }
 
 /** Deletes a stored file; one already gone is fine. */
 export async function deleteStoredFile(storageKey: string): Promise<void> {
-  await unlink(filePath(storageKey)).catch(() => undefined);
+  return storage.deleteStoredFile(FOLDER, storageKey);
 }
 
 export async function saveTrainingFile(
@@ -75,6 +62,6 @@ export async function readTrainingFile(fileId: string) {
     select: { fileName: true, mimeType: true, storageKey: true, record: { select: { userId: true } } },
   });
   if (!file?.storageKey) return null;
-  const content = await readFile(filePath(file.storageKey)).catch(() => null);
+  const content = await storage.readStoredFile(FOLDER, file.storageKey);
   return content && { fileName: file.fileName, mimeType: file.mimeType, userId: file.record.userId, content };
 }

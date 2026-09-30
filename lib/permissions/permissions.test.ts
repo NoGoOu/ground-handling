@@ -9,6 +9,7 @@ import {
   canRecordMilestone,
   canEditLayer,
   canManageMessaging,
+  canOpenDelayDocument,
   canManageTraining,
   canPlan,
   canRecordDelayCodes,
@@ -350,5 +351,17 @@ describe("messages (7. mérföldkő)", () => {
     expect(canRecordDelayCodes(bela, ["bela"])).toBe(true);
     expect(canRecordDelayCodes(anna, ["bela"])).toBe(false);
     expect(canRecordDelayCodes(planner, ["planner"])).toBe(false);
+  });
+
+  it("opens the airline's delay code document for whoever sees a task of the flight", () => {
+    const belaTask: TaskAssignment = { arrivalAgentId: null, departureAgentId: "bela", type: null };
+    const otherTask: TaskAssignment = { arrivalAgentId: "cili", departureAgentId: "cili", type: null };
+    // The agent of any of the flight's tasks, not only of the primary one.
+    expect(canOpenDelayDocument(bela, [otherTask, belaTask])).toBe(true);
+    expect(canOpenDelayDocument(anna, [otherTask, belaTask])).toBe(false);
+    // Flight managers (the "Késés rögzítése" form) and whoever uploads the documents.
+    expect(canOpenDelayDocument(lead, [])).toBe(true);
+    expect(canOpenDelayDocument(admin, [])).toBe(true);
+    expect(canOpenDelayDocument(planner, [otherTask])).toBe(false);
   });
 });
