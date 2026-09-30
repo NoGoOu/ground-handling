@@ -11,6 +11,7 @@ import {
   TaskTypeBadge,
   TypeBadge,
 } from "@/components/badges";
+import { DelayCodeReference } from "@/components/delay-code-reference";
 import { EstimateNote } from "@/components/estimate-note";
 import { TimeStack } from "@/components/time-stack";
 import { flightPartAgents, getTaskView, listFlightTasks, primaryTaskView, taskAssignment, type TaskView } from "@/lib/data/tasks";
@@ -30,6 +31,7 @@ import {
 import { requireUser, type CurrentUser } from "@/lib/session";
 import { formatDateTime, formatTime, formatTimeOnDay, toLocalDate, toLocalDateTimeInput } from "@/lib/time";
 import { hasPart, isRequiredMissing, type Part, type TimelineRow } from "@/lib/turnaround";
+import { delayCodeReference, type DelayCodeReference as DelayReference } from "@/lib/data/delay-documents";
 import { listDelayCodes, listDelayRecords, type DelayRecordRow } from "@/lib/data/delays";
 import { currentSlots, type FlightSlot } from "@/lib/data/slots";
 import { getSettings } from "@/lib/settings";
@@ -297,8 +299,11 @@ function DelayCodes({
   codes,
   editable,
   slotOffer,
+  reference,
 }: {
   task: TaskView;
+  /** The airline's own delay code document, or the common table (8. mérföldkő, utómunka). */
+  reference: DelayReference;
   records: DelayRecordRow[];
   codes: { code: string; description: string | null; active: boolean }[];
   editable: boolean;
@@ -314,6 +319,7 @@ function DelayCodes({
     <section className="flex flex-col gap-2 rounded-xl border border-neutral-200 bg-white p-4">
       <h2 className="font-semibold">{d.title}</h2>
       <p className="text-sm text-neutral-600">{d.hint}</p>
+      <DelayCodeReference flightId={task.flight.id} airlineName={task.flight.airline.name} reference={reference} />
       {records.length === 0 ? (
         <p className="text-sm text-neutral-600">{d.empty}</p>
       ) : (
@@ -435,9 +441,9 @@ export default async function TaskPage(props: PageProps<"/tasks/[id]">) {
     slotInfo = { slot, plannedOffBlock, lateness: slotLateness(plannedOffBlock, slot, tolerance), tolerance };
   }
   // Delay codes belong to the flight's departure part.
-  const [delayRecords, delayCodes] = task.flight.std
-    ? await Promise.all([listDelayRecords(task.flight.id), listDelayCodes()])
-    : [[], []];
+  const [delayRecords, delayCodes, reference] = task.flight.std
+    ? await Promise.all([listDelayRecords(task.flight.id), listDelayCodes(), delayCodeReference(task.flight.airlineId)])
+    : [[], [], null];
 
   return (
     <div className="flex flex-col gap-4">
@@ -461,9 +467,10 @@ export default async function TaskPage(props: PageProps<"/tasks/[id]">) {
       )}
       <PartSection ctx={ctx} part="ARRIVAL_PART" />
       <PartSection ctx={ctx} part="DEPARTURE_PART" />
-      {task.flight.std && (
+      {task.flight.std && reference && (
         <DelayCodes
           task={task}
+          reference={reference}
           records={delayRecords}
           codes={delayCodes}
           editable={canRecordDelayCodes(user, agents.departure)}

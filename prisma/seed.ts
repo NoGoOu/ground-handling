@@ -4,6 +4,7 @@ import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db";
 import { BASE_TASK_TYPE } from "@/lib/data/task-types";
 import { processText } from "@/lib/data/messages";
+import * as storage from "@/lib/data/storage";
 import { deleteStoredFile, storeFile } from "@/lib/data/training-files";
 import { DEFAULT_PLANNING_SETTINGS } from "@/lib/planning/settings";
 import { NETLINE_FINGERPRINT, NETLINE_MAPPING, NETLINE_PROFILE_NAME } from "@/lib/import/netline";
@@ -38,7 +39,15 @@ import {
   SEED_REQUIREMENTS,
   seedCertificatePdf,
 } from "./seed-training";
-import { buildSeedMessages, SEED_ADDRESSES, SEED_AIRPORTS, SEED_DELAY_CODES, SEED_SENDER } from "./seed-messages";
+import {
+  buildSeedMessages,
+  SEED_ADDRESSES,
+  SEED_AIRPORTS,
+  SEED_DELAY_CODES,
+  SEED_DELAY_DOCUMENT,
+  SEED_SENDER,
+  seedDelayCodePdf,
+} from "./seed-messages";
 
 // Usage: tsx prisma/seed.ts [--if-empty]
 // Replaces all data with the demo data set for today (Europe/Budapest).
@@ -54,6 +63,8 @@ async function main() {
   const passwordHash = await bcrypt.hash(DEMO_PASSWORD, 10);
   // The files of the records the seed replaces go from the disk too.
   const oldFiles = await prisma.trainingFile.findMany({ where: { storageKey: { not: null } }, select: { storageKey: true } });
+  // So do the airlines' delay code documents (8. mérföldkő, utómunka).
+  const oldDocuments = await prisma.delayCodeDocument.findMany({ where: { storageKey: { not: null } }, select: { storageKey: true } });
   let certificateRecordId: string | null = null;
   let coordinatorId: string | null = null;
 
@@ -68,6 +79,7 @@ async function main() {
     await tx.unsupportedMessageLog.deleteMany();
     await tx.addressBookEntry.deleteMany();
     await tx.delayCode.deleteMany();
+    await tx.delayCodeDocument.deleteMany();
     await tx.airport.deleteMany();
     await tx.plan.deleteMany();
     // Training data (6. mérföldkő): records and their file rows, trainings, requirements.
@@ -216,9 +228,9 @@ async function main() {
     await tx.airlineTaskType.create({
       data: { airlineId: importAirline.id, taskTypeId: baseType.id, templateId: importTemplate.id, isPrimary: true },
     });
-    // Messages (7. mérföldkő): the delay codes of the samples (descriptions to
-    // come from the owner of the project), and addresses nobody can receive at.
-    for (const code of SEED_DELAY_CODES) await tx.delayCode.create({ data: { code } });
+    // Messages (7. mérföldkő): the default delay code table with its IATA
+    // descriptions, and addresses nobody can receive at.
+    await tx.delayCode.createMany({ data: [...SEED_DELAY_CODES] });
     const airlineIds = new Map([
       [airline.iataCode, airline.id],
       [importAirline.iataCode, importAirline.id],
@@ -357,6 +369,23 @@ async function main() {
         size: bytes.byteLength,
         storageKey: await storeFile(bytes, "application/pdf"),
         uploadedById: coordinatorId,
+      },
+    });
+  }
+
+  // The demo airline's own delay code document: a sample we made (8. mérföldkő, utómunka).
+  for (const document of oldDocuments) await storage.deleteStoredFile("delay-codes", document.storageKey!);
+  {
+    const bytes = seedDelayCodePdf();
+    const admin = await prisma.user.findUniqueOrThrow({ where: { username: "admin" }, select: { id: true } });
+    const documentAirline = await prisma.airline.findUniqueOrThrow({ where: { iataCode: SEED_DELAY_DOCUMENT.airline }, select: { id: true } });
+    await prisma.delayCodeDocument.create({
+      data: {
+        airlineId: documentAirline.id,
+        fileName: SEED_DELAY_DOCUMENT.fileName,
+        size: bytes.byteLength,
+        storageKey: await storage.storeFile("delay-codes", bytes, "application/pdf"),
+        uploadedById: admin.id,
       },
     });
   }

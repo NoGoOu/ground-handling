@@ -84,6 +84,7 @@ A formátumok, a párosítás és a minták: [`docs/messages.md`](docs/messages.
 - **PSM és PTM, név nélkül:** a PSM-ből célállomásonként, kódonként és osztályonként a darabszám, a PTM-ből továbbjáratonként az utasok, a poggyász darabja és súlya. Nevet, ülést, csatlakozó járatot és nyers szöveget nem tárolunk, a figyelmeztetések és a napló sem idéznek a szövegből; teszt bizonyítja.
 - **Érkezési és korrekciós MVT:** az érkezési rész Üzenetek fülén előállítható az érkezési MVT (`AA földetérés/on-block`, az on-block a hatályos ATA); a küldött MVT-k kártyáján „Korrekció” (COR sorral, új verzió). A bejövő korrekció ATD-t vagy ATA-t frissít (naplózva); a célállomás AA sora a BUD-ról induló részhez kerül, tájékoztatásként.
 - **Slotüzenetek (SAM, SRM):** párosítás az IFPLID, különben az útvonal (repülőtér-tábla, `Admin → Üzenetküldés`) + EOBD + EOBT ±2 óra alapján. A járaton és a napi listán „Slot hh:mm”, a task nézetben a cél off-block (CTOT − gurulás), a szabályozások és az ok; figyelmeztetés, ha a tervezett off-block a cél off-block + tűrésnél (alapból 10 perc) későbbi. A slot nem írja át az ETD-t: a „Késés rögzítése” felajánlja a cél off-blockot, a késéskódok a slot okának kódját.
+- **Késéskódok légitársaságonként (utómunka):** a légitársasághoz feltölthető a saját késéskód-dokumentuma (`Admin → Üzenetküldés`; csak PDF, legfeljebb 10 MB, légitársaságonként egy; az új feltöltés cseréli a régit, a feltöltés, a csere és az eltávolítás naplózott). A járatról a „Késéskódok” hivatkozás nyitja meg – a késésrekordoknál, a „Késés rögzítése” műveletnél és az indulási MVT DL soránál –, új lapon. Ha a légitársaságnak nincs dokumentuma, ugyanott helyben a közös kódtábla nyílik le (kód és leírás). Megnyithatja, aki a járat valamelyik taskját látja.
 
 ## Indítás Docker Compose-zal
 
@@ -136,7 +137,7 @@ A seed a mintákból átírt demo üzeneteket is betölti a mai demo járatokhoz
 - Egy párosítatlan MVT (ET 3365, a légitársaság nincs a rendszerben) az `Üzenetek → Párosítatlan üzenetek` listában.
 - A 2026. szeptember 27-i minták: a ZZ1101 érkezésén a Lufthansa LDM, CPM, PSM és érkezési MVT – az infografikán legfelül a keretezett utasítás és a DAA, a D külön, a PSM darabszámai; a ZZ1204 IST-indulásán a Turkish PSM és PTM (csak darabszámok); a ZZ1102-n a célállomás korrekciós AA-ja.
 - Slotok: a ZZ1306-on egy SAM, majd az új verziója, egy SRM; a ZZ1408-on egy SAM, amelyet a késő ETD miatt „Slot” figyelmeztetés kísér. A késéskódoknál felajánlott kód egy kattintással felvehető.
-- A címjegyzékben csak nem létező címek vannak (`@example.invalid`, kitalált SITA-cím); a késéskódok (36, 68, 81, 82, 93) leírását a projekt gazdája adja meg. A repülőtér-táblában a demo- és mintajáratok repülőterei.
+- A címjegyzékben csak nem létező címek vannak (`@example.invalid`, kitalált SITA-cím); a késéskódok (36, 68, 81, 82, 93) leírása az IATA-szabvány szerinti. A Demo Fapados járatain a „Késéskódok” egy saját készítésű minta-PDF-et nyit meg (nem valódi légitársasági dokumentum); a Ryanairnek nincs dokumentuma, ott a közös kódtábla nyílik le. A repülőtér-táblában a demo- és mintajáratok repülőterei.
 
 A fogadó API kipróbálása: `admin`-ként az `Admin → Üzenetküldés` oldalon hozz létre egy API-kulcsot (csak egyszer látszik), majd:
 
@@ -187,7 +188,7 @@ docker compose down -v
 - Állíts be saját titkos kulcsot a munkamenetekhez: `AUTH_SECRET=<hosszú véletlen szöveg> docker compose up -d` (generálás: `npx auth secret` vagy `openssl rand -base64 32`).
 - Cseréld le az adatbázis jelszavát a `docker-compose.yml`-ben.
 - Változtasd meg vagy inaktiváld a demo felhasználókat.
-- A képzési rekordok fájljai az `uploads` kötetben vannak; az adatbázissal együtt mentsd. Automatikus törlés nincs.
+- A képzési rekordok fájljai és a légitársaságok késéskód-dokumentumai az `uploads` kötetben vannak; az adatbázissal együtt mentsd. Automatikus törlés nincs.
 - Üzenetküldés emailben: állítsd be az `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASSWORD` környezeti változókat az app szolgáltatásnál, és az `Admin → Üzenetküldés` oldalon a feladó címét. Cseréld le a demo címjegyzéket. Amíg nincs SMTP, a küldés csak naplóz; SITA-átjáró még nincs.
 
 ## Fejlesztés

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { checkDelayDocument } from "@/lib/delay-document";
 import { checkLdm, compareLdmCpm, compareUcmCpm } from "@/lib/telex/checks";
 import type { CpmData } from "@/lib/telex/cpm";
 import { messageEffects } from "@/lib/telex/effects";
@@ -9,8 +10,15 @@ import { matchSlot, slotLateness, slotOf } from "@/lib/telex/slot";
 import { isSupported, splitMessages } from "@/lib/telex/split";
 import type { UcmData } from "@/lib/telex/ucm";
 import { toLocalDate } from "@/lib/time";
-import { buildSeedFlights, type SeedFlight } from "./seed-data";
-import { buildSeedMessages, SEED_ADDRESSES, SEED_AIRPORTS } from "./seed-messages";
+import { buildSeedFlights, SEED_AIRLINE, type SeedFlight } from "./seed-data";
+import {
+  buildSeedMessages,
+  SEED_ADDRESSES,
+  SEED_AIRPORTS,
+  SEED_DELAY_CODES,
+  SEED_DELAY_DOCUMENT,
+  seedDelayCodePdf,
+} from "./seed-messages";
 
 const AIRLINES = [{ id: "zz", code: "ZZ" }];
 
@@ -150,5 +158,23 @@ describe("the demo address book", () => {
       if (entry.channel === "EMAIL") expect(entry.address).toMatch(/@example\.invalid$/);
       else expect(entry.address).toMatch(/^[A-Z0-9]{7}$/);
     }
+  });
+});
+
+describe("the demo delay codes", () => {
+  it("describes every code of the default table, the slot causes among them", () => {
+    expect(SEED_DELAY_CODES.map((c) => c.code)).toEqual(["36", "68", "81", "82", "93"]);
+    for (const code of SEED_DELAY_CODES) expect(code.description.length).toBeGreaterThan(10);
+  });
+
+  it("gives the demo airline a document of its own that says it is a sample", () => {
+    expect(SEED_DELAY_DOCUMENT.airline).toBe(SEED_AIRLINE.iataCode);
+    const bytes = seedDelayCodePdf();
+    expect(checkDelayDocument(bytes)).toEqual({ ok: true });
+    const text = new TextDecoder().decode(bytes);
+    expect(text).toContain("MINTA");
+    expect(text).toContain("nem valodi legitarsasagi dokumentum");
+    // Parentheses are escaped, or the PDF would not open.
+    expect(text).toContain("\\(ZZ\\)");
   });
 });

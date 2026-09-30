@@ -2,6 +2,7 @@ import { addMonths } from "@/lib/qualifications";
 import { addDays } from "@/lib/time";
 import { resolveRecord } from "@/lib/training";
 import { SEED_PLACEHOLDER_TASK_TYPE, type SeedUsername } from "./seed-data";
+import { textPdf } from "./seed-pdf";
 
 // Training demo data (CLAUDE.md, 6. mérföldkő, 8. lépés). The qualifications,
 // trainings and requirements are placeholders: the real GOU and HDS
@@ -104,24 +105,5 @@ export const SEED_FILE_NAME = "igazolas-minta.pdf";
 
 /** A one-page PDF certificate placeholder, for trying the download. */
 export function seedCertificatePdf(): Uint8Array {
-  const text = "Minta igazolas (demo, helyorzo dokumentum)";
-  const stream = `BT /F1 18 Tf 72 720 Td (${text}) Tj ET`;
-  const objects = [
-    "<< /Type /Catalog /Pages 2 0 R >>",
-    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
-    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>",
-    `<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`,
-    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
-  ];
-  let pdf = "%PDF-1.4\n";
-  const offsets = objects.map((body, index) => {
-    const offset = pdf.length;
-    pdf += `${index + 1} 0 obj\n${body}\nendobj\n`;
-    return offset;
-  });
-  const xref = pdf.length;
-  pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
-  pdf += offsets.map((offset) => `${String(offset).padStart(10, "0")} 00000 n \n`).join("");
-  pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
-  return new TextEncoder().encode(pdf);
+  return textPdf(["Minta igazolas (demo, helyorzo dokumentum)"], 18);
 }

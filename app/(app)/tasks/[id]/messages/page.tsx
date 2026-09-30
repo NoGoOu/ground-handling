@@ -2,8 +2,10 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { TaskTypeBadge } from "@/components/badges";
+import { DelayCodeReference } from "@/components/delay-code-reference";
 import { InfographicView } from "@/components/infographic";
 import { MessageContent } from "@/components/message-content";
+import { delayCodeReference } from "@/lib/data/delay-documents";
 import { listDelayRecords } from "@/lib/data/delays";
 import { listFlightMessages, versionGroups, type FlightMessage } from "@/lib/data/messages";
 import { currentSlots } from "@/lib/data/slots";
@@ -185,6 +187,8 @@ export default async function TaskMessagesPage(props: PageProps<"/tasks/[id]/mes
     slotOffer?.code && !(await listDelayRecords(task.flight.id)).some((r) => r.code === slotOffer.code)
       ? fmt(messages.slot.offerMvt, { code: slotOffer.code, minutes: slotOffer.minutes })
       : null;
+  // The codes of the DL line: the airline's document, or the common table (8. mérföldkő, utómunka).
+  const reference = canSend.DEPARTURE_PART ? await delayCodeReference(task.flight.airlineId) : null;
   const actual: Record<Part, string | null> = {
     ARRIVAL_PART: task.timeline.effectiveAta ? formatDateTime(task.timeline.effectiveAta) : null,
     DEPARTURE_PART: task.timeline.effectiveAtd ? formatDateTime(task.timeline.effectiveAtd) : null,
@@ -221,6 +225,9 @@ export default async function TaskMessagesPage(props: PageProps<"/tasks/[id]/mes
               <h3 className="font-semibold">{part === "DEPARTURE_PART" ? messages.outbound.title : messages.outbound.arrivalTitle}</h3>
               <p className="text-sm text-neutral-600">{part === "DEPARTURE_PART" ? messages.outbound.hint : messages.outbound.arrivalHint}</p>
               {part === "DEPARTURE_PART" && slotHint && <p className="text-sm text-sky-900">{slotHint}</p>}
+              {part === "DEPARTURE_PART" && reference && (
+                <DelayCodeReference flightId={task.flight.id} airlineName={task.flight.airline.name} reference={reference} />
+              )}
               <MvtPanel
                 {...panel(part, false, {
                   registration: (part === "DEPARTURE_PART" ? flight.departureRegistration : flight.arrivalRegistration) ?? "",

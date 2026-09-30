@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
 import { MissingBadge } from "@/components/badges";
+import { DelayCodeReference } from "@/components/delay-code-reference";
 import { estimateText } from "@/components/estimate-note";
+import { delayCodeReference } from "@/lib/data/delay-documents";
 import { currentSlots } from "@/lib/data/slots";
 import { listAirlineOptions } from "@/lib/data/task-types";
 import { prisma } from "@/lib/db";
@@ -42,6 +44,9 @@ export default async function EditFlightPage(props: PageProps<"/flights/[id]/edi
   if (!flight) notFound();
   // The slot offers its target off-block for the ETD (8. mérföldkő).
   const slot = flight.std ? (await currentSlots([flight.id])).get(flight.id) : undefined;
+
+  // The delay codes to look up while the delay is recorded (8. mérföldkő, utómunka).
+  const reference = await delayCodeReference(flight.airlineId);
 
   const input = (d: Date | null) => (d ? toLocalDateTimeInput(d) : "");
   const current = (time: Date | null, info: Parameters<typeof estimateText>[0]) =>
@@ -142,6 +147,7 @@ export default async function EditFlightPage(props: PageProps<"/flights/[id]/edi
             </>
           )}
         </dl>
+        <DelayCodeReference flightId={flight.id} airlineName={flight.airline.name} reference={reference} />
         <DelayForm
           action={recordDelay.bind(null, flight.id)}
           withEta={!!flight.sta && !flight.arrivalCancelled}

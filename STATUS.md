@@ -4,22 +4,20 @@
 
 ## Mi készült el
 
-- **9. mérföldkő, 1. lépés (a 8. mérföldkő utómunkája), első fele:** a légitársaság késéskód-dokumentuma – tárolás és feltöltés.
-  - Új tábla (`DelayCodeDocument`): légitársaságonként egy PDF; a sor egyben a napló (ki, mikor, milyen fájlt töltött fel, cserélt le, távolított el). Cserénél és eltávolításnál a fájl törlődik a tárhelyről.
-  - A fájl a meglévő kötet `delay-codes` mappájában van; csak PDF (az első bájtok alapján), legfeljebb 10 MB.
-  - `Admin → Üzenetküldés`: új szakasz légitársaságonként feltöltéssel, cserével, eltávolítással, megnyitással és naplóval, az „Üzenetküldés beállításai” jogosultsággal.
-  - Letöltés két útvonalon, szerveroldali ellenőrzéssel: a járatról (`/api/flights/[id]/delay-codes`) és a beállításokból (`/api/airlines/[id]/delay-codes`).
-  - A migráció a meglévő 36, 68, 81, 82, 93 kód üres leírását az IATA szerinti szöveggel tölti ki.
+- **9. mérföldkő, 1. lépés kész: a 8. mérföldkő utómunkája (késéskódok légitársaságonként).**
+  - Tárolás és feltöltés (`4ffa147`): légitársaságonként egy PDF (legfeljebb 10 MB, a tartalom alapján ellenőrizve) a meglévő kötet `delay-codes` mappájában; feltöltés, csere, eltávolítás és napló az `Admin → Üzenetküldés` oldalon.
+  - Megnyitás a járatról: „Késéskódok” hivatkozás a késésrekordoknál, a „Késés rögzítése” műveletnél és az indulási MVT DL soránál. Ha van dokumentum, új lapon nyílik; ha nincs, helyben lenyílik a közös kódtábla (aktív kódok, leírással).
+  - Seed: a 36, 68, 81, 82, 93 kód IATA szerinti leírása; a Demo Fapadoshoz saját készítésű minta-PDF (a Ryanairnek nincs, ott a közös tábla látszik). README frissítve.
 
 ## Állapot
 
-- Utolsó commit: `feat: keep a delay code document per airline` (ez a commit; előtte `b998932`)
-- Tesztek: `npm test` → 617 teszt, mind zöld; `npm run lint` hibátlan, `npx tsc --noEmit` tiszta
-- Adatbázison ellenőrizve: feltöltés, csere (a régi fájl törlődik), két egyidejű feltöltés után is egy dokumentum marad, eltávolítás, napló. A felületet belépés nélkül nem néztem meg.
+- Utolsó commit: `feat: open the delay codes from the flight` (ez a commit; előtte `4ffa147`)
+- Tesztek: `npm test` → 619 teszt, mind zöld; `npm run lint` hibátlan, `npx tsc --noEmit` tiszta, `npm run build` sikeres
+- Ellenőrizve: adatbázison a feltöltés, a csere, az egyidejű feltöltés és az eltávolítás; a minta-PDF megnyitható; belépés nélkül mindkét letöltési útvonal a belépéshez irányít. A felületet belépés nélkül nem néztem meg.
 
 ## Eltérések a CLAUDE.md-től
 
-- Nincs. Pontosítás: a dokumentumot a járat taskjainak látóin kívül az is megnyithatja, aki járatot kezel (a „Késés rögzítése” űrlap miatt) vagy a dokumentumokat feltölti.
+- Nincs. Jóváhagyott döntés: a közös kódtábla helyben nyílik le. Pontosítás: a dokumentumot a járat taskjainak látóin kívül az is megnyithatja, aki járatot kezel (a „Késés rögzítése” űrlap miatt) vagy a dokumentumokat feltölti.
 
 ## Kérdések a tervezéshez
 
@@ -27,4 +25,4 @@
 
 ## Következő lépés
 
-- Az 1. lépés második fele: „Késéskódok” megnyitása a járatról (késésrekordok, „Késés rögzítése”, az indulási MVT DL sora), dokumentum nélkül a közös kódtábla; seed (IATA-leírások, minta-PDF a demo légitársasághoz).
+- 2. lépés: `lib/staffing/` – a nap 15 perces sávjai óraátállítással, a sáv csúcsa feladattípusonként és összesen, tesztekkel.

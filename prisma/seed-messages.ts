@@ -1,5 +1,6 @@
 import { SAMPLES } from "@/lib/telex/samples.fixture";
 import type { SeedFlight } from "./seed-data";
+import { textPdf } from "./seed-pdf";
 
 // Demo messages (CLAUDE.md, 7. mérföldkő, 12. lépés; 8. mérföldkő, 7. lépés),
 // built on the samples of docs/messages.md and fitted to the demo flights of
@@ -28,10 +29,39 @@ const headerDayMonth = (date: Date) =>
   `${headerDay(date)}${MONTHS[Number(new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Budapest", month: "numeric" }).format(date)) - 1]}`;
 
 /**
- * The delay codes of the samples (36, 68, 93) and of the slot causes (81, 82);
- * their descriptions come from the owner of the project.
+ * The default, common delay code table: the codes of the samples (36, 68, 93)
+ * and of the slot causes (81, 82), described by the IATA standard (CLAUDE.md,
+ * 8. mérföldkő, utómunka).
  */
-export const SEED_DELAY_CODES = ["36", "68", "81", "82", "93"] as const;
+export const SEED_DELAY_CODES = [
+  { code: "36", description: "Tankolás vagy üzemanyag-leeresztés (üzemanyag-szállító)" },
+  { code: "68", description: "A kabinszemélyzet hibája vagy külön kérése" },
+  { code: "81", description: "Útvonali légiforgalmi korlátozás vagy kapacitás" },
+  { code: "82", description: "Útvonali légiforgalmi korlátozás létszámhiány vagy berendezéshiba miatt" },
+  { code: "93", description: "Gépforgás: a gép késve érkezett egy másik járatról vagy az előző szakaszról" },
+] as const;
+
+/**
+ * The demo airline's own delay code document: a sample we made, not a real
+ * airline's. The other airline has none, so there the common table opens.
+ */
+export const SEED_DELAY_DOCUMENT = { airline: "ZZ", fileName: "zz-keseskodok-minta.pdf" } as const;
+
+export function seedDelayCodePdf(): Uint8Array {
+  return textPdf([
+    "MINTA - Demo Fapados (ZZ): keseskodok",
+    "Sajat keszitesu mintadokumentum, nem valodi legitarsasagi dokumentum.",
+    "",
+    "36   Tankolas vagy uzemanyag-leeresztes (uzemanyag-szallito)",
+    "36A  Az uzemanyag-szallito kesve erkezett a gephez",
+    "68   A kabinszemelyzet hibaja vagy kulon kerese",
+    "68A  A kabinszemelyzet kesve erkezett a gephez",
+    "81   Utvonali legiforgalmi korlatozas vagy kapacitas",
+    "82   Utvonali legiforgalmi korlatozas letszamhiany vagy berendezeshiba miatt",
+    "93   Gepforgas: a gep kesve erkezett az elozo szakaszrol",
+    "93A  Gepforgas: gepcsere miatt",
+  ]);
+}
 
 /** A made-up address book: example.invalid never resolves, and there is no SITA gateway. */
 export const SEED_ADDRESSES = [
