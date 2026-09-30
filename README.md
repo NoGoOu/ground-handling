@@ -86,6 +86,17 @@ A formátumok, a párosítás és a minták: [`docs/messages.md`](docs/messages.
 - **Slotüzenetek (SAM, SRM):** párosítás az IFPLID, különben az útvonal (repülőtér-tábla, `Admin → Üzenetküldés`) + EOBD + EOBT ±2 óra alapján. A járaton és a napi listán „Slot hh:mm”, a task nézetben a cél off-block (CTOT − gurulás), a szabályozások és az ok; figyelmeztetés, ha a tervezett off-block a cél off-block + tűrésnél (alapból 10 perc) későbbi. A slot nem írja át az ETD-t: a „Késés rögzítése” felajánlja a cél off-blockot, a késéskódok a slot okának kódját.
 - **Késéskódok légitársaságonként (utómunka):** a légitársasághoz feltölthető a saját késéskód-dokumentuma (`Admin → Üzenetküldés`; csak PDF, legfeljebb 10 MB, légitársaságonként egy; az új feltöltés cseréli a régit, a feltöltés, a csere és az eltávolítás naplózott). A járatról a „Késéskódok” hivatkozás nyitja meg – a késésrekordoknál, a „Késés rögzítése” műveletnél és az indulási MVT DL soránál –, új lapon. Ha a légitársaságnak nincs dokumentuma, ugyanott helyben a közös kódtábla nyílik le (kód és leírás). Megnyithatja, aki a járat valamelyik taskját látja.
 
+**9. mérföldkő – létszámigény**
+
+- **Igény** (`Létszámigény` menü, „Létszámigény megtekintése” jogosultsággal: Tervező, Műszakvezető, Admin): hány ügynök kell egyszerre, 15 perces sávokban. A sáv értéke a sávon belüli csúcs: a legtöbb egyszerre futó foglaltsági ablak, minden task minden feladattípusából, a hatályos időkkel (a késéssel együtt mozog), a kiosztástól függetlenül. A törölt részek és a „nincs teendő” taskok kimaradnak; az éjfélen átnyúló ablak mindkét napba beleszámít.
+- **Bontás:** feladattípusonként és összesen. Az összesen a minden ablakból együtt számolt csúcs, nem a feladattípusok csúcsainak összege.
+- **Beosztás:** sávonként a valós réteg operatív részeiben lévő, nem operatív rész blokkjában (az utazási idővel) éppen nem lévő ügynökök száma, a sávon belüli legkisebb érték; aki a sávnak csak egy részében van bent, nem számít. **Hiány és többlet:** beosztás − összesített igény.
+- **Napi nézet:** napválasztó, lépcsős grafikon (összesített igény, feladattípusok, a beosztás vonala, a hiányos sávok pirossal), a napi csúcs és a legnagyobb hiány az idejével, alatta táblázat sávonként.
+- **Áttekintés:** legfeljebb 31 napos időszak, naponként egy sor, negyedóránként egy cella az összesített igénnyel, az igény nagysága szerint színezve, a hiányos sávok pirossal; naponként a csúcs és a legnagyobb hiány. A napra kattintva a napi nézet nyílik.
+- **Valós beosztás nélküli nap** (pl. még nem publikált): az igény látszik, de hiányként nem jelöljük.
+- **Óraátállítás:** a sávok a valós időt követik, a nap 92 vagy 100 sávból áll. Az áttekintés oszlopai a helyi óra negyedórái: tavasszal a nem létező óra cellái üresek, ősszel a kétszer előforduló óra cellája a nagyobb igényt és a nagyobb hiányt mutatja (a napi nézetben mindkét sáv látszik).
+- Tiszta függvények (`lib/staffing/`), külső AI nélkül. A sávos nézeten a létszámigény nem jelenik meg.
+
 ## Indítás Docker Compose-zal
 
 Követelmény: [Docker Desktop](https://www.docker.com/products/docker-desktop/) (Windows / macOS) vagy Docker Engine Compose-zal (Linux).
@@ -105,6 +116,12 @@ Mindegyik jelszava: `demo1234`
 A demo légitársaságnak két feladattípusa van: az elsődleges „Alap” (a demo sablonnal) és egy „Helyőrző” (HLY, csak indulási részből álló helyőrző sablonnal), így minden demo járatnak két taskja van. A csak érkező járat helyőrző taskjának nincs teendője. A valós GOU- és HDS-sablonokat a projekt gazdája adja meg.
 
 A demo beosztás a betöltés napjára és a következő napra publikált és valós réteget tartalmaz: Nagy Eszter reggelén egy oktatás blokk van 20–20 perc utazási idővel, a második napon pedig a valós műszakja eltér a publikálttól.
+
+### A létszámigény kipróbálása
+
+1. `tervezo`-ként vagy `vezeto`-ként nyisd meg a `Létszámigény` menüt. A betöltés napján a csúcs 16:15-kor 4 fő (két átfedő forduló, feladattípusonként 2–2), miközben egy ügynök van beosztva: a legnagyobb hiány 3 fő. Reggel 06:15 és 08:15 között szintén hiány van, délben a két ügynök fedezi az igényt.
+2. 10:45-kor a beosztás még 1 fő: Nagy Eszter oktatása 10:30-ig tart, a 20 perces visszaút 10:50-ig, a műszakja 11:00-kor kezdődik.
+3. Az `Áttekintés` fülön mától egy hét látszik: a mai nap sora színes, a holnapi napnak van beosztása, de igénye nincs; az azutáni napoknak nincs valós beosztásuk (∅). Az importpróba után a 2024. szeptember 10-i hét igénye is megnézhető (ott nincs beosztás, így hiány sem jelölődik).
 
 | Felhasználónév | Név | Szerepkör |
 |---|---|---|
@@ -225,6 +242,7 @@ Ha a Docker nem elérhető, a Prisma saját helyi Postgrese is megfelel fejleszt
 | `lib/roster.ts` | Beosztás-segédfüggvények: publikált napok, a publikált és a valós réteg eltérései |
 | `lib/task-types.ts` | Feladattípusok: egy új járat taskjai a légitársaság aktív feladattípusai szerint, és ugyanannak az embernek két feladattípusa egy járaton |
 | `lib/planning/` | Tervezés: bemenet (napi ablakok), a pozíció szabályai, minimális pozíciószám, kiegyenlítés és mutatók, betölthetőség párosítással, a terv nézete, mentés a tervezetbe, kiosztás átvétele; tiszta függvények tesztekkel |
+| `lib/staffing/` | Létszámigény: a nap 15 perces sávjai óraátállítással, a sáv csúcsa feladattípusonként és összesen, a beosztás és a hiány, a nap összesítése, a grafikon és az áttekintés számításai; tiszta függvények tesztekkel |
 | `lib/telex/` | Üzenetek: szétválasztás (COR, -TITLE), fejléc, MVT/LDM/CPM/UCM, PSM/PTM (csak darabszámok) és ADEXP (SAM, SRM) feldolgozók, párosítás, slot, ellenőrzések, hatás a járatra, infografika, MVT-előállítás (indulási, érkezési, korrekció), kézbesítési döntések; tiszta függvények, tesztek a docs/messages.md mintáival |
 | `lib/data/messages.ts`, `lib/data/outbound.ts` | Üzenetek tárolása, verziózása, hatása a járatra; kimenő üzenetek küldése címzettenkénti állapottal |
 | `lib/qualifications.ts`, `lib/training.ts` | Jogosítások: a rekordokból számolt érvényesség és állapot, a task részeinek követelménye és teljesülése; a rekord szabályai és a fájlok ellenőrzése |

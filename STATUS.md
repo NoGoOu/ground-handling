@@ -4,27 +4,31 @@
 
 ## Mi készült el
 
-- **9. mérföldkő, 6. lépés:** többnapos áttekintés (`/staffing/overview`).
-  - Időszak kezdő és záró nappal (alapból mától egy hét), előző / következő időszak; 31 napnál hosszabb vagy fordított időszakot az oldal elutasít, nem vág le.
-  - Nap × negyedóra táblázat az összesített igénnyel, az időszak legnagyobb igényéhez színezve; a hiányos sávok pirosak; a cellán az idő, az igény, a beosztás és a hiány.
-  - Naponként a csúcs és az ideje, a legnagyobb hiány és az ideje; a napra kattintva a napi nézet nyílik. Valós beosztás nélküli napon ∅ jel, hiány nélkül.
-  - Óraátállítás: az oszlopok a helyi óra negyedórái; tavasszal a nem létező óra cellái üresek (×), ősszel a kétszer előforduló óra cellája a nagyobb igényt és a nagyobb hiányt mutatja, megjelölve.
-- 5. lépés (`945a1cc`): napi nézet. 4. lépés (`8602a2d`): adatréteg és jogosultság. 3. lépés (`2def19f`): beosztás és hiány. 2. lépés (`8fda5cb`): sávok és igény. 1. lépés (`4ffa147`, `24bf6f3`): késéskód-dokumentum.
+- **A 9. mérföldkő (létszámigény) kész, a 8. mérföldkő utómunkájával együtt.**
+- 7. lépés: a seed demo napján teszt őrzi, hogy van hiányos sáv (csúcs 16:15-kor 4 fő, beosztás 1, hiány 3; délben fedezett; másnap van beosztás igény nélkül; utána nincs valós beosztás). A seedet nem kellett módosítani. README (9. mérföldkő, kipróbálás, felépítés); tiszta Docker-indítás rendben.
+- 6. lépés (`cf0add9`): többnapos áttekintés, legfeljebb 31 nap, nap × negyedóra táblázat, naponként csúcs és legnagyobb hiány.
+- 5. lépés (`945a1cc`): napi nézet – lépcsős grafikon és sávonkénti táblázat a `Létszámigény` oldalon.
+- 4. lépés (`8602a2d`): adatréteg (a nappal átfedő ablakok, a valós réteg) és a „Létszámigény megtekintése” jogosultság.
+- 3. lépés (`2def19f`): beosztás és hiány. 2. lépés (`8fda5cb`): a nap sávjai óraátállítással, a sáv csúcsa feladattípusonként és összesen.
+- 1. lépés (`4ffa147`, `24bf6f3`): késéskód-dokumentum légitársaságonként, megnyitás a járatról, az alapértelmezett tábla IATA-leírásai, minta-PDF a demo légitársasághoz.
 
 ## Állapot
 
-- Utolsó commit: `feat: show the staffing demand of up to 31 days` (ez a commit; előtte `945a1cc`)
-- Tesztek: `npm test` → 682 teszt, mind zöld; `npm run lint` hibátlan, `npx tsc --noEmit` tiszta, `npm run build` sikeres
-- Az áttekintést a demo adatokkal és mindkét óraátállítási nappal statikusan renderelve néztem meg; a 96 oszlop a lap szélességébe belefér. Bejelentkezve nem néztem meg; belépés nélkül az oldalak a belépéshez irányítanak.
+- Utolsó commit: `feat: guard the short bands of the demo day` (ez a commit; előtte `cf0add9`)
+- Tesztek: `npm test` → 689 teszt, mind zöld; `npm run lint` hibátlan, `npx tsc --noEmit` tiszta, `npm run build` sikeres, figyelmeztetés nélkül
+- Tiszta Docker-indítás: 17 migráció, seed, a minta-PDF a kötetben, a három szerepkör megkapta az új jogosultságot.
+- A felületet bejelentkezve nem néztem meg (jelszót nem írok be): a számítást tesztek és adatbázis-ellenőrzés, a nézeteket a demo adatok statikus renderelése igazolja; belépés nélkül az új oldalak és a letöltési útvonalak a belépéshez irányítanak.
 
 ## Eltérések a CLAUDE.md-től
 
-- Nincs. A jóváhagyott döntések szerint készült (alapidőszak egy hét; óraátállítás az áttekintésben; nap valós beosztás nélkül).
+- Nincs. A jóváhagyott döntések (felvehetők a szabályok közé): a közös kódtábla helyben nyílik le, a légitársaság PDF-je új lapon; minden task beleszámít az igénybe, státusztól függetlenül; valós beosztás nélküli napon az igény látszik, hiány nem jelölődik; az áttekintés oszlopai a helyi óra negyedórái (tavasszal üres cellák, ősszel a nagyobb igény és a nagyobb hiány, megjelölve); az áttekintés alapból mától egy hét, a 31 napnál hosszabb időszakot elutasítja; a beosztásba mindenki beleszámít, akinek a valós rétegben operatív része van.
+- Pontosítások: a késéskód-dokumentumot az is megnyithatja, aki járatot kezel vagy a dokumentumokat feltölti; a nappal átfedő ablakokhoz az előző és a következő nap járatlistája is betöltődik (a tervezőével azonos feltevés: egy ablak legfeljebb a szomszédos napra nyúlik át).
 
 ## Kérdések a tervezéshez
 
-- nincs
+- A még nem publikált napokon az igényt össze kell-e vetni a tervezet réteggel (most csak a valós réteg számít)?
+- Változatlanul nyitott a 8. mérföldkőből: a `PAD`, `CRW`, `DHC`, `TB`, a CPM `4/1` és a `.TW`, az `XOM` és az `XCS` jelentése; a SITA-átjáró fajtája; slottörlés és a késési (ED) MVT mintája.
 
 ## Következő lépés
 
-- 7. lépés: seed (teszt arra, hogy a demo napon van hiányos sáv), README, STATUS.md, tiszta Docker-indítás.
+- A tervezés döntése szerint.
