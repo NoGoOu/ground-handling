@@ -18,7 +18,8 @@ export function uploadDir(): string {
 function filePath(folder: StorageFolder, storageKey: string): string {
   // The key is ours; the check keeps any other value out.
   if (!/^[0-9a-f-]{36}\.(pdf|png|jpg)$/.test(storageKey)) throw new Error("Bad storage key");
-  return path.join(uploadDir(), folder, storageKey);
+  // The files are runtime data on a volume, not part of the build: nothing to trace.
+  return path.join(/* turbopackIgnore: true */ uploadDir(), folder, storageKey);
 }
 
 /** Writes checked bytes under a new name of ours; returns that name (the storage key). */
