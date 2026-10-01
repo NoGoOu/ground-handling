@@ -4,7 +4,7 @@ import { StaffingOverview } from "@/components/staffing-overview";
 import { loadStaffing } from "@/lib/data/staffing";
 import { messages } from "@/lib/messages";
 import { fmt } from "@/lib/messages/format";
-import { canViewStaffing } from "@/lib/permissions";
+import { canViewLayer, canViewStaffing } from "@/lib/permissions";
 import { requireCapability } from "@/lib/session";
 import { overviewPeriod, shiftPeriod } from "@/lib/staffing/overview";
 import { toLocalDate } from "@/lib/time";
@@ -20,11 +20,11 @@ const first = (value: string | string[] | undefined) => (Array.isArray(value) ? 
 const periodHref = (period: { from: string; to: string }) => `/staffing/overview?from=${period.from}&to=${period.to}`;
 
 export default async function StaffingOverviewPage(props: PageProps<"/staffing/overview">) {
-  await requireCapability(canViewStaffing);
+  const user = await requireCapability(canViewStaffing);
   const { from, to } = await props.searchParams;
   const period = overviewPeriod(first(from), first(to), toLocalDate(new Date()));
   // A refused period loads nothing: the form shows why.
-  const staffing = period.problem ? null : await loadStaffing(period.from, period.to);
+  const staffing = period.problem ? null : await loadStaffing(period.from, period.to, { draft: canViewLayer(user, "DRAFT") });
 
   return (
     <div className="flex flex-col gap-4">

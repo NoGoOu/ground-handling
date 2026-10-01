@@ -8,9 +8,11 @@ import { windowsOverlap, type TimeWindow } from "@/lib/turnaround";
 // actual roster and not in the block of a non-operative one. The roster is not
 // split by task type or qualification: agents are not tied to a task type.
 
-/** A segment of the actual roster with its agent. */
+/** A segment of the roster with its agent. */
 export interface StaffSegment extends BlockSource {
   userId: string;
+  /** The layer it comes from (9. mérföldkő, utómunka); the actual one when not given. */
+  layer?: "ACTUAL" | "DRAFT";
 }
 
 /** The windows minus the cuts, both as half-open intervals. */

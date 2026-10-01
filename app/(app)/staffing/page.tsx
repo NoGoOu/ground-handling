@@ -4,7 +4,7 @@ import { StaffingTable } from "@/components/staffing-table";
 import { loadStaffing } from "@/lib/data/staffing";
 import { messages } from "@/lib/messages";
 import { fmt } from "@/lib/messages/format";
-import { canViewStaffing } from "@/lib/permissions";
+import { canViewLayer, canViewStaffing } from "@/lib/permissions";
 import { dateParam } from "@/lib/search-params";
 import { requireCapability } from "@/lib/session";
 import { summaryOf } from "@/lib/staffing/summary";
@@ -18,10 +18,10 @@ import { StaffingViews } from "./views";
 const t = messages.staffing;
 
 export default async function StaffingPage(props: PageProps<"/staffing">) {
-  await requireCapability(canViewStaffing);
+  const user = await requireCapability(canViewStaffing);
   const { date: dateValue } = await props.searchParams;
   const date = dateParam(dateValue);
-  const { days, taskTypeNames } = await loadStaffing(date, date);
+  const { days, taskTypeNames } = await loadStaffing(date, date, { draft: canViewLayer(user, "DRAFT") });
   const [day] = days;
   const summary = summaryOf(day);
 
