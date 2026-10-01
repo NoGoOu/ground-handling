@@ -411,6 +411,20 @@ export const hu = {
       text: "Legfeljebb 2000 karakter.",
     },
   },
+  release: {
+    title: "Kibocsátás",
+    readyHint: "Minden előírt rész sikeres: a folyamat kibocsátható. A kibocsátás létrehozza a sikeres képzési rekordot (a teljesítés napja a mai nap, az érvényesség a jogosítás szerint, a dolgozat eredménye az utolsó sikeres e-vizsgáé); ettől érvényes a jogosítás, és az ügynök önállóan dolgozhat.",
+    notReadyHint: "Kibocsátani akkor lehet, ha minden előírt rész sikeres.",
+    release: "Kibocsátás",
+    confirm: "Kibocsátod? Létrejön a sikeres képzési rekord, és a folyamat lezárul.",
+    released: "Kibocsátva: a képzési rekord létrejött.",
+    record: "A létrehozott képzési rekord",
+    problems: {
+      notReady: "A folyamat nem kibocsátható: nem minden előírt rész sikeres, vagy már nem fut.",
+      taken: "A folyamatot közben már kibocsátották vagy megszakították.",
+    },
+    recordNote: "Kibocsátva a(z) {training} képzési folyamatból.",
+  },
   processes: {
     title: "Képzési folyamatok",
     intro:

@@ -13,13 +13,13 @@ import { flightLabel } from "@/lib/flight";
 import { attemptState, formatPoints, percentOf } from "@/lib/exams/scoring";
 import { messages } from "@/lib/messages";
 import { fmt } from "@/lib/messages/format";
-import { canExamine, canManageTraining, canOpenExamAttempt, canSeeInternalNotes, canViewProcessOf } from "@/lib/permissions";
+import { canExamine, canManageTraining, canOpenExamAttempt, canRelease, canSeeInternalNotes, canViewProcessOf } from "@/lib/permissions";
 import { requireUser } from "@/lib/session";
 import { formatDateTime, toLocalDate } from "@/lib/time";
 import { openAttemptAction } from "../../attempts/actions";
 import { OpenAttemptForm } from "../../attempts/forms";
-import { abortProcessAction } from "../actions";
-import { AbortProcessForm } from "../forms";
+import { abortProcessAction, releaseProcessAction } from "../actions";
+import { AbortProcessForm, ReleaseButton } from "../forms";
 import { recordPracticalExamAction } from "../practical-actions";
 import { PracticalExamForm } from "../practical-form";
 
@@ -256,6 +256,19 @@ export default async function ProcessPage(props: PageProps<"/training/processes/
             )}
           </section>
         </>
+      )}
+
+      {process.state === "READY" && canRelease(user) && (
+        <section className="flex flex-col gap-2 rounded-xl border-2 border-amber-300 bg-amber-50 p-4">
+          <h2 className="font-semibold text-amber-900">{messages.release.title}</h2>
+          <p className="max-w-3xl text-sm text-amber-900">{messages.release.readyHint}</p>
+          <ReleaseButton action={releaseProcessAction.bind(null, process.id)} />
+        </section>
+      )}
+      {process.recordId && canManageTraining(user) && (
+        <Link href={`/training/records/${process.recordId}`} className="self-start text-sm text-sky-700 hover:underline">
+          {messages.release.record}
+        </Link>
       )}
 
       {running && canManageTraining(user) && (

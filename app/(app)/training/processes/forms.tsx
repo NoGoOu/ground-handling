@@ -53,6 +53,26 @@ export function StartProcessForm({
   );
 }
 
+export function ReleaseButton({ action }: { action: () => Promise<ActionResult> }) {
+  const [result, formAction, pending] = useActionState(action, null);
+  const r = messages.release;
+  return (
+    <form action={formAction} className="flex flex-col gap-2">
+      <button
+        type="submit"
+        disabled={pending}
+        className="btn btn-primary btn-lg self-start"
+        onClick={(event) => {
+          if (!window.confirm(r.confirm)) event.preventDefault();
+        }}
+      >
+        {r.release}
+      </button>
+      <ActionFeedback result={result} successText={r.released} />
+    </form>
+  );
+}
+
 export function AbortProcessForm({ action }: { action: (state: ActionResult | null, formData: FormData) => Promise<ActionResult> }) {
   const [result, formAction, pending] = useActionState(action, null);
   return (

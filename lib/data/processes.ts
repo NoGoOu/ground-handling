@@ -2,7 +2,10 @@ import type { Prisma } from "@/generated/prisma/client";
 import { finalize } from "@/lib/data/attempts";
 import { prisma } from "@/lib/db";
 import { ojtProgress, readMetrics, type OjtProgress } from "@/lib/exams/ojt";
-import { hasParts, processParts, processState, type ProcessParts, type ProcessState } from "@/lib/exams/process";
+import { hasParts, latestPassedPercent, processParts, processState, releaseRecord, type ProcessParts, type ProcessState } from "@/lib/exams/process";
+import { percentOf } from "@/lib/exams/scoring";
+import { messages } from "@/lib/messages";
+import { fmt } from "@/lib/messages/format";
 
 // Training processes (CLAUDE.md, 10. mérföldkő, "Képzési folyamat"): one agent
 // going through the parts of one training, started and aborted by the
@@ -18,6 +21,7 @@ const processInclude = {
       theoryPart: true,
       practicalPart: true,
       passPercent: true,
+      hasExam: true,
       ojtRequiredCount: true,
       ojtMinCompletenessPercent: true,
       ojtMinOnTimePercent: true,
@@ -27,7 +31,7 @@ const processInclude = {
   startedBy: { select: { name: true } },
   abortedBy: { select: { name: true } },
   releasedBy: { select: { name: true } },
-  attempts: { select: { passed: true, submittedAt: true } },
+  attempts: { select: { passed: true, submittedAt: true, scoredPoints: true, maxPoints: true } },
   ojtSessions: { select: { verdict: true, metrics: true } },
   practicalExams: { select: { verdict: true } },
 } satisfies Prisma.TrainingProcessInclude;
@@ -111,6 +115,51 @@ export async function abortProcess(id: string, actorId: string, reason: string |
   const open = await prisma.examAttempt.findMany({ where: { processId: id, submittedAt: null }, select: { id: true } });
   for (const attempt of open) await finalize(attempt.id);
   return true;
+}
+
+export type ReleaseProblem = "notReady" | "taken";
+
+/**
+ * Releases a process whose every prescribed part is passed: the passed
+ * training record is made (completed today, valid by the qualification, with
+ * the result of the latest passed e-exam), and the qualification comes from
+ * it as before. Of two releases at once only one goes through.
+ */
+export async function releaseProcess(id: string, actorId: string, today: string): Promise<{ recordId: string } | { problem: ReleaseProblem }> {
+  const process = await getProcess(id);
+  if (!process || process.state !== "READY") return { problem: "notReady" };
+  const examPercent = process.training.hasExam
+    ? latestPassedPercent(
+        process.attempts.map((attempt) => ({
+          passed: attempt.passed,
+          submittedAt: attempt.submittedAt,
+          percent: attempt.scoredPoints === null ? null : percentOf(attempt.scoredPoints, attempt.maxPoints),
+        })),
+      )
+    : null;
+  const values = releaseRecord(process.training, today, examPercent);
+  return prisma.$transaction(async (tx) => {
+    const claimed = await tx.trainingProcess.updateMany({
+      where: { id, status: "IN_PROGRESS" },
+      data: { status: "RELEASED", openKey: null, releasedById: actorId, releasedAt: new Date() },
+    });
+    if (claimed.count === 0) return { problem: "taken" as const };
+    const record = await tx.trainingRecord.create({
+      data: {
+        userId: process.userId,
+        trainingId: process.trainingId,
+        completedOn: new Date(`${values.completedOn}T00:00:00Z`),
+        examPercent: values.examPercent,
+        passed: true,
+        validUntil: values.validUntil ? new Date(`${values.validUntil}T00:00:00Z`) : null,
+        validUntilManual: false,
+        note: fmt(messages.release.recordNote, { training: process.training.name }),
+        createdById: actorId,
+      },
+    });
+    await tx.trainingProcess.update({ where: { id }, data: { recordId: record.id } });
+    return { recordId: record.id };
+  });
 }
 
 /** The active sheets of a training, for opening an attempt. */

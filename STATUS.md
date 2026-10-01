@@ -4,22 +4,22 @@
 
 ## Mi készült el
 
-- **10. mérföldkő, 7. lépés:** gyakorlati vizsga.
-  - A folyamat oldaláról rögzíti a vizsgáztató: a vizsgázó elmúlt 14 napjának (paraméter) olyan task részéből választ, ahol ügynök vagy gyakornok volt; szempontonként megfelelt / nem felelt meg, megjegyzéssel; végeredmény, visszajelzés és belső megjegyzés.
-  - Rögzíteni a „Vizsgáztatás” jogosultsággal és a képzés jogosításával lehet, amely a választott task napján érvényes; a felület előre jelzi, ha ma nem érvényes.
-  - Figyelmeztet, de enged, ha az OJT-követelmény még nem teljesül (a rögzítés előtt és után is).
-  - A folyamat oldalán a vizsgák listája: task, vizsgáztató, szempontonkénti eredmény, visszajelzés; a belső megjegyzés csak a vizsgáztatóknak, a kibocsátásra jogosultaknak és a koordinátornak. A szempontok másolatként tárolódnak, a későbbi szerkesztés nem változtatja meg őket.
-- 6. lépés (`283f5e6`): OJT a taskon. 5. lépés (`2d3010d`): képzési folyamat. 1–4. lépés: adatmodell, tiszta függvények, szerkesztőfelületek, e-vizsga.
+- **10. mérföldkő, 8. lépés:** kibocsátás.
+  - A „kibocsátható” folyamat (minden előírt rész sikeres) kiemelve jelenik meg a listán és a folyamat oldalán; a „Kibocsátás” jogosultsággal egy gombbal, megerősítés után kibocsátható.
+  - A kibocsátás létrehozza a sikeres képzési rekordot: a teljesítés napja a mai nap, az érvényesség a jogosítás szerint, a dolgozat eredménye az utolsó sikeres e-vizsgáé (dolgozat nélküli képzésnél üres), megjegyzésben a folyamat; a rekord hivatkozik a folyamatra. Ettől érvényes a jogosítás.
+  - Naplózva: ki és mikor bocsátotta ki; a folyamat lezárul, a koordinátor a rekordot megnyithatja.
+  - Két egyidejű kibocsátásból csak egy megy át.
+- 7. lépés (`c1fdb81`): gyakorlati vizsga. 6. lépés (`283f5e6`): OJT. 5. lépés (`2d3010d`): folyamat. 1–4. lépés: adatmodell, tiszta függvények, szerkesztőfelületek, e-vizsga.
 
 ## Állapot
 
-- Utolsó commit: `feat: record the practical exam on a real flight` (ez a commit; előtte `283f5e6`)
+- Utolsó commit: `feat: release a ready process into a passed record` (ez a commit; előtte `c1fdb81`)
 - Tesztek: `npm test` → 749 teszt, mind zöld; `npm run lint` hibátlan, `npx tsc --noEmit` tiszta, `npm run build` sikeres
-- Adatbázison végigpróbálva: a vizsgázó task részei (ügynökként), a szerep ellenőrzése, a vizsga rögzítése szempontokkal, utána a folyamat gyakorlati része sikeres. Bejelentkezve nem néztem meg.
+- Adatbázison végigpróbálva: nem kibocsátható folyamat elutasítva; két sikeres kísérletből a későbbi eredménye (85%) kerül a rekordba; két egyidejű kibocsátásból egy megy át; a rekord mai teljesítéssel és 12 hónapos érvényességgel jön létre; a jogosítás előtte nem, utána érvényes. Bejelentkezve nem néztem meg.
 
 ## Eltérések a CLAUDE.md-től
 
-- Nincs. Megvalósításban: a gyakorlati vizsga rögzítés után nem módosítható (új vizsga rögzíthető); a végeredményt a vizsgáztató adja, a szempontok eredményétől függetlenül.
+- nincs
 
 ## Kérdések a tervezéshez
 
@@ -27,4 +27,4 @@
 
 ## Következő lépés
 
-- 8. lépés: kibocsátás – „kibocsátható” jelzés, jóváhagyás, a képzési rekord létrehozása.
+- 9. lépés: seed (Mentor és Vizsgáztató felhasználó, kétrészes képzés rövid kérdésbankkal, egy félúton lévő és egy kibocsátható folyamat), README, STATUS.md, tiszta Docker-indítás.
