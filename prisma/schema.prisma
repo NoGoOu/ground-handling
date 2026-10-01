@@ -91,6 +91,18 @@ model User {
   apiKeys            ApiKey[]
   delayDocsUploaded  DelayCodeDocument[] @relation("DelayCodeDocumentsUploaded")
   delayDocsRemoved   DelayCodeDocument[] @relation("DelayCodeDocumentsRemoved")
+  // Training with e-exams, OJT and release (10. mérföldkő).
+  trainingProcesses  TrainingProcess[] @relation("TrainingProcesses")
+  processesStarted   TrainingProcess[] @relation("TrainingProcessesStarted")
+  processesAborted   TrainingProcess[] @relation("TrainingProcessesAborted")
+  processesReleased  TrainingProcess[] @relation("TrainingProcessesReleased")
+  attemptsOpened     ExamAttempt[]     @relation("ExamAttemptsOpened")
+  attemptsGraded     ExamAttempt[]     @relation("ExamAttemptsGraded")
+  answersGraded      ExamAnswer[]      @relation("ExamAnswersGraded")
+  ojtAsTrainee       OjtSession[]      @relation("OjtTrainee")
+  ojtAdded           OjtSession[]      @relation("OjtAdded")
+  ojtAsMentor        OjtSession[]      @relation("OjtMentor")
+  practicalExams     PracticalExam[]   @relation("PracticalExaminer")
 }
 
 /// A role is a name plus the permissions ticked for it (CLAUDE.md, "Jogosultsági rendszer").
@@ -426,6 +438,9 @@ model Task {
 
   records   MilestoneRecord[]
   planItems PlanItem[]
+  /// Trainees next to its agents and practical exams on it (10. mérföldkő).
+  ojtSessions    OjtSession[]
+  practicalExams PracticalExam[]
 
   @@unique([flightId, taskTypeId])
   @@index([flightId])
@@ -446,6 +461,9 @@ model MilestoneRecord {
   updatedById           String?
   updatedBy             User?               @relation("UpdatedBy", fields: [updatedById], references: [id])
   updatedAt             DateTime?
+  /// Recorded, or last corrected, by the trainee of the part (10. mérföldkő).
+  byTrainee             Boolean             @default(false)
+  updatedByTrainee      Boolean             @default(false)
 
   @@unique([taskId, milestoneDefinitionId])
 }
@@ -676,7 +694,19 @@ model Training {
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
 
-  records TrainingRecord[]
+  /// The parts of the training (10. mérföldkő): theory closed by an e-exam
+  /// (it needs the exam and its pass mark), practice with OJT and a practical exam.
+  theoryPart                Boolean @default(false)
+  practicalPart             Boolean @default(false)
+  /// The OJT requirement; the defaults are placeholders (lib/exams/defaults.ts).
+  ojtRequiredCount          Int     @default(10)
+  ojtMinCompletenessPercent Int     @default(100)
+  ojtMinOnTimePercent       Int     @default(0)
+
+  records    TrainingRecord[]
+  examSheets ExamSheet[]
+  processes  TrainingProcess[]
+  criteria   PracticalCriterion[]
 }
 
 /// One completion of a training by an agent. Corrected, never deleted.
@@ -703,6 +733,8 @@ model TrainingRecord {
   updatedAt        DateTime  @updatedAt
 
   files TrainingFile[]
+  /// The process whose release made it (10. mérföldkő); none for a record kept by hand.
+  process TrainingProcess?
 
   @@index([userId])
 }
@@ -962,4 +994,239 @@ model Airport {
   name      String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// Training with e-exams, on the job training and release (10. mérföldkő).
+// A process takes an agent through the parts of a training; its release makes
+// the passed training record, and the qualification comes from that record as
+// before (6. mérföldkő).
+
+enum ExamQuestionKind {
+  /// One right answer.
+  SINGLE
+  /// Several right answers.
+  MULTIPLE
+  /// A written answer, scored by the examiner.
+  TEXT
+}
+
+/// How a question with several right answers scores (a placeholder rule, set per exam sheet).
+enum MultipleChoiceScoring {
+  /// Only the fully right answer scores.
+  ALL_OR_NOTHING
+  /// Points × (right ones marked − wrong ones marked) / all right ones, at least zero.
+  PROPORTIONAL
+}
+
+enum TrainingProcessStatus {
+  /// Running; "ready for release" is worked out from its parts.
+  IN_PROGRESS
+  RELEASED
+  ABORTED
+}
+
+enum Verdict {
+  PASS
+  FAIL
+}
+
+/// A question of the question bank.
+model ExamQuestion {
+  id        String           @id @default(cuid())
+  text      String
+  kind      ExamQuestionKind
+  points    Int              @default(1)
+  topic     String?
+  active    Boolean          @default(true)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  options ExamOption[]
+  sheets  ExamSheetQuestion[]
+}
+
+/// An answer to choose for a single or multiple choice question.
+model ExamOption {
+  id         String       @id @default(cuid())
+  questionId String
+  question   ExamQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  order      Int
+  text       String
+  correct    Boolean      @default(false)
+
+  @@unique([questionId, order])
+}
+
+/// An exam sheet of a training: questions in order, an optional time limit.
+model ExamSheet {
+  id               String                @id @default(cuid())
+  name             String                @unique
+  trainingId       String
+  training         Training              @relation(fields: [trainingId], references: [id])
+  timeLimitMinutes Int?
+  multipleScoring  MultipleChoiceScoring @default(ALL_OR_NOTHING)
+  active           Boolean               @default(true)
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+
+  questions ExamSheetQuestion[]
+  attempts  ExamAttempt[]
+}
+
+model ExamSheetQuestion {
+  id         String       @id @default(cuid())
+  sheetId    String
+  sheet      ExamSheet    @relation(fields: [sheetId], references: [id], onDelete: Cascade)
+  questionId String
+  question   ExamQuestion @relation(fields: [questionId], references: [id])
+  order      Int
+
+  @@unique([sheetId, questionId])
+  @@index([sheetId])
+}
+
+/// One agent going through the parts of one training.
+model TrainingProcess {
+  id           String                @id @default(cuid())
+  userId       String
+  user         User                  @relation("TrainingProcesses", fields: [userId], references: [id])
+  trainingId   String
+  training     Training              @relation(fields: [trainingId], references: [id])
+  status       TrainingProcessStatus @default(IN_PROGRESS)
+  /// "userId:trainingId" while the process is open: one open process per agent and training.
+  openKey      String?               @unique
+  startedById  String
+  startedBy    User                  @relation("TrainingProcessesStarted", fields: [startedById], references: [id])
+  startedAt    DateTime              @default(now())
+  abortedById  String?
+  abortedBy    User?                 @relation("TrainingProcessesAborted", fields: [abortedById], references: [id])
+  abortedAt    DateTime?
+  abortReason  String?
+  releasedById String?
+  releasedBy   User?                 @relation("TrainingProcessesReleased", fields: [releasedById], references: [id])
+  releasedAt   DateTime?
+  /// The passed record the release made.
+  recordId     String?               @unique
+  record       TrainingRecord?       @relation(fields: [recordId], references: [id])
+
+  attempts       ExamAttempt[]
+  ojtSessions    OjtSession[]
+  practicalExams PracticalExam[]
+
+  @@index([userId])
+}
+
+/// One sitting of an e-exam. It keeps a copy of the sheet and its questions
+/// from when it was opened, like the snapshot of a completed task.
+model ExamAttempt {
+  id           String          @id @default(cuid())
+  processId    String
+  process      TrainingProcess @relation(fields: [processId], references: [id])
+  sheetId      String
+  sheet        ExamSheet       @relation(fields: [sheetId], references: [id])
+  snapshot     Json
+  maxPoints    Int
+  /// The process id while the attempt is open: one open attempt per process.
+  openKey      String?         @unique
+  openedById   String
+  openedBy     User            @relation("ExamAttemptsOpened", fields: [openedById], references: [id])
+  openedAt     DateTime        @default(now())
+  /// The examinee's first look: the time limit runs from here.
+  startedAt    DateTime?
+  deadline     DateTime?
+  submittedAt  DateTime?
+  /// Set once every answer is scored.
+  scoredPoints Float?
+  passed       Boolean?
+  /// Seen by the examinee too.
+  feedback     String?
+  /// Seen only by examiners, releasers and the coordinator.
+  internalNote String?
+  gradedById   String?
+  gradedBy     User?           @relation("ExamAttemptsGraded", fields: [gradedById], references: [id])
+  gradedAt     DateTime?
+
+  answers ExamAnswer[]
+
+  @@index([processId])
+}
+
+/// The answer to one question of an attempt, by its place in the copy.
+model ExamAnswer {
+  id            String      @id @default(cuid())
+  attemptId     String
+  attempt       ExamAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  questionIndex Int
+  /// The places of the chosen options in the copy.
+  choices       Int[]
+  text          String?
+  /// Given by the system on submission (choice questions) or by the examiner (written answers).
+  points        Float?
+  graderNote    String?
+  gradedById    String?
+  gradedBy      User?       @relation("ExamAnswersGraded", fields: [gradedById], references: [id])
+  gradedAt      DateTime?
+
+  @@unique([attemptId, questionIndex])
+}
+
+/// A trainee next to the agent of a task part, the mentor; with the mentor's
+/// evaluation after the task and the metrics frozen then.
+model OjtSession {
+  id          String          @id @default(cuid())
+  taskId      String
+  task        Task            @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  part        MilestonePart
+  traineeId   String
+  trainee     User            @relation("OjtTrainee", fields: [traineeId], references: [id])
+  processId   String
+  process     TrainingProcess @relation(fields: [processId], references: [id])
+  addedById   String
+  addedBy     User            @relation("OjtAdded", fields: [addedById], references: [id])
+  addedAt     DateTime        @default(now())
+  verdict     Verdict?
+  comment     String?
+  metrics     Json?
+  mentorId    String?
+  mentor      User?           @relation("OjtMentor", fields: [mentorId], references: [id])
+  evaluatedAt DateTime?
+
+  @@unique([taskId, part])
+  @@index([traineeId])
+  @@index([processId])
+}
+
+/// A criterion of the practical exam of a training.
+model PracticalCriterion {
+  id         String   @id @default(cuid())
+  trainingId String
+  training   Training @relation(fields: [trainingId], references: [id])
+  order      Int
+  text       String
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([trainingId])
+}
+
+/// A practical exam on a real flight, a task part, judged by the examiner per criterion.
+model PracticalExam {
+  id           String          @id @default(cuid())
+  processId    String
+  process      TrainingProcess @relation(fields: [processId], references: [id])
+  taskId       String
+  task         Task            @relation(fields: [taskId], references: [id])
+  part         MilestonePart
+  examinerId   String
+  examiner     User            @relation("PracticalExaminer", fields: [examinerId], references: [id])
+  /// The criteria as they were, each with its verdict and note.
+  results      Json
+  verdict      Verdict
+  feedback     String?
+  internalNote String?
+  createdAt    DateTime        @default(now())
+
+  @@index([processId])
 }

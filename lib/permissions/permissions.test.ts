@@ -8,7 +8,13 @@ import {
   canChangeTaskStatus,
   canRecordMilestone,
   canEditLayer,
+  canEditExams,
+  canExamine,
   canManageMessaging,
+  canMentor,
+  canOpenExamAttempt,
+  canRelease,
+  canSeeInternalNotes,
   canOpenDelayDocument,
   canManageTraining,
   canPlan,
@@ -352,6 +358,25 @@ describe("messages (7. mérföldkő)", () => {
     expect(canRecordDelayCodes(bela, ["bela"])).toBe(true);
     expect(canRecordDelayCodes(anna, ["bela"])).toBe(false);
     expect(canRecordDelayCodes(planner, ["planner"])).toBe(false);
+  });
+
+  it("gives the exams, mentoring, examining and release to their roles (10. mérföldkő)", () => {
+    const coordinator = actorWith("olga", ["Oktatási koordinátor"]);
+    const mentor = actorWith("mira", ["Ügynök", "Mentor"]);
+    const examiner = actorWith("vera", ["Vizsgáztató"]);
+    expect([canEditExams, canExamine, canRelease, canOpenExamAttempt, canSeeInternalNotes].map((f) => f(coordinator))).toEqual([
+      true, true, true, true, true,
+    ]);
+    expect(canMentor(coordinator)).toBe(false);
+    expect([canMentor(mentor), canExamine(mentor), canSeeInternalNotes(mentor), canEditExams(mentor)]).toEqual([true, false, false, false]);
+    expect([canExamine(examiner), canOpenExamAttempt(examiner), canSeeInternalNotes(examiner), canRelease(examiner)]).toEqual([
+      true, true, true, false,
+    ]);
+    // The admin has everything; an agent has none of it.
+    expect([canEditExams, canMentor, canExamine, canRelease].every((f) => f(admin))).toBe(true);
+    expect([canEditExams, canMentor, canExamine, canRelease, canOpenExamAttempt, canSeeInternalNotes].some((f) => f(anna))).toBe(false);
+    expect(canAccessPath(coordinator, "/training/exams")).toBe(true);
+    expect(canAccessPath(examiner, "/training/exams")).toBe(false);
   });
 
   it("shows the staffing demand to the planner, the shift lead and the admin", () => {

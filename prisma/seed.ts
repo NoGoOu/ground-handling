@@ -82,6 +82,14 @@ async function main() {
     await tx.delayCodeDocument.deleteMany();
     await tx.airport.deleteMany();
     await tx.plan.deleteMany();
+    // Exams, OJT and processes (10. mérföldkő) point at trainings, tasks, records and users.
+    await tx.practicalExam.deleteMany();
+    await tx.ojtSession.deleteMany();
+    await tx.examAttempt.deleteMany();
+    await tx.trainingProcess.deleteMany();
+    await tx.examSheet.deleteMany();
+    await tx.examQuestion.deleteMany();
+    await tx.practicalCriterion.deleteMany();
     // Training data (6. mérföldkő): records and their file rows, trainings, requirements.
     await tx.trainingRecord.deleteMany();
     await tx.training.deleteMany();

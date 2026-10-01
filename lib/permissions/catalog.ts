@@ -39,6 +39,11 @@ export const PERMISSIONS = {
   STAFFING_VIEW: { label: "Létszámigény megtekintése", scoped: false, group: "Beosztás" },
   TRAINING_MANAGE: { label: "Képzések kezelése", scoped: false, group: "Képzések" },
   TRAINING_VIEW: { label: "Képzési adatok megtekintése", scoped: true, group: "Képzések" },
+  // E-exams, on the job training and release (10. mérföldkő).
+  EXAM_EDIT: { label: "Vizsgák szerkesztése", scoped: false, group: "Képzések" },
+  MENTORING: { label: "Mentorálás", scoped: false, group: "Képzések" },
+  EXAMINING: { label: "Vizsgáztatás", scoped: false, group: "Képzések" },
+  RELEASE: { label: "Kibocsátás", scoped: false, group: "Képzések" },
   MESSAGE_VIEW: { label: "Üzenetek megtekintése", scoped: true, group: "Üzenetek" },
   MESSAGE_RECORD: { label: "Üzenetek rögzítése", scoped: false, group: "Üzenetek" },
   MESSAGE_SEND: { label: "Üzenetek küldése", scoped: true, group: "Üzenetek" },
@@ -78,6 +83,9 @@ export function permissionGroups(): { group: string; permissions: Permission[] }
 export const BUILT_IN_ADMIN_ROLE = "Admin";
 /** The new default role of the 6. mérföldkő. */
 export const TRAINING_COORDINATOR_ROLE = "Oktatási koordinátor";
+/** The new default roles of the 10. mérföldkő. */
+export const MENTOR_ROLE = "Mentor";
+export const EXAMINER_ROLE = "Vizsgáztató";
 
 export const DEFAULT_ROLES: { name: string; builtIn: boolean; permissions: Partial<Record<Permission, Scope>> }[] = [
   {
@@ -128,7 +136,21 @@ export const DEFAULT_ROLES: { name: string; builtIn: boolean; permissions: Parti
     permissions: {
       TRAINING_MANAGE: "ALL",
       TRAINING_VIEW: "ALL",
+      // E-exams, examining and release (10. mérföldkő).
+      EXAM_EDIT: "ALL",
+      EXAMINING: "ALL",
+      RELEASE: "ALL",
     },
+  },
+  {
+    name: MENTOR_ROLE,
+    builtIn: false,
+    permissions: { MENTORING: "ALL" },
+  },
+  {
+    name: EXAMINER_ROLE,
+    builtIn: false,
+    permissions: { EXAMINING: "ALL" },
   },
   {
     name: "Ügynök",

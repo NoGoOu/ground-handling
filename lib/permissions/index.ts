@@ -216,6 +216,21 @@ export const canViewStaffing = (actor: Actor) => can(actor, "STAFFING_VIEW");
 export const canManageTraining = (actor: Actor) => can(actor, "TRAINING_MANAGE");
 export const canViewTraining = (actor: Actor) => can(actor, "TRAINING_VIEW") || can(actor, "TRAINING_MANAGE");
 
+// E-exams, on the job training and release (10. mérföldkő). Whether a mentor's
+// or an examiner's qualification is valid on the day is checked apart (lib/exams).
+
+/** Question bank, exam sheets, practical criteria, the parts of a training and its OJT requirement. */
+export const canEditExams = (actor: Actor) => can(actor, "EXAM_EDIT");
+export const canMentor = (actor: Actor) => can(actor, "MENTORING");
+/** Scoring written answers and the practical exam. */
+export const canExamine = (actor: Actor) => can(actor, "EXAMINING");
+export const canRelease = (actor: Actor) => can(actor, "RELEASE");
+/** Opening an e-exam for the examinee is organising, not judging: examiners and the coordinator. */
+export const canOpenExamAttempt = (actor: Actor) => can(actor, "EXAMINING") || can(actor, "TRAINING_MANAGE");
+/** The internal notes of the exams: for examiners, releasers and the coordinator only. */
+export const canSeeInternalNotes = (actor: Actor) =>
+  can(actor, "EXAMINING") || can(actor, "RELEASE") || can(actor, "TRAINING_MANAGE");
+
 /** One person's training data and files: the coordinator sees everyone, the others by scope. */
 export function canViewTrainingOf(actor: Actor, userId: string): boolean {
   return can(actor, "TRAINING_MANAGE") || inScope(actor, "TRAINING_VIEW", [userId]);
@@ -288,6 +303,7 @@ const ROUTE_PERMISSIONS: [prefix: string, permissions: Permission[]][] = [
   ["/flights", ["FLIGHT_MANAGE"]],
   ["/import", ["SCHEDULE_IMPORT"]],
   ["/planning/settings", ["PLANNING"]],
+  ["/training/exams", ["EXAM_EDIT"]],
   ["/training/qualifications", ["TRAINING_MANAGE"]],
   ["/training/courses", ["TRAINING_MANAGE"]],
   ["/training/records", ["TRAINING_MANAGE"]],
