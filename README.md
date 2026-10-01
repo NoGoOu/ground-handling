@@ -93,7 +93,8 @@ A formátumok, a párosítás és a minták: [`docs/messages.md`](docs/messages.
 - **Beosztás:** sávonként a valós réteg operatív részeiben lévő, nem operatív rész blokkjában (az utazási idővel) éppen nem lévő ügynökök száma, a sávon belüli legkisebb érték; aki a sávnak csak egy részében van bent, nem számít. **Hiány és többlet:** beosztás − összesített igény.
 - **Napi nézet:** napválasztó, lépcsős grafikon (összesített igény, feladattípusok, a beosztás vonala, a hiányos sávok pirossal), a napi csúcs és a legnagyobb hiány az idejével, alatta táblázat sávonként.
 - **Áttekintés:** legfeljebb 31 napos időszak, naponként egy sor, negyedóránként egy cella az összesített igénnyel, az igény nagysága szerint színezve, a hiányos sávok pirossal; naponként a csúcs és a legnagyobb hiány. A napra kattintva a napi nézet nyílik.
-- **Valós beosztás nélküli nap** (pl. még nem publikált): az igény látszik, de hiányként nem jelöljük.
+- **Még nem publikált nap (utómunka):** a beosztás a tervezet réteg műszakjaiból számol, ugyanúgy, hiánnyal és többlettel, „Tervezet” jelöléssel (a napi nézetben címke, pontozott beosztásvonal és „Beosztás (tervezet)”; az áttekintésben „T” a nap mellett). Ezt csak az látja, aki a beosztás tervezetét is láthatja („Beosztás tervezése” jogosultság: Tervező, Admin); a többieknek ezeken a napokon csak az igény látszik. Egy műszak a kezdőnapja szerinti rétegből számít, így az éjfélen átnyúló műszak a publikált és a nem publikált nap határán is jól számol; a nem publikált napra felvitt valós műszak és a publikált napra felvitt tervezet nem számít.
+- **Beosztás nélküli nap** (a publikált napon nincs valós, a nem publikált napon nincs tervezett műszak): az igény látszik, de hiányként nem jelöljük.
 - **Óraátállítás:** a sávok a valós időt követik, a nap 92 vagy 100 sávból áll. Az áttekintés oszlopai a helyi óra negyedórái: tavasszal a nem létező óra cellái üresek, ősszel a kétszer előforduló óra cellája a nagyobb igényt és a nagyobb hiányt mutatja (a napi nézetben mindkét sáv látszik).
 - Tiszta függvények (`lib/staffing/`), külső AI nélkül. A sávos nézeten a létszámigény nem jelenik meg.
 
@@ -121,7 +122,8 @@ A demo beosztás a betöltés napjára és a következő napra publikált és va
 
 1. `tervezo`-ként vagy `vezeto`-ként nyisd meg a `Létszámigény` menüt. A betöltés napján a csúcs 16:15-kor 4 fő (két átfedő forduló, feladattípusonként 2–2), miközben egy ügynök van beosztva: a legnagyobb hiány 3 fő. Reggel 06:15 és 08:15 között szintén hiány van, délben a két ügynök fedezi az igényt.
 2. 10:45-kor a beosztás még 1 fő: Nagy Eszter oktatása 10:30-ig tart, a 20 perces visszaút 10:50-ig, a műszakja 11:00-kor kezdődik.
-3. Az `Áttekintés` fülön mától egy hét látszik: a mai nap sora színes, a holnapi napnak van beosztása, de igénye nincs; az azutáni napoknak nincs valós beosztásuk (∅). Az importpróba után a 2024. szeptember 10-i hét igénye is megnézhető (ott nincs beosztás, így hiány sem jelölődik).
+3. Az `Áttekintés` fülön mától egy hét látszik: a mai nap sora színes, a holnapi napnak van beosztása, de igénye nincs; az azutáni napoknak nincs valós beosztásuk (∅). Az importpróba után a 2024. szeptember 10-i hét igénye is megnézhető (ott még nincs beosztás, így hiány sem jelölődik).
+4. A tervezet összevetése: az importpróba és a tervezői nézet kipróbálása (lent) után, amikor a terv „Mentés a tervezetbe” gombbal a 2024. szeptember 10-i hét tervezetébe került, `tervezo`-ként nyisd meg az `Áttekintés` fület 2024-09-10 és 2024-09-16 között: a napok „T” jelölést kapnak, és az igény a tervezet műszakjaival vetődik össze. `vezeto`-ként ugyanitt csak az igény látszik, mert a napok még nincsenek publikálva.
 
 | Felhasználónév | Név | Szerepkör |
 |---|---|---|

@@ -8,6 +8,7 @@ import { canViewLayer, canViewStaffing } from "@/lib/permissions";
 import { dateParam } from "@/lib/search-params";
 import { requireCapability } from "@/lib/session";
 import { summaryOf } from "@/lib/staffing/summary";
+import { rosterNote } from "@/lib/staffing/texts";
 import { formatTime, toLocalDate } from "@/lib/time";
 import { StaffingViews } from "./views";
 
@@ -33,7 +34,10 @@ export default async function StaffingPage(props: PageProps<"/staffing">) {
       <p className="max-w-3xl text-sm text-neutral-600">{t.hint}</p>
 
       <section className="flex flex-col gap-3 rounded-xl border border-neutral-200 bg-white p-4">
-        <p className="flex flex-wrap gap-x-6 gap-y-1 text-sm">
+        <p className="flex flex-wrap items-center gap-x-6 gap-y-1 text-sm">
+          {day.rosterLayer === "DRAFT" && (
+            <span className="rounded-full bg-violet-100 px-2 py-0.5 text-xs font-semibold text-violet-800">{t.draftBadge}</span>
+          )}
           <span className="font-medium">
             {summary.peakAt ? fmt(t.peak, { n: summary.peak, time: formatTime(summary.peakAt) }) : t.noPeak}
           </span>
@@ -46,9 +50,9 @@ export default async function StaffingPage(props: PageProps<"/staffing">) {
               <span className="text-emerald-700">{t.noShortage}</span>
             ))}
         </p>
-        {!day.hasRoster && (
-          <p role="status" className="text-sm text-orange-700">
-            {t.noRoster}
+        {rosterNote(day) && (
+          <p role="status" className={`text-sm ${day.hasRoster ? "text-violet-800" : "text-orange-700"}`}>
+            {rosterNote(day)}
           </p>
         )}
         {day.bands.length !== 96 && <p className="text-sm text-neutral-600">{fmt(t.dstNote, { count: day.bands.length })}</p>}

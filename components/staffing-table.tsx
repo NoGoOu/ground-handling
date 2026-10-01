@@ -1,9 +1,8 @@
 import { typeColor } from "@/components/staffing-chart";
 import { messages } from "@/lib/messages";
-import { fmt } from "@/lib/messages/format";
 import type { StaffingDay } from "@/lib/staffing/day";
-import { shortageOf, surplusOf, type StaffingBand } from "@/lib/staffing/roster";
 import { isShort } from "@/lib/staffing/summary";
+import { balanceText } from "@/lib/staffing/texts";
 import { formatTime } from "@/lib/time";
 
 // The table under the chart of the daily staffing view (CLAUDE.md, 9.
@@ -11,14 +10,6 @@ import { formatTime } from "@/lib/time";
 // total, the roster, and the shortage or the surplus.
 
 const t = messages.staffing;
-
-/** "−2 hiány", "+1 többlet" or "0"; a dash on a day without an actual roster. */
-export function balanceText(day: Pick<StaffingDay, "hasRoster">, band: Pick<StaffingBand, "balance">): string {
-  if (!day.hasRoster) return t.noBalance;
-  if (band.balance < 0) return fmt(t.shortage, { n: shortageOf(band) });
-  if (band.balance > 0) return fmt(t.surplus, { n: surplusOf(band) });
-  return t.even;
-}
 
 export function StaffingTable({ day }: { day: StaffingDay }) {
   return (
@@ -33,7 +24,7 @@ export function StaffingTable({ day }: { day: StaffingDay }) {
               </th>
             ))}
             <th className="py-1.5 pr-3 text-right font-semibold text-neutral-700">{t.total}</th>
-            <th className="py-1.5 pr-3 text-right font-normal">{t.rostered}</th>
+            <th className="py-1.5 pr-3 text-right font-normal">{day.rosterLayer === "DRAFT" ? t.rosteredDraft : t.rostered}</th>
             <th className="py-1.5 font-normal">{t.balance}</th>
           </tr>
         </thead>

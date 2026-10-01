@@ -1,10 +1,10 @@
 import Link from "next/link";
-import { balanceText } from "@/components/staffing-table";
 import { messages } from "@/lib/messages";
 import { fmt } from "@/lib/messages/format";
 import type { StaffingDay } from "@/lib/staffing/day";
 import { clockColumns, peakOfDays, type OverviewCell } from "@/lib/staffing/overview";
 import { summaryOf } from "@/lib/staffing/summary";
+import { balanceText, rosterNote } from "@/lib/staffing/texts";
 import { formatDayShort, formatTime, weekdayIndex } from "@/lib/time";
 
 // The overview of several days (CLAUDE.md, 9. mérföldkő, "Nézet"): a day ×
@@ -31,6 +31,9 @@ function cellTitle(day: StaffingDay, cell: OverviewCell): string {
 const HOURS = Array.from({ length: 24 }, (_, hour) => String(hour).padStart(2, "0"));
 /** Narrow enough for the 96 quarter hours of a day to fit the page without scrolling sideways. */
 const CELL = "h-6 w-[9px] min-w-[9px] p-0 text-center text-[8px] leading-6 tracking-tighter";
+/** The mark of a day whose roster is the draft (9. mérföldkő, utómunka). */
+const DRAFT_MARK = "ml-1 inline-block rounded bg-violet-100 px-1 text-[10px] leading-4 font-semibold text-violet-800";
+
 /** A line between the hours, so that the eye finds its way along a row. */
 const hourEdge = (column: number) => (column % 4 === 0 ? "border-l border-neutral-300" : "");
 
@@ -42,9 +45,9 @@ export function StaffingOverview({ days }: { days: readonly StaffingDay[] }) {
         <table className="border-collapse text-sm tabular-nums">
           <thead className="text-xs text-neutral-500">
             <tr>
-              <th className="sticky left-0 z-10 bg-white py-1 pr-3 text-left font-normal">{t.day}</th>
-              <th className="py-1 pr-3 text-left font-normal whitespace-nowrap">{t.dayPeak}</th>
-              <th className="py-1 pr-3 text-left font-normal whitespace-nowrap">{t.dayShortage}</th>
+              <th className="sticky left-0 z-10 bg-white py-1 pr-2 text-left font-normal">{t.day}</th>
+              <th className="py-1 pr-2 text-left font-normal whitespace-nowrap">{t.dayPeak}</th>
+              <th className="py-1 pr-2 text-left font-normal whitespace-nowrap">{t.dayShortage}</th>
               {HOURS.map((hour) => (
                 <th key={hour} colSpan={4} className="border-l border-neutral-300 px-0 py-1 text-left font-normal">
                   <span className="pl-0.5">{hour}</span>
@@ -57,17 +60,22 @@ export function StaffingOverview({ days }: { days: readonly StaffingDay[] }) {
               const summary = summaryOf(day);
               return (
                 <tr key={day.day} className="border-t border-neutral-200">
-                  <th className="sticky left-0 z-10 bg-white py-0.5 pr-3 text-left font-medium whitespace-nowrap">
+                  <th className="sticky left-0 z-10 bg-white py-0.5 pr-2 text-left font-medium whitespace-nowrap">
                     <Link href={`/staffing?date=${day.day}`} className="text-sky-700 hover:underline" title={fmt(t.openDay, { date: day.day })}>
                       {messages.roster.weekdays[weekdayIndex(day.day)]} {formatDayShort(day.day)}
                     </Link>
+                    {day.rosterLayer === "DRAFT" && (
+                      <span title={t.draftLegend} className={DRAFT_MARK}>
+                        {t.draftMark}
+                      </span>
+                    )}
                   </th>
-                  <td className="py-0.5 pr-3 whitespace-nowrap">
+                  <td className="py-0.5 pr-2 whitespace-nowrap">
                     {summary.peakAt ? fmt(t.dayPeakValue, { n: summary.peak, time: formatTime(summary.peakAt) }) : t.none}
                   </td>
-                  <td className="py-0.5 pr-3 whitespace-nowrap">
+                  <td className="py-0.5 pr-2 whitespace-nowrap">
                     {!day.hasRoster ? (
-                      <span className="text-neutral-500" title={t.noRosterLegend}>
+                      <span className="text-neutral-500" title={rosterNote(day) ?? undefined}>
                         {t.noRosterMark}
                       </span>
                     ) : summary.shortageAt ? (
@@ -113,6 +121,12 @@ export function StaffingOverview({ days }: { days: readonly StaffingDay[] }) {
           <span className="inline-block h-4 w-4" style={cellStyle({ total: max, short: true } as OverviewCell, max)} />
           {t.legendShort}
         </li>
+        {days.some((day) => day.rosterLayer === "DRAFT") && (
+          <li className="flex items-center gap-2">
+            <span className={DRAFT_MARK}>{t.draftMark}</span>
+            {t.draftLegend}
+          </li>
+        )}
         {days.some((day) => !day.hasRoster) && (
           <li className="flex items-center gap-2">
             <span className="inline-block w-4 text-center text-neutral-500">{t.noRosterMark}</span>

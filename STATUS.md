@@ -4,21 +4,23 @@
 
 ## Mi készült el
 
-- **A 9. mérföldkő utómunkája, első fele:** a tervezet a létszámigényben – számítás és adatréteg.
-  - A publikált napon a beosztás a valós rétegből jön, a még nem publikált napon a tervezetből; ugyanazzal a számítással, a hiány és a többlet ugyanúgy jelölődik.
-  - Egy műszak a kezdőnapja szerinti rétegből számít, így az éjfélen átnyúló műszak a publikált és a nem publikált nap határán is jól számol. A nem publikált napon felvitt valós műszak és a publikált napon felvitt tervezet nem számít.
-  - A tervezetet csak az tölti be, aki láthatja („Beosztás tervezése”); a többieknek a nem publikált napon csak az igény látszik, akkor is, ha arra a napra valós műszak van.
-  - Ha a nap saját rétegében nincs semmi (pl. még nincs tervezet), hiány nem jelölődik, akkor sem, ha az előző napról átnyúló műszak beleér.
-  - Tesztek (`lib/staffing/layers.test.ts`) a felsorolt esetekre; adatbázison is ellenőrizve (a demo napot ideiglenesen nem publikálttá téve: a tervezetből számolt hiány a tervezőnek látszik, a műszakvezetőnek csak az igény).
+- **A 9. mérföldkő utómunkája kész: a tervezet a létszámigényben.**
+- Második fele: a jelölés a nézetekben.
+  - Napi nézet: „Tervezet” címke, egy mondat arról, hogy a nap még nincs publikálva és a beosztás a tervezetből számol, pontozott beosztásvonal, „Beosztás (tervezet)” a jelmagyarázatban és a táblázatban. A hiány és a többlet ugyanúgy látszik.
+  - Áttekintés: „T” jelölés a tervezetből számoló napok mellett, a jelmagyarázatban is; a ∅ jel buboréka megmondja, miért nincs beosztás (nincs valós, nincs tervezet, vagy még nincs publikálva).
+  - Aki a tervezetet nem láthatja, a nem publikált napon „A nap még nincs publikálva: csak az igény látszik.” üzenetet kap; jelölés és beosztásvonal nélkül.
+  - README: a tervezet összevetésének leírása és kipróbálása (importpróba → terv → „Mentés a tervezetbe” → `Áttekintés`).
+- Első fele (`8479e07`): a számítás és az adatréteg; a műszak a kezdőnapja szerinti rétegből számít; a tervezetet csak az tölti be, aki láthatja.
 
 ## Állapot
 
-- Utolsó commit: `feat: set the draft against the staffing demand of unpublished days` (ez a commit; előtte `a913a66`)
-- Tesztek: `npm test` → 698 teszt, mind zöld; `npm run lint` hibátlan, `npx tsc --noEmit` tiszta
+- Utolsó commit: `feat: mark the days whose roster is the draft` (ez a commit; előtte `8479e07`)
+- Tesztek: `npm test` → 700 teszt, mind zöld; `npm run lint` hibátlan, `npx tsc --noEmit` tiszta, `npm run build` sikeres
+- Ellenőrizve: a demo napot ideiglenesen nem publikálttá téve, tervezet-műszakokkal, statikusan renderelve a tervező és a műszakvezető nézetét (a tervezőnek a tervezetből számolt hiány „Tervezet”, illetve „T” jelöléssel; a műszakvezetőnek csak az igény), utána a seed visszatöltve. Bejelentkezve nem néztem meg, mert jelszót nem írok be.
 
 ## Eltérések a CLAUDE.md-től
 
-- Nincs. A jóváhagyott döntések: a műszak a kezdőnapja szerinti rétegből számít; a nem odaillő réteg műszakjai nem számítanak; jogosultság nélkül a nem publikált napon csak az igény látszik; tervezet nélküli nem publikált napon nincs hiányjelölés; a seed nem változik.
+- Nincs. A jóváhagyott döntések (felvehetők a szabályok közé): a műszak a kezdőnapja szerinti rétegből számít; a nem publikált napra felvitt valós műszak és a publikált napra felvitt tervezet nem számít; jogosultság nélkül a nem publikált napon csak az igény látszik, akkor is, ha valós műszak van rá; ha a nap saját rétegében nincs műszak, hiány nem jelölődik (az előző napról átnyúló műszak akkor sem teszi hiányossá); a seed nem változott.
 
 ## Kérdések a tervezéshez
 
@@ -26,4 +28,4 @@
 
 ## Következő lépés
 
-- Az utómunka második fele: a „tervezet” jelölés a napi nézetben és az áttekintésben, README, STATUS.md.
+- A 10. mérföldkő (oktatás: e-vizsga, OJT, kibocsátás), a szokásos terv-jóváhagyással.

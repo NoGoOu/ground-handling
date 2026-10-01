@@ -23,6 +23,9 @@ const typeShift = (index: number, count: number) => (index - (count - 1) / 2) * 
 
 const TOTAL_COLOR = "#171717";
 const ROSTER_COLOR = "#059669";
+/** The draft of a day not yet published (9. mérföldkő, utómunka): the same colour, dotted. */
+const DRAFT_DASH = "2 3";
+const ACTUAL_DASH = "7 4";
 const SHORT_COLOR = "#dc2626";
 
 export function StaffingChart({ day, label }: { day: StaffingDay; label: string }) {
@@ -97,8 +100,8 @@ export function StaffingChart({ day, label }: { day: StaffingDay; label: string 
             d={stepPath(bands.map((band) => band.rostered), x, y)}
             fill="none"
             stroke={ROSTER_COLOR}
-            strokeWidth={2}
-            strokeDasharray="7 4"
+            strokeWidth={day.rosterLayer === "DRAFT" ? 2.5 : 2}
+            strokeDasharray={day.rosterLayer === "DRAFT" ? DRAFT_DASH : ACTUAL_DASH}
             strokeLinejoin="round"
           />
         )}
@@ -108,13 +111,13 @@ export function StaffingChart({ day, label }: { day: StaffingDay; label: string 
   );
 }
 
-function Swatch({ color, dashed, area }: { color: string; dashed?: boolean; area?: boolean }) {
+function Swatch({ color, dash, area }: { color: string; dash?: string; area?: boolean }) {
   return (
     <svg width={28} height={12} aria-hidden="true" className="shrink-0">
       {area ? (
         <rect x={0} y={1} width={28} height={10} fill={color} opacity={0.45} />
       ) : (
-        <line x1={0} x2={28} y1={6} y2={6} stroke={color} strokeWidth={dashed ? 2 : 2.5} strokeDasharray={dashed ? "7 4" : undefined} />
+        <line x1={0} x2={28} y1={6} y2={6} stroke={color} strokeWidth={dash ? 2 : 2.5} strokeDasharray={dash} />
       )}
     </svg>
   );
@@ -137,8 +140,8 @@ export function StaffingLegend({ day, names }: { day: StaffingDay; names: Readon
       {day.hasRoster && (
         <>
           <li className="flex items-center gap-2">
-            <Swatch color={ROSTER_COLOR} dashed />
-            {t.legendRoster}
+            <Swatch color={ROSTER_COLOR} dash={day.rosterLayer === "DRAFT" ? DRAFT_DASH : ACTUAL_DASH} />
+            {day.rosterLayer === "DRAFT" ? t.legendDraftRoster : t.legendRoster}
           </li>
           <li className="flex items-center gap-2">
             <Swatch color={SHORT_COLOR} area />
