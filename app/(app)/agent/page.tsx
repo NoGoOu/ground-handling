@@ -10,7 +10,7 @@ import { flightLabel } from "@/lib/flight";
 import { dayAnchors } from "@/lib/flight-day";
 import { messages } from "@/lib/messages";
 import { fmt } from "@/lib/messages/format";
-import { assignedParts, canViewOwnTasks, canViewTask, traineeParts } from "@/lib/permissions";
+import { assignedParts, canReportFault, canViewOwnTasks, canViewTask, traineeParts } from "@/lib/permissions";
 import { dateParam } from "@/lib/search-params";
 import { requireCapability, type CurrentUser } from "@/lib/session";
 import { formatTimeOnDay, toLocalDate } from "@/lib/time";
@@ -132,7 +132,15 @@ export default async function AgentPage(props: PageProps<"/agent">) {
 
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-2xl font-bold">{messages.pages.agent}</h1>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h1 className="text-2xl font-bold">{messages.pages.agent}</h1>
+        {/* A fault on a piece of equipment, one tap away on the apron (11. mérföldkő). */}
+        {canReportFault(user) && (
+          <Link href="/faults/new" className="btn btn-secondary btn-lg">
+            {messages.faults.report}
+          </Link>
+        )}
+      </div>
       <DateNav basePath="/agent" date={date} today={toLocalDate(new Date())} />
       {items.length === 0 ? (
         <p className="rounded-lg border border-dashed border-neutral-300 p-8 text-center text-neutral-600">{t.empty}</p>

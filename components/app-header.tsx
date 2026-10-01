@@ -8,6 +8,7 @@ import {
   canOpenAdmin,
   canOpenTrainingArea,
   canRecordMessages,
+  canReportFault,
   canViewBoard,
   canViewEquipment,
   canViewOwnTasks,
@@ -29,6 +30,7 @@ function linksFor(user: CurrentUser) {
   if (canRecordMessages(user)) links.push({ href: "/messages", label: messages.nav.messages });
   // Ground equipment (11. mérföldkő).
   if (canViewEquipment(user)) links.push({ href: "/equipment", label: messages.nav.equipment });
+  if (canReportFault(user)) links.push({ href: "/faults", label: messages.nav.faults });
   // "My tasks" is the agents' view; agents are the users who belong to a team.
   if (user.teamId && canViewOwnTasks(user)) links.push({ href: "/agent", label: messages.nav.myTasks });
   if (canOpenAdmin(user)) links.push({ href: "/admin", label: messages.nav.admin });

@@ -8,7 +8,7 @@ import { canMoveEquipment, equipmentStepNeeds, type EquipmentStatus } from "@/li
 import { counterStatus, deadlineStatus } from "@/lib/equipment/status";
 import { messages } from "@/lib/messages";
 import { fmt } from "@/lib/messages/format";
-import { can, canManageEquipment, canViewEquipment } from "@/lib/permissions";
+import { can, canManageEquipment, canReportFault, canViewEquipment } from "@/lib/permissions";
 import { requireCapability } from "@/lib/session";
 import { getSettings } from "@/lib/settings";
 import { formatDateTime, toLocalDate } from "@/lib/time";
@@ -58,6 +58,11 @@ export default async function EquipmentSheetPage(props: PageProps<"/equipment/[i
         <EquipmentStatusBadge status={equipment.status} />
         <span className="text-neutral-600">{equipment.type.name}</span>
         {equipment.plate && <span className="font-mono text-sm text-neutral-500">{equipment.plate}</span>}
+        {equipment.status !== "RETIRED" && canReportFault(user) && (
+          <Link href={`/faults/new?equipment=${equipment.id}`} className="btn btn-secondary ml-auto">
+            {messages.faults.report}
+          </Link>
+        )}
       </div>
       {created && <FormMessage notice={e.created} />}
 

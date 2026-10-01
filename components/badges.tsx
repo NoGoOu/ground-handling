@@ -179,3 +179,14 @@ const deadlineStyle = {
 export function DeadlineBadge({ status, label }: { status: keyof typeof deadlineStyle; label?: string }) {
   return <span className={`${base} ${deadlineStyle[status]}`}>{label ?? messages.equipment.deadlineStates[status]}</span>;
 }
+
+const faultStyle = {
+  OPEN: "bg-red-100 text-red-800",
+  IN_PROGRESS: "bg-amber-100 text-amber-900",
+  CLOSED: "bg-neutral-100 text-neutral-600",
+} as const;
+
+/** The state of a fault (11. mérföldkő). */
+export function FaultStatusBadge({ status }: { status: keyof typeof faultStyle }) {
+  return <span className={`${base} ${faultStyle[status]}`}>{messages.faults.statuses[status]}</span>;
+}
