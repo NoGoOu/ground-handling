@@ -1,6 +1,6 @@
 # Ground Handling App – projektleírás
 
-*Verzió: 34 · 2026. október 1.*
+*Verzió: 35 · 2026. október 1.*
 
 Nyílt forráskódú webalkalmazás repülőtéri földi kiszolgálás (ground handling) szervezésére. Minden járatfordulóhoz feladattípusonként egy task tartozik, benne mérföldkövekkel, amelyeknek van tervezett és tényleges időpontja. A mérföldkövek légitársaságonként testreszabható sablonokból jönnek. A hozzáférés szerepkör alapú.
 
@@ -682,7 +682,7 @@ Külön oldal, asztali gépre; telefonon ne törjön el, de nem arra optimalizá
 
 ## 10. mérföldkő – oktatás: e-vizsga, on the job gyakorlás (OJT) és kibocsátás
 
-**Ezt építjük most,** a szokásos terv-jóváhagyással. A 6. mérföldkő képzéseire épül. Egy képzésnek lehet elméleti és gyakorlati része, mindkettő vizsgával. Akinek minden előírt része sikeres, azt egy jogosult ember kibocsátja: ettől dolgozhat önállóan, mert a kibocsátás hozza létre a sikeres képzési rekordot, és abból adódik a jogosítás (6. mérföldkő). A meglévő működés nem változik: a képzési rekord kézi rögzítése megmarad (pl. papíron vagy korábban teljesített képzésekhez), és ez adja az első mentorok és vizsgáztatók jogosítását is.
+**Kész** (2026. október 1.), az utómunka kivételével: **most az utómunkát építjük** (lásd a szakasz végén). A leírás a megépült működés referenciája; a megvalósítás pontosításai a „További eldöntött szabályok” 73–79. pontjában. A 6. mérföldkő képzéseire épül. Egy képzésnek lehet elméleti és gyakorlati része, mindkettő vizsgával. Akinek minden előírt része sikeres, azt egy jogosult ember kibocsátja: ettől dolgozhat önállóan, mert a kibocsátás hozza létre a sikeres képzési rekordot, és abból adódik a jogosítás (6. mérföldkő). A meglévő működés nem változik: a képzési rekord kézi rögzítése megmarad (pl. papíron vagy korábban teljesített képzésekhez), és ez adja az első mentorok és vizsgáztatók jogosítását is.
 
 ### A képzés részei
 
@@ -747,6 +747,54 @@ Külön oldal, asztali gépre; telefonon ne törjön el, de nem arra optimalizá
 7. Gyakorlati vizsga
 8. Kibocsátás: „kibocsátható” jelzés, jóváhagyás, a képzési rekord létrehozása
 9. Seed (egy Mentor és egy Vizsgáztató felhasználó; egy képzés mindkét résszel, rövid kérdésbankkal; egy félúton lévő és egy kibocsátható folyamat), README, STATUS.md
+
+### Utómunka (a 11. mérföldkő előtt)
+
+1. **Kizáró szempontok a gyakorlati vizsgán:** az értékelési szempontnál jelölhető, hogy kizáró-e. Ha egy kizáró szempont nem felelt meg, a vizsga végeredménye automatikusan sikertelen, és a vizsgáztató nem írhatja át; ha minden kizáró szempont megfelelt, a végeredményt továbbra is a vizsgáztató adja. A vizsga elmenti a szempontok akkori kizáró jelölését, így a későbbi szerkesztés nem változtatja meg. Tesztekkel; seed: legalább egy kizáró szempont; README, STATUS.md.
+
+## 11. mérföldkő – földi eszközök és hibajegy
+
+**Tervezett: a 10. mérföldkő utómunkája után jön,** a szokásos terv-jóváhagyással. Az összes földi eszköz (motoros és nem motoros: pushback, szalagkocsi, busz, lépcső, GPU, dolly …) műszaki nyilvántartása, és hibajegy, amelyet bárki beadhat, a Műszaki pedig kezel.
+
+### Eszközök
+
+- **Eszköztípus:** név, kód, aktív, és a műszaki adatok mezőlistája (lásd lent). A Műszaki és az Admin kezeli.
+- **Eszköz:** típus, azonosító (pl. flottaszám), rendszám (opcionális), leírás, állapot (üzemképes, üzemképtelen, kivonva), megjegyzés. Nem törölhető, csak kivonható.
+- **Műszaki adatok:** eszköztípusonként szerkeszthető, kézzel bővíthető mezőlista. Mezőfajták:
+  - határidő (dátum, lejárat-figyeléssel: érvényes, hamarosan lejár, lejárt, mint a jogosításoknál);
+  - számláló (üzemóra vagy km, kézzel rögzített értékkel, opcionális esedékességi értékkel; figyelmeztet, ha elérte);
+  - szöveg.
+  - Alapmezők a seedben: műszaki vizsga lejárata (határidő), szerviz esedékessége (határidő és számláló), üzemóra vagy km (számláló).
+  - Az értékek eszközönként szerkeszthetők; minden változás naplózott (ki, mikor, régi és új érték).
+- **Dokumentumok:** eszközönként feltölthető fájlok (pl. forgalmi, szervizlap, fotó; PDF, JPG, PNG, legfeljebb 10 MB, helyőrző) a meglévő tárhelyen; az eltávolítás naplózott.
+- **„Hamarosan lejár”** az eszközöknél: külön globális beállítás napokban (helyőrző: 30).
+- **Lejáró határidők listája:** két csoport (hamarosan lejár, lejárt), csak aktív, nem kivont eszközökkel.
+
+### Hibajegy
+
+- **Jelentés:** bárki, aki be van lépve, hibát jelenthet egy eszközre, telefonról is: eszköz, leírás, fotók (opcionális), és jelölheti, hogy az eszköz üzemképtelen.
+- Az üzemképtelennek jelentett eszköz állapota azonnal üzemképtelen lesz; üzemképesre a Műszaki állítja vissza.
+- **Állapotok:** nyitott → folyamatban (a Műszaki átvette) → lezárva (javítva, vagy nem hiba). Megjegyzések a jegyen, időrendben, ki és mikor írta. Minden állapotváltás naplózott.
+- **Kinek látszik:** a Műszaki minden jegyet lát és kezel; a műszakvezető minden jegyet és az eszközök állapotát látja; a jelentő a saját jegyeit. Az eszközlistán az állapot, a nyitott jegyek száma és a legközelebbi határidő látszik.
+- **Jelzés:** a Műszakinak a menüben a nyitott jegyek száma. Emailes értesítés később.
+
+### Jogosultságok
+
+- „Eszközök kezelése” (eszköztípusok és mezőlisták, eszközök, műszaki adatok, dokumentumok): új alapértelmezett Műszaki szerepkör, Admin.
+- „Hibajegyek kezelése” (átvétel, megjegyzés, lezárás, az állapot visszaállítása): Műszaki, Admin.
+- „Hiba jelentése”: minden alapértelmezett szerepkör.
+- „Hibajegyek megtekintése” hatókörrel (Ügynök: saját; Műszakvezető, Műszaki, Admin: összes).
+
+### Lépésterv
+
+1. Adatmodell és migráció: eszköztípus mezőlistával, eszköz, mezőértékek naplóval, dokumentumok, hibajegy fotókkal és megjegyzésekkel; új jogosultságok és a Műszaki alapértelmezett szerepkör; az eszközök „hamarosan lejár” beállítása
+2. Tiszta függvények: a határidő és a számláló állapota, az eszköz állapota a hibajegyekből, a hibajegy állapotátmenetei; tesztek
+3. Eszköztípusok és mezőlisták szerkesztése
+4. Eszközök: lista, adatlap, a műszaki adatok szerkesztése naplóval, dokumentumok
+5. Hibajegy jelentése telefonról, fotóval
+6. Hibajegyek kezelése (Műszaki): átvétel, megjegyzések, lezárás; a műszakvezető és a jelentő nézete
+7. Lejáró határidők listája; jelzés a menüben
+8. Seed (egy Műszaki felhasználó; néhány eszköztípus és eszköz minden határidő-állapottal; egy nyitott, egy folyamatban lévő és egy lezárt jegy), README, STATUS.md
 
 ## További eldöntött szabályok
 
@@ -824,6 +872,13 @@ Ezeket a kérdéseket a megrendelő 2026. szeptember 22-én jóváhagyta; a kód
 70. **Nappal átfedő ablakok:** az előző és a következő nap járatai is betöltődnek; feltevés, mint a tervezőnél: egy ablak legfeljebb a szomszédos napra nyúlik át.
 71. **A műszak rétege a létszámigényben:** a műszak a kezdőnapja szerinti rétegből számít (publikált napon a valós, nem publikált napon a tervezet); a nem publikált napra felvitt valós műszak és a publikált napra felvitt tervezet nem számít.
 72. **Tervezet láthatósága a létszámigényben:** akinek nincs joga a tervezethez, a nem publikált napon csak az igényt látja, akkor is, ha valós műszak van rá.
+73. **Elméleti rész:** csak dolgozattal és sikerességi határral rendelkező képzésnek lehet. Ha a képzésnek dolgozata van, a gyakorlati rész mellé az elméleti is kell, és elméleti résszel a dolgozat nem kapcsolható ki.
+74. **E-vizsga pontozása:** a több helyes válaszú kérdés pontozása vizsgalaponkénti paraméter (csak a teljesen helyes válasz ér pontot, vagy arányos). A megválaszolatlan szöveges kérdés 0 pont, nem vár javításra. A kísérlet a sikerességi határt is lemásolja.
+75. **E-vizsga kitöltése:** minden válasz azonnal mentődik; az időkorlát a vizsgázó Kezdés gombjától fut, lejártakor a mentett válaszok beadódnak. A folyamat megszakításakor a nyitott kísérlet is a mentett válaszokkal beadódik.
+76. **Kérdés és értékelési szempont:** nem törölhető, csak inaktiválható.
+77. **OJT-értékelés:** a task lezárása után, egyszer, csak futó folyamatban; a mutatók az értékeléskor rögzülnek.
+78. **Gyakorlati vizsga:** a folyamat oldaláról indul, a vizsgázó elmúlt 14 napjának egy olyan task részén, ahol ügynök vagy gyakornok volt; rögzítés után nem módosítható. A végeredményt a vizsgáztató adja (a kizáró szempontokra lásd a 10. mérföldkő utómunkáját).
+79. **Kibocsátás:** a teljesítés napja a kibocsátás napja; a rekordba az utolsó sikeres e-vizsga eredménye kerül.
 
 ## Később (most ne építsd)
 
@@ -831,7 +886,7 @@ Ezeket a kérdéseket a megrendelő 2026. szeptember 22-én jóváhagyta; a kód
 - A lezárt taskok utólagos javításának jogosultsága
 - Ügynöki beosztásnézet: az ügynök lássa a saját publikált és valós beosztását.
 - A beosztás TRN részének összekötése egy konkrét képzéssel
-- Járművek és hibajegy (külön mérföldkő, a 10. után): a járművek műszaki nyilvántartása; meghibásodáskor hibajegy adható, amelyet a megfelelő emberek látnak és kezelnek. A részletek egyeztetendők.
+- Földi eszközök: az eszköz hozzárendelése a taskhoz; emailes értesítés a hibajegyekről
 - E-vizsga: véletlen kérdéshúzás a kérdésbankból, képek a kérdésekben
 - További slotüzenetek (pl. slottörlés), minta után
 - Az SI elemeinek feldolgozása (DAA, célállomásonkénti nettó bontás, poggyászdarabszámok, LOAD IN CPTS, B-sorok), ha a minták alapján egységesíthető
