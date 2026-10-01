@@ -289,6 +289,10 @@ export function CriterionForm({
           className="input min-w-64 flex-1"
           required
         />
+        <label className="flex items-center gap-1 text-sm" title={c.knockOutHint}>
+          <input key={`k${value("knockOut")}`} type="checkbox" name="knockOut" defaultChecked={value("knockOut") === "on"} className="size-5" />
+          {c.knockOut}
+        </label>
         {withActive && (
           <label className="flex items-center gap-1 text-sm">
             <input type="checkbox" name="active" defaultChecked={value("active") === "on"} className="size-5" />

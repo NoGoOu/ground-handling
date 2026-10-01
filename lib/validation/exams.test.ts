@@ -103,7 +103,12 @@ describe("the parts of a training", () => {
 
 describe("a criterion of the practical exam", () => {
   it("is a short text", () => {
-    expect(criterionSchema.parse({ text: " Biztonságos pushback ", active: "on" })).toEqual({ text: "Biztonságos pushback", active: true });
-    expect(criterionSchema.safeParse({ text: "", active: "" }).success).toBe(false);
+    expect(criterionSchema.parse({ text: " Biztonságos pushback ", active: "on", knockOut: "" })).toEqual({
+      text: "Biztonságos pushback",
+      active: true,
+      knockOut: false,
+    });
+    expect(criterionSchema.parse({ text: "Biztonság", active: "on", knockOut: "on" }).knockOut).toBe(true);
+    expect(criterionSchema.safeParse({ text: "", active: "", knockOut: "" }).success).toBe(false);
   });
 });

@@ -9,6 +9,7 @@ import { activeCriteria, listExamineeTaskParts, listProcessPracticalExams, readR
 import { PRACTICAL_EXAM_LOOKBACK_DAYS } from "@/lib/exams/defaults";
 import { getProcess, listTrainingSheets, ojtRequirementOf } from "@/lib/data/processes";
 import { readMetrics } from "@/lib/exams/ojt";
+import { failedKnockOuts } from "@/lib/exams/practical";
 import { flightLabel } from "@/lib/flight";
 import { attemptState, formatPoints, percentOf } from "@/lib/exams/scoring";
 import { messages } from "@/lib/messages";
@@ -198,6 +199,9 @@ export default async function ProcessPage(props: PageProps<"/training/processes/
                         </Link>
                         <span className={`font-semibold ${exam.verdict === "PASS" ? "text-emerald-700" : "text-red-700"}`}>{x.verdicts[exam.verdict]}</span>
                       </span>
+                      {failedKnockOuts(readResults(exam.results)).length > 0 && (
+                        <span className="font-medium text-red-700">{x.forcedFailShort}</span>
+                      )}
                       <span className="text-neutral-600">{fmt(x.examiner, { name: exam.examiner.name })} · {formatDateTime(exam.createdAt)}</span>
                       <ul className="flex flex-col gap-0.5">
                         {readResults(exam.results).map((result) => (
@@ -205,6 +209,7 @@ export default async function ProcessPage(props: PageProps<"/training/processes/
                             <span className={result.verdict === "PASS" ? "text-emerald-700" : "text-red-700"}>{x.criterionVerdicts[result.verdict]}</span>
                             {" · "}
                             {result.text}
+                            {result.knockOut && <span className="ml-1 rounded bg-red-100 px-1 text-xs font-semibold text-red-800">{x.knockOutTag}</span>}
                             {result.note && <span className="text-neutral-600"> – {result.note}</span>}
                           </li>
                         ))}
@@ -249,7 +254,7 @@ export default async function ProcessPage(props: PageProps<"/training/processes/
                         role: x.roles[role],
                       }),
                     }))}
-                    criteria={criteria.map((criterion) => ({ id: criterion.id, text: criterion.text }))}
+                    criteria={criteria.map((criterion) => ({ id: criterion.id, text: criterion.text, knockOut: criterion.knockOut }))}
                   />
                 )}
               </div>

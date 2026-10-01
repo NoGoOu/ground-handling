@@ -156,10 +156,10 @@ export async function getExamTraining(id: string) {
   });
 }
 
-export async function addCriterion(trainingId: string, text: string): Promise<void> {
+export async function addCriterion(trainingId: string, text: string, knockOut = false): Promise<void> {
   await prisma.$transaction(async (tx) => {
     const last = await tx.practicalCriterion.aggregate({ where: { trainingId }, _max: { order: true } });
-    await tx.practicalCriterion.create({ data: { trainingId, text, order: (last._max.order ?? 0) + 1 } });
+    await tx.practicalCriterion.create({ data: { trainingId, text, knockOut, order: (last._max.order ?? 0) + 1 } });
   });
 }
 

@@ -3,6 +3,7 @@ import { practiceDay } from "@/lib/data/ojt";
 import { getTaskView, taskAssignment, type TaskView } from "@/lib/data/tasks";
 import { prisma } from "@/lib/db";
 import { PRACTICAL_EXAM_LOOKBACK_DAYS } from "@/lib/exams/defaults";
+import type { CriterionResult } from "@/lib/exams/practical";
 import { agentOfPart, traineeOfPart } from "@/lib/permissions";
 import { addDays, localDayRange, toLocalDate } from "@/lib/time";
 import { hasPart, isPartCancelled, type Part } from "@/lib/turnaround";
@@ -52,12 +53,7 @@ export async function listExamineeTaskParts(userId: string, today = toLocalDate(
   return parts.sort((a, b) => (a.day < b.day ? 1 : a.day > b.day ? -1 : 0));
 }
 
-export interface CriterionResult {
-  criterionId: string;
-  text: string;
-  verdict: "PASS" | "FAIL";
-  note: string | null;
-}
+export type { CriterionResult } from "@/lib/exams/practical";
 
 export async function recordPracticalExam(data: {
   processId: string;

@@ -40,6 +40,9 @@ describe("the demo exams", () => {
     }
     expect(SEED_EXAM_TRAININGS.filter((t) => t.theoryPart && t.practicalPart)).toHaveLength(1);
     expect(SEED_CRITERIA.texts.length).toBeGreaterThanOrEqual(3);
+    // At least one knock-out criterion, among the criteria.
+    expect(SEED_CRITERIA.knockOut.length).toBeGreaterThanOrEqual(1);
+    for (const text of SEED_CRITERIA.knockOut) expect(SEED_CRITERIA.texts).toContain(text);
   });
 
   it("has questions the form would accept, and sheets that can be taken", () => {

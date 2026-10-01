@@ -98,6 +98,8 @@ export const SEED_CRITERIA = {
     "A mérföldkövek pontos és időben történő rögzítése",
     "Kommunikáció a személyzettel és az utasokkal",
   ],
+  /** Failing these fails the exam (10. mérföldkő, utómunka). */
+  knockOut: ["Biztonságos munkavégzés az előtéren"],
 } as const;
 
 /** One answer per question of a sheet, by the question's place. */

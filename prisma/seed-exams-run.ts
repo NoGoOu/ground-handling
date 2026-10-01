@@ -72,7 +72,9 @@ export async function seedExams(localDate: string): Promise<void> {
     sheetIds.set(sheet.name, created.id);
   }
   const practicalTraining = await trainingId(SEED_CRITERIA.course);
-  for (const text of SEED_CRITERIA.texts) await addCriterion(practicalTraining, text);
+  for (const text of SEED_CRITERIA.texts) {
+    await addCriterion(practicalTraining, text, (SEED_CRITERIA.knockOut as readonly string[]).includes(text));
+  }
 
   // The examiner holds the qualifications they judge.
   for (const code of SEED_EXAMINER_QUALIFICATIONS) {

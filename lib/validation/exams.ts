@@ -109,10 +109,12 @@ export function partsProblem(
   return null;
 }
 
-export const CRITERION_FIELDS = ["text", "active"] as const;
+export const CRITERION_FIELDS = ["text", "active", "knockOut"] as const;
 export type CriterionFormInput = Record<(typeof CRITERION_FIELDS)[number], string>;
 
 export const criterionSchema = z.object({
   text: z.string().trim().min(1, c.criterion).max(300, c.criterion),
   active: checkbox,
+  /** Failing a knock-out criterion fails the practical exam (10. mérföldkő, utómunka). */
+  knockOut: checkbox,
 });

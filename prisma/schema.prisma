@@ -1205,6 +1205,8 @@ model PracticalCriterion {
   order      Int
   text       String
   active     Boolean  @default(true)
+  /// A knock-out criterion (10. mérföldkő, utómunka): failing it fails the exam, whatever the examiner says.
+  knockOut   Boolean  @default(false)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 

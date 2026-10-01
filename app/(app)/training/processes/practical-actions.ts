@@ -8,6 +8,7 @@ import { activeCriteria, examineeRole, recordPracticalExam, type CriterionResult
 import { getProcess } from "@/lib/data/processes";
 import { getTaskView } from "@/lib/data/tasks";
 import { PRACTICAL_EXAM_LOOKBACK_DAYS } from "@/lib/exams/defaults";
+import { practicalVerdict } from "@/lib/exams/practical";
 import { messages } from "@/lib/messages";
 import { fmt } from "@/lib/messages/format";
 import { addDays, toLocalDate } from "@/lib/time";
@@ -52,10 +53,19 @@ export async function recordPracticalExamAction(processId: string, _previous: Ac
     for (const criterion of await activeCriteria(process.trainingId)) {
       const verdict = formData.get(`criterion_${criterion.id}`);
       if (!isVerdict(verdict)) throw new ActionError(x.errors.criterion);
-      results.push({ criterionId: criterion.id, text: criterion.text, verdict, note: text(formData, `note_${criterion.id}`) });
+      // The knock-out mark of now is kept with the exam (10. mérföldkő, utómunka).
+      results.push({
+        criterionId: criterion.id,
+        text: criterion.text,
+        verdict,
+        note: text(formData, `note_${criterion.id}`),
+        knockOut: criterion.knockOut,
+      });
     }
-    const verdict = formData.get("verdict");
-    if (!isVerdict(verdict)) throw new ActionError(x.errors.verdict);
+    // A failed knock-out criterion fails the exam: what the form sends is not asked then.
+    const chosen = formData.get("verdict");
+    const { verdict } = practicalVerdict(results, isVerdict(chosen) ? chosen : null);
+    if (!verdict) throw new ActionError(x.errors.verdict);
 
     await recordPracticalExam({
       processId,

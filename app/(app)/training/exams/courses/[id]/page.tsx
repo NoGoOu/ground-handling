@@ -65,7 +65,7 @@ export default async function ExamCoursePage(props: PageProps<"/training/exams/c
                 <span className="w-6 text-right text-sm text-neutral-500">{index + 1}.</span>
                 <CriterionForm
                   action={saveCriterionAction.bind(null, criterion.id)}
-                  initial={{ text: criterion.text, active: criterion.active ? "on" : "" }}
+                  initial={{ text: criterion.text, active: criterion.active ? "on" : "", knockOut: criterion.knockOut ? "on" : "" }}
                   submitLabel={messages.form.save}
                   withActive
                 />
@@ -77,7 +77,7 @@ export default async function ExamCoursePage(props: PageProps<"/training/exams/c
         )}
         <div className="flex flex-col gap-1 border-t border-neutral-100 pt-3">
           <span className="text-sm font-medium text-neutral-700">{c.addCriterion}</span>
-          <CriterionForm action={addCriterionAction.bind(null, training.id)} initial={{ text: "", active: "on" }} submitLabel={c.addCriterion} withActive={false} />
+          <CriterionForm action={addCriterionAction.bind(null, training.id)} initial={{ text: "", active: "on", knockOut: "" }} submitLabel={c.addCriterion} withActive={false} />
         </div>
       </section>
     </div>

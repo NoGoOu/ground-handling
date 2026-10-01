@@ -130,9 +130,9 @@ export async function addCriterionAction(trainingId: string, _previous: Criterio
   if (!parsed.success) return { errors: fieldErrors(parsed.error), values };
   const training = await prisma.training.findUnique({ where: { id: trainingId }, select: { id: true } });
   if (!training) return { message: messages.errors.notFound };
-  await addCriterion(trainingId, parsed.data.text);
+  await addCriterion(trainingId, parsed.data.text, parsed.data.knockOut);
   refresh();
-  return { notice: e.course.saved, values: { text: "", active: "on" } };
+  return { notice: e.course.saved, values: { text: "", active: "on", knockOut: "" } };
 }
 
 export async function saveCriterionAction(id: string, _previous: CriterionFormState, formData: FormData): Promise<CriterionFormState> {
