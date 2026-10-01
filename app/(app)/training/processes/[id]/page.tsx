@@ -3,20 +3,25 @@ import { notFound } from "next/navigation";
 import { OjtMetricsView, Suitability } from "@/components/ojt-metrics";
 import { ProcessSummary } from "@/components/process-summary";
 import { listProcessAttempts } from "@/lib/data/attempts";
+import { examinerProblem } from "@/lib/data/exam-access";
 import { listProcessSessions } from "@/lib/data/ojt";
+import { activeCriteria, listExamineeTaskParts, listProcessPracticalExams, readResults } from "@/lib/data/practical";
+import { PRACTICAL_EXAM_LOOKBACK_DAYS } from "@/lib/exams/defaults";
 import { getProcess, listTrainingSheets, ojtRequirementOf } from "@/lib/data/processes";
 import { readMetrics } from "@/lib/exams/ojt";
 import { flightLabel } from "@/lib/flight";
 import { attemptState, formatPoints, percentOf } from "@/lib/exams/scoring";
 import { messages } from "@/lib/messages";
 import { fmt } from "@/lib/messages/format";
-import { canManageTraining, canOpenExamAttempt, canSeeInternalNotes, canViewProcessOf } from "@/lib/permissions";
+import { canExamine, canManageTraining, canOpenExamAttempt, canSeeInternalNotes, canViewProcessOf } from "@/lib/permissions";
 import { requireUser } from "@/lib/session";
 import { formatDateTime, toLocalDate } from "@/lib/time";
 import { openAttemptAction } from "../../attempts/actions";
 import { OpenAttemptForm } from "../../attempts/forms";
 import { abortProcessAction } from "../actions";
 import { AbortProcessForm } from "../forms";
+import { recordPracticalExamAction } from "../practical-actions";
+import { PracticalExamForm } from "../practical-form";
 
 // One training process (CLAUDE.md, 10. mérföldkő, "Képzési folyamat"): where
 // it stands, and each prescribed part with its attempts, practices and exams.
@@ -38,6 +43,17 @@ export default async function ProcessPage(props: PageProps<"/training/processes/
   const details = canSeeInternalNotes(user) || canOpenExamAttempt(user);
   const sessions = process.training.practicalPart ? await listProcessSessions(process.id) : [];
   const requirement = ojtRequirementOf(process.training);
+  const practicalExams = process.training.practicalPart ? await listProcessPracticalExams(process.id) : [];
+  // The examiner records it; whether the qualification is valid is checked for the day of the chosen task.
+  const examining = running && process.training.practicalPart && canExamine(user);
+  const [taskParts, criteria, examinerToday] = examining
+    ? await Promise.all([
+        listExamineeTaskParts(process.userId),
+        activeCriteria(process.trainingId),
+        examinerProblem(user, process.training.qualification),
+      ])
+    : [[], [], null];
+  const x = messages.practical;
 
   return (
     <div className="flex flex-col gap-4">
@@ -163,7 +179,81 @@ export default async function ProcessPage(props: PageProps<"/training/processes/
           </section>
           <section className="flex flex-col gap-2 rounded-xl border border-neutral-200 bg-white p-4 text-sm">
             <h2 className="font-semibold">{p.practicalTitle}</h2>
-            {process.practicalExams.length === 0 && <p className="text-neutral-600">{p.noPractical}</p>}
+            {practicalExams.length === 0 ? (
+              <p className="text-neutral-600">{p.noPractical}</p>
+            ) : (
+              <ul className="flex flex-col divide-y divide-neutral-100">
+                {practicalExams.map((exam) => {
+                  const day = exam.task.flight.sta ?? exam.task.flight.std;
+                  return (
+                    <li key={exam.id} className="flex flex-col gap-1 py-2">
+                      <span className="flex flex-wrap items-center justify-between gap-2">
+                        <Link href={`/tasks/${exam.task.id}`} className="font-medium text-sky-700 hover:underline">
+                          {fmt(x.row, {
+                            date: day ? toLocalDate(day) : "–",
+                            flight: flightLabel(exam.task.flight),
+                            type: exam.task.taskType.code,
+                            part: messages.part[exam.part],
+                          })}
+                        </Link>
+                        <span className={`font-semibold ${exam.verdict === "PASS" ? "text-emerald-700" : "text-red-700"}`}>{x.verdicts[exam.verdict]}</span>
+                      </span>
+                      <span className="text-neutral-600">{fmt(x.examiner, { name: exam.examiner.name })} · {formatDateTime(exam.createdAt)}</span>
+                      <ul className="flex flex-col gap-0.5">
+                        {readResults(exam.results).map((result) => (
+                          <li key={result.criterionId}>
+                            <span className={result.verdict === "PASS" ? "text-emerald-700" : "text-red-700"}>{x.criterionVerdicts[result.verdict]}</span>
+                            {" · "}
+                            {result.text}
+                            {result.note && <span className="text-neutral-600"> – {result.note}</span>}
+                          </li>
+                        ))}
+                      </ul>
+                      {exam.feedback && (
+                        <span>
+                          <span className="text-neutral-500">{x.feedback}: </span>
+                          {exam.feedback}
+                        </span>
+                      )}
+                      {canSeeInternalNotes(user) && exam.internalNote && (
+                        <span>
+                          <span className="text-neutral-500">{x.internalNote}: </span>
+                          {exam.internalNote}
+                        </span>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+            {examining && (
+              <div className="flex flex-col gap-2 border-t border-neutral-100 pt-3">
+                <h3 className="font-semibold">{x.formTitle}</h3>
+                <p className="max-w-3xl text-neutral-600">{fmt(x.hint, { days: PRACTICAL_EXAM_LOOKBACK_DAYS })}</p>
+                {!process.ojt.met && (
+                  <p className="text-orange-700">⚠ {fmt(x.ojtNotMet, { suitable: process.ojt.suitable, required: process.ojt.required })}</p>
+                )}
+                {examinerToday && <p className="text-orange-700">⚠ {messages.attempts.notEligible[examinerToday]}</p>}
+                {taskParts.length === 0 ? (
+                  <p className="text-neutral-600">{fmt(x.noTaskParts, { days: PRACTICAL_EXAM_LOOKBACK_DAYS })}</p>
+                ) : (
+                  <PracticalExamForm
+                    action={recordPracticalExamAction.bind(null, process.id)}
+                    taskParts={taskParts.map(({ task, part, day, role }) => ({
+                      value: `${task.id}|${part}`,
+                      label: fmt(x.option, {
+                        day,
+                        flight: flightLabel(task.flight),
+                        type: task.taskType.code,
+                        part: messages.part[part],
+                        role: x.roles[role],
+                      }),
+                    }))}
+                    criteria={criteria.map((criterion) => ({ id: criterion.id, text: criterion.text }))}
+                  />
+                )}
+              </div>
+            )}
           </section>
         </>
       )}
