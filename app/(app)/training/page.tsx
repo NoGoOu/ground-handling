@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { messages } from "@/lib/messages";
-import { canManageTraining, canViewTraining, canViewTrainingOf, trainingVisibleUserIds } from "@/lib/permissions";
+import { canEditExams, canManageTraining, canViewTraining, canViewTrainingOf, trainingVisibleUserIds } from "@/lib/permissions";
 import { requireCapability } from "@/lib/session";
 
 const t = messages.training;
@@ -31,6 +31,8 @@ export default async function TrainingPage() {
           { href: "/training/records", title: h.records, hint: h.recordsHint },
         ]
       : []),
+    // The exams (10. mérföldkő).
+    ...(canEditExams(user) ? [{ href: "/training/exams", title: h.exams, hint: h.examsHint }] : []),
     { href: "/training/expiring", title: h.expiring, hint: h.expiringHint },
   ];
   return (

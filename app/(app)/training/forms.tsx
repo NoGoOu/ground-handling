@@ -109,6 +109,11 @@ export function CourseForm({
           {pending ? messages.form.saving : submitLabel}
         </button>
       </div>
+      {state.errors?.hasExam && (
+        <p role="alert" className="text-sm text-red-700">
+          {state.errors.hasExam}
+        </p>
+      )}
     </form>
   );
 }

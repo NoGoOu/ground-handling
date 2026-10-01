@@ -4,22 +4,23 @@
 
 ## Mi készült el
 
-- **10. mérföldkő, 2. lépés:** tiszta függvények (`lib/exams/`), tesztekkel.
-  - `snapshot.ts`: a vizsgakísérlet másolata (a kérdések és a válaszlehetőségek sorrendben, a sikerességi határral); a vizsgázónak szánt nézet a helyes válaszok nélkül; a ki nem tölthető vizsgalap felismerése.
-  - `scoring.ts`: választós kérdés pontozása (egy helyes; több helyes a vizsgalap paramétere szerint: csak a teljesen helyes vagy arányos), a válaszok tisztítása, a megválaszolatlan kérdés 0 pont, az eredmény pontos összevetéssel és lefelé kerekített százalékkal, időkorlát és a kísérlet állapota.
-  - `ojt.ts`: a gyakorlás részei (gyors fordulónál az érkezési gyakornoké az egész task), a mutatók (kötelező mérföldkövek teljessége, a gyakornok aránya, eltérések színenként), a megfelelő gyakorlás és a követelmény teljesülése a képzés paraméterei szerint.
-  - `process.ts`: a folyamat részei és állapota („kibocsátható” számolt), a kibocsátás rekordja (a kibocsátás napja, érvényesség a jogosítás szerint, az utolsó sikeres e-vizsga eredménye).
-  - `eligibility.ts`: mentor és vizsgáztató alkalmassága (jogosultság és a képzés jogosítása az adott napon; inaktív jogosítás nem számít, 33. szabály).
-- 1. lépés (`db7c7e2`): adatmodell, migráció, jogosultságok, Mentor és Vizsgáztató szerepkör.
+- **10. mérföldkő, 3. lépés:** szerkesztőfelületek a `Képzések → Vizsgák` alatt, a „Vizsgák szerkesztése” jogosultsággal.
+  - Kérdésbank: kérdés, típus (egy helyes, több helyes, szöveges), pont, témakör, aktív; legfeljebb hat válaszlehetőség a helyes jelöléssel. A kérdés nem törölhető, csak inaktiválható; az inaktív kérdés új kísérletbe nem kerül.
+  - Vizsgalapok: név, képzés (csak dolgozattal és határral rendelkező), időkorlát, a többválaszos pontozás módja (paraméter); a kérdések sorrendje fel/le mozgatással, felvétel és eltávolítás; a ki nem tölthető vizsgalap figyelmeztet (pl. nincs helyes válasz).
+  - Képzésenként: elméleti és gyakorlati rész, az OJT-követelmény három paramétere (az alapértékek mellett helyőrzőként jelölve), a gyakorlati vizsga szempontjai (felvétel, szerkesztés, inaktiválás, sorrend).
+  - A képzés adatainál (6. mérföldkő) a dolgozat nem kapcsolható ki, ha a képzésnek elméleti része van.
+  - Adatbázison ellenőrizve: kérdés mentése és javítása, vizsgalap sorrendje, az inaktív kérdés kimarad a másolatból, a szabályt az adatbázis is őrzi.
+- 2. lépés (`95ae671`): tiszta függvények. 1. lépés (`db7c7e2`): adatmodell.
 
 ## Állapot
 
-- Utolsó commit: `feat: score exams and judge practices in pure functions` (ez a commit; előtte `db7c7e2`)
-- Tesztek: `npm test` → 736 teszt, mind zöld; `npm run lint` hibátlan, `npx tsc --noEmit` tiszta
+- Utolsó commit: `feat: edit the question bank, exam sheets and training parts` (ez a commit; előtte `95ae671`)
+- Tesztek: `npm test` → 744 teszt, mind zöld; `npm run lint` hibátlan, `npx tsc --noEmit` tiszta, `npm run build` sikeres
+- A felületet bejelentkezve nem néztem meg (jelszót nem írok be).
 
 ## Eltérések a CLAUDE.md-től
 
-- Nincs. Megvalósításban: a megválaszolatlan szöveges kérdés 0 pont, nem vár javításra; a kísérlet a sikerességi határt is lemásolja, hogy az eredmény később ne változzon.
+- Nincs. Megvalósításban: ha a képzésnek dolgozata van, a gyakorlati rész mellé az elméleti rész is kell, mert a kibocsátott rekordba a dolgozat eredménye kerül (különben a rekord dolgozat-eredmény nélkül maradna).
 
 ## Kérdések a tervezéshez
 
@@ -27,4 +28,4 @@
 
 ## Következő lépés
 
-- 3. lépés: kérdésbank, vizsgalapok, gyakorlati szempontok és a képzés részeinek szerkesztése (`Képzések → Vizsgák`).
+- 4. lépés: e-vizsga – megnyitás, kitöltés (telefonon is), automatikus javítás, a szöveges válaszok javítása, visszajelzés és belső megjegyzés.

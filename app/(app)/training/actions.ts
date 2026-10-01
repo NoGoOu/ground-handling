@@ -11,6 +11,7 @@ import { messages } from "@/lib/messages";
 import { canManageTraining } from "@/lib/permissions";
 import { getCurrentUser } from "@/lib/session";
 import { resolveRecord } from "@/lib/training";
+import { partsProblem } from "@/lib/validation/exams";
 import { fieldErrors, formValues, type FormState } from "@/lib/validation/form";
 import {
   COURSE_FIELDS,
@@ -71,6 +72,15 @@ export async function saveCourse(id: string | null, _previous: CourseFormState, 
   const values = formValues(formData, COURSE_FIELDS);
   const parsed = courseSchema.safeParse(values);
   if (!parsed.success) return { errors: fieldErrors(parsed.error), values };
+
+  // The exam and the parts of a process go together (10. mérföldkő): a theory
+  // part needs the exam, and an exam needs the theory part next to practice.
+  if (id) {
+    const parts = await prisma.training.findUnique({ where: { id }, select: { theoryPart: true, practicalPart: true } });
+    const problem = parts && partsProblem(parts, parsed.data);
+    if (problem === "theoryNeedsExam") return { errors: { hasExam: t.courses.errors.examLocked }, values };
+    if (problem === "examNeedsTheory") return { errors: { hasExam: t.courses.errors.examNeedsTheory }, values };
+  }
 
   // An inactive qualification is not given out any more (approved decision 1); a course may keep its own.
   if (parsed.data.qualificationId) {
