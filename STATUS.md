@@ -4,22 +4,22 @@
 
 ## Mi készült el
 
-- **10. mérföldkő, 1. lépés:** adatmodell és migráció.
-  - Képzés: elméleti és gyakorlati rész; OJT-követelmény három paraméterrel (megfelelő gyakorlások száma, kötelező mérföldkövek teljessége, zöld vagy sárga rögzítések aránya). A helyőrző alapértékek (10, 100%, 0%) egy helyen, konstansként (`lib/exams/defaults.ts`); teszt őrzi, hogy az adatbázis alapértékei ugyanezek.
-  - Kérdésbank válaszlehetőségekkel; vizsgalap a kérdések sorrendjével, időkorláttal és a többválaszos pontozás módjával (paraméter, alapból „csak a teljesen helyes”).
-  - Képzési folyamat; vizsgakísérlet a vizsgalap másolatával és a válaszokkal; OJT-gyakorlás a task részén, értékeléssel és rögzített mutatókkal; gyakorlati szempontok és gyakorlati vizsga; a rögzítésen a „gyakornok rögzítette” jelölés; a képzési rekord hivatkozik a kibocsátó folyamatra.
-  - Az adatbázis kikényszeríti: egy nyitott folyamat ügynökönként és képzésenként, egy nyitott kísérlet folyamatonként, az elméleti rész csak dolgozattal és határral, a paraméterek tartományai.
-  - Új jogosultságok („Vizsgák szerkesztése”, „Mentorálás”, „Vizsgáztatás”, „Kibocsátás”), új alapértelmezett Mentor és Vizsgáztató szerepkör; az Oktatási koordinátor megkapja a vizsgák szerkesztését, a vizsgáztatást és a kibocsátást. Tesztekkel.
-  - A meglévő működés nem változott; a seed az új táblákat is üríti újratöltéskor.
+- **10. mérföldkő, 2. lépés:** tiszta függvények (`lib/exams/`), tesztekkel.
+  - `snapshot.ts`: a vizsgakísérlet másolata (a kérdések és a válaszlehetőségek sorrendben, a sikerességi határral); a vizsgázónak szánt nézet a helyes válaszok nélkül; a ki nem tölthető vizsgalap felismerése.
+  - `scoring.ts`: választós kérdés pontozása (egy helyes; több helyes a vizsgalap paramétere szerint: csak a teljesen helyes vagy arányos), a válaszok tisztítása, a megválaszolatlan kérdés 0 pont, az eredmény pontos összevetéssel és lefelé kerekített százalékkal, időkorlát és a kísérlet állapota.
+  - `ojt.ts`: a gyakorlás részei (gyors fordulónál az érkezési gyakornoké az egész task), a mutatók (kötelező mérföldkövek teljessége, a gyakornok aránya, eltérések színenként), a megfelelő gyakorlás és a követelmény teljesülése a képzés paraméterei szerint.
+  - `process.ts`: a folyamat részei és állapota („kibocsátható” számolt), a kibocsátás rekordja (a kibocsátás napja, érvényesség a jogosítás szerint, az utolsó sikeres e-vizsga eredménye).
+  - `eligibility.ts`: mentor és vizsgáztató alkalmassága (jogosultság és a képzés jogosítása az adott napon; inaktív jogosítás nem számít, 33. szabály).
+- 1. lépés (`db7c7e2`): adatmodell, migráció, jogosultságok, Mentor és Vizsgáztató szerepkör.
 
 ## Állapot
 
-- Utolsó commit: `feat: add the data model of exams, OJT and release` (ez a commit; előtte `188e974`)
-- Tesztek: `npm test` → 703 teszt, mind zöld; `npm run lint` hibátlan, `npx tsc --noEmit` tiszta
+- Utolsó commit: `feat: score exams and judge practices in pure functions` (ez a commit; előtte `db7c7e2`)
+- Tesztek: `npm test` → 736 teszt, mind zöld; `npm run lint` hibátlan, `npx tsc --noEmit` tiszta
 
 ## Eltérések a CLAUDE.md-től
 
-- Nincs. A jóváhagyott döntések szerint készül (14 pont, a terv szerint).
+- Nincs. Megvalósításban: a megválaszolatlan szöveges kérdés 0 pont, nem vár javításra; a kísérlet a sikerességi határt is lemásolja, hogy az eredmény később ne változzon.
 
 ## Kérdések a tervezéshez
 
@@ -27,4 +27,4 @@
 
 ## Következő lépés
 
-- 2. lépés: tiszta függvények (`lib/exams/`) – az e-vizsga pontozása és eredménye, az OJT-mutatók és a követelmény, a folyamat állapota, a mentor és a vizsgáztató alkalmassága; tesztekkel.
+- 3. lépés: kérdésbank, vizsgalapok, gyakorlati szempontok és a képzés részeinek szerkesztése (`Képzések → Vizsgák`).
