@@ -120,3 +120,30 @@ const qualificationStyle = {
 export function QualificationStatusBadge({ status }: { status: keyof typeof qualificationStyle }) {
   return <span className={`${base} ${qualificationStyle[status]}`}>{messages.training.status[status]}</span>;
 }
+
+const processStyle = {
+  IN_PROGRESS: "bg-sky-100 text-sky-800",
+  READY: "bg-amber-100 text-amber-900",
+  RELEASED: "bg-emerald-100 text-emerald-800",
+  ABORTED: "bg-neutral-100 text-neutral-600",
+} as const;
+
+/** The state of a training process (10. mérföldkő); "kibocsátható" stands out. */
+export function ProcessStateBadge({ state }: { state: keyof typeof processStyle }) {
+  return <span className={`${base} ${processStyle[state]}`}>{messages.processes.states[state]}</span>;
+}
+
+const partStyle = {
+  NOT_REQUIRED: "bg-neutral-50 text-neutral-400",
+  PENDING: "bg-sky-50 text-sky-800",
+  PASSED: "bg-emerald-100 text-emerald-800",
+} as const;
+
+/** One part of a process: its name and where it stands. */
+export function PartStateBadge({ label, state }: { label: string; state: keyof typeof partStyle }) {
+  return (
+    <span className={`${base} ${partStyle[state]}`}>
+      {label}: {messages.processes.partStates[state]}
+    </span>
+  );
+}

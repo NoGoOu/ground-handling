@@ -1,5 +1,7 @@
 import Link from "next/link";
+import { ProcessSummary } from "@/components/process-summary";
 import { listOpenAttemptsOf } from "@/lib/data/attempts";
+import { listProcesses } from "@/lib/data/processes";
 import { messages } from "@/lib/messages";
 import { fmt } from "@/lib/messages/format";
 import { canManageTraining, canViewTraining, canViewTrainingOf } from "@/lib/permissions";
@@ -13,7 +15,11 @@ const t = messages.training;
 /** The agent's own qualifications and trainings (CLAUDE.md, 6. mérföldkő), readable on a phone. */
 export default async function MyTrainingPage() {
   const user = await requireCapability((u) => canViewTraining(u) && canViewTrainingOf(u, u.id));
-  const [{ expiryWarningDays }, openAttempts] = await Promise.all([getSettings(), listOpenAttemptsOf(user.id)]);
+  const [{ expiryWarningDays }, openAttempts, processes] = await Promise.all([
+    getSettings(),
+    listOpenAttemptsOf(user.id),
+    listProcesses([user.id]),
+  ]);
   const a = messages.attempts;
   return (
     <div className="flex flex-col gap-4">
@@ -35,6 +41,25 @@ export default async function MyTrainingPage() {
                 </span>
                 <Link href={`/training/exam/${attempt.id}`} className="btn btn-primary btn-lg">
                   {a.fill}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+      {/* The agent's training processes (10. mérföldkő). */}
+      {processes.length > 0 && (
+        <section className="flex flex-col gap-2 rounded-xl border border-neutral-200 bg-white p-4">
+          <h2 className="font-semibold">{messages.processes.mineTitle}</h2>
+          <ul className="flex flex-col divide-y divide-neutral-100">
+            {processes.map((process) => (
+              <li key={process.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
+                <span className="flex flex-col gap-1">
+                  <span className="font-medium">{process.training.name}</span>
+                  <ProcessSummary process={process} />
+                </span>
+                <Link href={`/training/processes/${process.id}`} className="text-sky-700 hover:underline">
+                  {messages.processes.open}
                 </Link>
               </li>
             ))}

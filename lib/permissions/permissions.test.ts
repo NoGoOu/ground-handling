@@ -25,7 +25,9 @@ import {
   canViewLayer,
   canViewPlans,
   canViewLayerOf,
+  canOpenTrainingArea,
   canViewProcessOf,
+  processVisibleUserIds,
   canViewRosterOf,
   canViewStaffing,
   canViewTask,
@@ -387,6 +389,12 @@ describe("messages (7. mérföldkő)", () => {
     expect(canViewProcessOf(anna, "anna")).toBe(true);
     expect(canViewProcessOf(anna, "bela")).toBe(false);
     expect(canViewProcessOf(mentor, "anna")).toBe(false);
+    // The list of processes: an examiner everyone's, a team leader the team's, an agent their own.
+    expect(processVisibleUserIds(examiner)).toBeNull();
+    expect(processVisibleUserIds(actorWith("lead", ["Műszakvezető"], ["anna", "bela"]))).toEqual(["lead", "anna", "bela"]);
+    expect(processVisibleUserIds(anna)).toEqual(["anna"]);
+    expect([canOpenTrainingArea(examiner), canOpenTrainingArea(anna), canOpenTrainingArea(lead)]).toEqual([true, true, true]);
+    expect(canOpenTrainingArea(actorWith("p", ["Tervező"]))).toBe(false);
   });
 
   it("shows the staffing demand to the planner, the shift lead and the admin", () => {

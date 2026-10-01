@@ -6,13 +6,13 @@ import {
   canImportSchedule,
   canManageFlights,
   canOpenAdmin,
+  canOpenTrainingArea,
   canRecordMessages,
   canViewBoard,
   canViewOwnTasks,
   canViewPlans,
   canViewRoster,
   canViewStaffing,
-  canViewTraining,
 } from "@/lib/permissions";
 import type { CurrentUser } from "@/lib/session";
 
@@ -24,7 +24,7 @@ function linksFor(user: CurrentUser) {
   if (canImportSchedule(user)) links.push({ href: "/import", label: messages.nav.import });
   if (canViewPlans(user)) links.push({ href: "/planning", label: messages.nav.planning });
   if (canViewStaffing(user)) links.push({ href: "/staffing", label: messages.nav.staffing });
-  if (canViewTraining(user)) links.push({ href: "/training", label: messages.nav.training });
+  if (canOpenTrainingArea(user)) links.push({ href: "/training", label: messages.nav.training });
   if (canRecordMessages(user)) links.push({ href: "/messages", label: messages.nav.messages });
   // "My tasks" is the agents' view; agents are the users who belong to a team.
   if (user.teamId && canViewOwnTasks(user)) links.push({ href: "/agent", label: messages.nav.myTasks });

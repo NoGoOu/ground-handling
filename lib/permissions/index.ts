@@ -239,6 +239,16 @@ export function canViewProcessOf(actor: Actor, userId: string): boolean {
   return canViewTrainingOf(actor, userId) || canSeeInternalNotes(actor);
 }
 
+/** Whose processes the actor may list; null means everyone. */
+export function processVisibleUserIds(actor: Actor): string[] | null {
+  return canSeeInternalNotes(actor) ? null : trainingVisibleUserIds(actor);
+}
+
+/** The training area: training data, the exams, examining and release. */
+export function canOpenTrainingArea(actor: Actor): boolean {
+  return canViewTraining(actor) || canSeeInternalNotes(actor) || canEditExams(actor);
+}
+
 /** One person's training data and files: the coordinator sees everyone, the others by scope. */
 export function canViewTrainingOf(actor: Actor, userId: string): boolean {
   return can(actor, "TRAINING_MANAGE") || inScope(actor, "TRAINING_VIEW", [userId]);

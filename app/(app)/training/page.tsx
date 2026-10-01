@@ -1,18 +1,26 @@
 import Link from "next/link";
 import { messages } from "@/lib/messages";
-import { canEditExams, canManageTraining, canViewTraining, canViewTrainingOf, trainingVisibleUserIds } from "@/lib/permissions";
+import {
+  canEditExams,
+  canManageTraining,
+  canOpenTrainingArea,
+  canSeeInternalNotes,
+  canViewTraining,
+  canViewTrainingOf,
+  trainingVisibleUserIds,
+} from "@/lib/permissions";
 import { requireCapability } from "@/lib/session";
 
 const t = messages.training;
 
 /** Training data (6. mérföldkő): what the user may open. */
 export default async function TrainingPage() {
-  const user = await requireCapability(canViewTraining);
+  const user = await requireCapability(canOpenTrainingArea);
   const h = t.hub;
   const visible = trainingVisibleUserIds(user);
   // Everyone sees their own data (an agent is a team member); a team leader the
   // team; the coordinator and the admin everyone.
-  const own = !!user.teamId && canViewTrainingOf(user, user.id);
+  const own = !!user.teamId && canViewTraining(user) && canViewTrainingOf(user, user.id);
   const everyone = visible === null;
   const team = !everyone && (visible?.length ?? 0) > 1;
   const sections = [
@@ -31,9 +39,10 @@ export default async function TrainingPage() {
           { href: "/training/records", title: h.records, hint: h.recordsHint },
         ]
       : []),
-    // The exams (10. mérföldkő).
+    // The processes and the exams (10. mérföldkő).
+    ...(team || everyone || canSeeInternalNotes(user) ? [{ href: "/training/processes", title: h.processes, hint: h.processesHint }] : []),
     ...(canEditExams(user) ? [{ href: "/training/exams", title: h.exams, hint: h.examsHint }] : []),
-    { href: "/training/expiring", title: h.expiring, hint: h.expiringHint },
+    ...(canViewTraining(user) ? [{ href: "/training/expiring", title: h.expiring, hint: h.expiringHint }] : []),
   ];
   return (
     <div className="flex flex-col gap-4">
