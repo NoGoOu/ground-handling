@@ -2,7 +2,7 @@ import path from "node:path";
 import { changeEquipmentStatus } from "@/lib/data/equipment";
 import * as storage from "@/lib/data/storage";
 import { prisma } from "@/lib/db";
-import { isReportable, statusOnReport } from "@/lib/equipment/faults";
+import { canMoveFault, isReportable, statusOnReport } from "@/lib/equipment/faults";
 import { checkUpload, type UploadProblem, type UploadType } from "@/lib/training";
 
 // Faults on ground equipment (CLAUDE.md, 11. mérföldkő, "Hibajegy"): anyone
@@ -87,6 +87,73 @@ const faultInclude = {
 
 export async function getFault(id: string) {
   return prisma.fault.findUnique({ where: { id }, include: faultInclude });
+}
+
+/** The technical staff take a fault over: open → in progress, logged. */
+export async function takeFault(id: string, actorId: string): Promise<boolean> {
+  return prisma.$transaction(async (tx) => {
+    const fault = await tx.fault.findUnique({ where: { id }, select: { status: true } });
+    if (!fault || !canMoveFault(fault.status, "IN_PROGRESS")) return false;
+    const moved = await tx.fault.updateMany({ where: { id, status: fault.status }, data: { status: "IN_PROGRESS", takenById: actorId, takenAt: new Date() } });
+    if (moved.count === 0) return false;
+    await tx.faultEvent.create({ data: { faultId: id, fromStatus: fault.status, toStatus: "IN_PROGRESS", createdById: actorId } });
+    return true;
+  });
+}
+
+/**
+ * Closes a fault, fixed or not a fault, logged. Setting the equipment back to
+ * operational is the technical staff's own step: here only when they tick it
+ * (approved decision 5).
+ */
+export async function closeFault(id: string, actorId: string, resolution: "FIXED" | "NOT_A_FAULT", restore: boolean): Promise<boolean> {
+  const closed = await prisma.$transaction(async (tx) => {
+    const fault = await tx.fault.findUnique({ where: { id }, select: { status: true } });
+    if (!fault || !canMoveFault(fault.status, "CLOSED")) return false;
+    const moved = await tx.fault.updateMany({
+      where: { id, status: fault.status },
+      data: { status: "CLOSED", resolution, closedById: actorId, closedAt: new Date() },
+    });
+    if (moved.count === 0) return false;
+    await tx.faultEvent.create({ data: { faultId: id, fromStatus: fault.status, toStatus: "CLOSED", createdById: actorId } });
+    return true;
+  });
+  if (closed && restore) {
+    const fault = await prisma.fault.findUniqueOrThrow({ where: { id }, select: { equipmentId: true, equipment: { select: { status: true } } } });
+    if (fault.equipment.status === "OUT_OF_SERVICE") await changeEquipmentStatus(fault.equipmentId, "OPERATIONAL", actorId, null, id);
+  }
+  return closed;
+}
+
+export async function addFaultComment(id: string, authorId: string, text: string): Promise<boolean> {
+  const fault = await prisma.fault.findUnique({ where: { id }, select: { id: true } });
+  if (!fault) return false;
+  await prisma.faultComment.create({ data: { faultId: id, authorId, text } });
+  return true;
+}
+
+/** Faults of the given reporters (everyone's when null), open ones first, newest first. */
+export async function listFaults(reporterIds: readonly string[] | null, options: { open: boolean; equipmentId?: string }) {
+  return prisma.fault.findMany({
+    where: {
+      ...(reporterIds ? { reportedById: { in: [...reporterIds] } } : {}),
+      ...(options.open ? { status: { not: "CLOSED" } } : {}),
+      ...(options.equipmentId ? { equipmentId: options.equipmentId } : {}),
+    },
+    include: {
+      equipment: { select: { id: true, identifier: true, type: { select: { name: true } } } },
+      reportedBy: { select: { name: true } },
+      takenBy: { select: { name: true } },
+      _count: { select: { comments: true, photos: true } },
+    },
+    orderBy: [{ status: "asc" }, { reportedAt: "desc" }],
+    take: 300,
+  });
+}
+
+/** The open faults, for the count in the menu of the technical staff. */
+export async function countOpenFaults(): Promise<number> {
+  return prisma.fault.count({ where: { status: { not: "CLOSED" } } });
 }
 
 /** A photo with its fault's reporter, for the download check. */

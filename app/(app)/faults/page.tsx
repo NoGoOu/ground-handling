@@ -1,33 +1,44 @@
 import Link from "next/link";
 import { FaultStatusBadge } from "@/components/badges";
-import { prisma } from "@/lib/db";
+import { listFaults } from "@/lib/data/faults";
 import { messages } from "@/lib/messages";
-import { canReportFault, faultVisibleReporterIds } from "@/lib/permissions";
+import { fmt } from "@/lib/messages/format";
+import { canManageFaults, canReportFault, faultVisibleReporterIds } from "@/lib/permissions";
 import { requireCapability } from "@/lib/session";
 import { formatDateTime } from "@/lib/time";
 
-// The faults the user may see (CLAUDE.md, 11. mérföldkő, "Hibajegy"): their
-// own, or everyone's by the scope of viewing faults; newest first.
+// The faults the user may see (CLAUDE.md, 11. mérföldkő, "Hibajegy"): the
+// technical staff and the shift lead everyone's, a reporter their own. Open
+// ones first; the closed ones on request.
 
 const f = messages.faults;
 
-export default async function FaultsPage() {
-  const user = await requireCapability((u) => canReportFault(u) || faultVisibleReporterIds(u) === null);
-  const reporters = faultVisibleReporterIds(user);
-  const faults = await prisma.fault.findMany({
-    where: reporters ? { reportedById: { in: reporters } } : {},
-    include: { equipment: { select: { identifier: true, type: { select: { name: true } } } }, reportedBy: { select: { name: true } } },
-    orderBy: { reportedAt: "desc" },
-    take: 200,
-  });
+export default async function FaultsPage(props: PageProps<"/faults">) {
+  const user = await requireCapability((u) => canReportFault(u) || canManageFaults(u) || faultVisibleReporterIds(u) === null);
+  const { show } = await props.searchParams;
+  const all = show === "all";
+  const faults = await listFaults(faultVisibleReporterIds(user), { open: !all });
   return (
     <div className="flex flex-col gap-4">
       <h1 className="text-2xl font-bold">{f.title}</h1>
+      <p className="max-w-3xl text-sm text-neutral-600">{f.listHint}</p>
       {canReportFault(user) && (
         <Link href="/faults/new" className="btn btn-primary btn-lg self-stretch sm:self-start">
           {f.report}
         </Link>
       )}
+      <nav className="flex gap-2">
+        {(["open", "all"] as const).map((key) => (
+          <Link
+            key={key}
+            href={key === "all" ? "/faults?show=all" : "/faults"}
+            aria-current={(key === "all") === all ? "page" : undefined}
+            className={`rounded-lg px-3 py-1.5 text-sm font-medium ${(key === "all") === all ? "bg-sky-700 text-white" : "bg-neutral-100 text-neutral-700 hover:bg-neutral-200"}`}
+          >
+            {f.filters[key]}
+          </Link>
+        ))}
+      </nav>
       {faults.length === 0 ? (
         <p className="text-neutral-600">{f.empty}</p>
       ) : (
@@ -39,10 +50,16 @@ export default async function FaultsPage() {
                   <span className="font-semibold">{fault.equipment.identifier}</span>
                   <span className="text-sm text-neutral-600">{fault.equipment.type.name}</span>
                   <FaultStatusBadge status={fault.status} />
+                  {fault.reportedOutOfService && fault.status !== "CLOSED" && (
+                    <span className="text-xs font-medium text-red-700">{messages.equipment.statuses.OUT_OF_SERVICE}</span>
+                  )}
                 </span>
                 <span className="line-clamp-2 text-sm">{fault.description}</span>
                 <span className="text-xs text-neutral-500">
-                  {fault.reportedBy.name} · {formatDateTime(fault.reportedAt)}
+                  {fmt(f.row, { reporter: fault.reportedBy.name, time: formatDateTime(fault.reportedAt) })}
+                  {fault.takenBy && <> · {fmt(f.takenRow, { name: fault.takenBy.name })}</>}
+                  {" · "}
+                  {fmt(f.counts, { comments: fault._count.comments, photos: fault._count.photos })}
                 </span>
               </Link>
             </li>

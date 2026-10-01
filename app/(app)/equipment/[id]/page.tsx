@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { DeadlineBadge, EquipmentStatusBadge } from "@/components/badges";
+import { DeadlineBadge, EquipmentStatusBadge, FaultStatusBadge } from "@/components/badges";
 import { FormMessage } from "@/components/form-field";
 import { RowButton } from "@/components/row-button";
 import { getEquipment, listActiveTypes, toFieldValue } from "@/lib/data/equipment";
+import { listFaults } from "@/lib/data/faults";
 import { canMoveEquipment, equipmentStepNeeds, type EquipmentStatus } from "@/lib/equipment/faults";
 import { counterStatus, deadlineStatus } from "@/lib/equipment/status";
 import { messages } from "@/lib/messages";
@@ -42,7 +43,7 @@ export default async function EquipmentSheetPage(props: PageProps<"/equipment/[i
   const manage = canManageEquipment(user);
   const today = toLocalDate(new Date());
   const { equipmentWarningDays } = await getSettings();
-  const types = manage ? await listActiveTypes() : [];
+  const [types, faults] = await Promise.all([manage ? listActiveTypes() : Promise.resolve([]), listFaults(null, { open: false, equipmentId: equipment.id })]);
   const valueOf = new Map(equipment.values.map((row) => [row.fieldId, toFieldValue(row)]));
   const steps = (["OPERATIONAL", "OUT_OF_SERVICE", "RETIRED"] as EquipmentStatus[]).filter(
     (to) => canMoveEquipment(equipment.status, to) && can(user, equipmentStepNeeds(equipment.status, to)),
@@ -128,6 +129,27 @@ export default async function EquipmentSheetPage(props: PageProps<"/equipment/[i
               ))}
             </ul>
           </details>
+        )}
+      </section>
+
+      <section className="flex flex-col gap-2 rounded-xl border border-neutral-200 bg-white p-4">
+        <h2 className="font-semibold">{messages.faults.equipmentFaults}</h2>
+        {faults.length === 0 ? (
+          <p className="text-sm text-neutral-600">{messages.faults.empty}</p>
+        ) : (
+          <ul className="flex flex-col divide-y divide-neutral-100 text-sm">
+            {faults.map((fault) => (
+              <li key={fault.id}>
+                <Link href={`/faults/${fault.id}`} className="flex flex-wrap items-center gap-2 py-1.5 hover:underline">
+                  <FaultStatusBadge status={fault.status} />
+                  <span className="line-clamp-1">{fault.description}</span>
+                  <span className="text-xs text-neutral-500">
+                    {fault.reportedBy.name} · {formatDateTime(fault.reportedAt)}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
         )}
       </section>
 
