@@ -1,3 +1,4 @@
+import { effectiveTraineeId } from "@/lib/exams/ojt";
 import { effectiveDepartureAgentId, type Part, type TurnaroundType } from "@/lib/turnaround";
 import { widerScope, type Permission, type Scope } from "./catalog";
 
@@ -90,6 +91,19 @@ export interface TaskAssignment {
   departureAgentId: string | null;
   /** Null on a one-sided flight, which has only one part (rule 11). */
   type: TurnaroundType | null;
+  /** The trainees next to the agents (10. mérföldkő); none when not given. */
+  arrivalTraineeId?: string | null;
+  departureTraineeId?: string | null;
+}
+
+/** The trainee of a part: on a quick turnaround the arrival trainee does both, like the agent (rule 8). */
+export function traineeOfPart(task: TaskAssignment, part: Part): string | null {
+  return effectiveTraineeId(task.type, part, { arrival: task.arrivalTraineeId ?? null, departure: task.departureTraineeId ?? null });
+}
+
+/** The parts of the task the actor works as a trainee. */
+export function traineeParts(actor: Actor, task: TaskAssignment): Part[] {
+  return (["ARRIVAL_PART", "DEPARTURE_PART"] as const).filter((part) => traineeOfPart(task, part) === actor.id);
 }
 
 /** The agents actually working the task; a quick turnaround has one (rule 8). */
@@ -108,10 +122,14 @@ export function assignedParts(actor: Actor, task: TaskAssignment): Part[] {
   return parts;
 }
 
-/** Whoever may assign tasks also sees the unassigned ones, whatever their scope. */
+/**
+ * Whoever may assign tasks also sees the unassigned ones, whatever their scope;
+ * a trainee sees the task they practise on (10. mérföldkő).
+ */
 export function canViewTask(actor: Actor, task: TaskAssignment): boolean {
   const agents = taskAgentIds(task);
   if (agents.length === 0 && can(actor, "TASK_ASSIGN")) return true;
+  if (traineeParts(actor, task).length > 0 && can(actor, "TASK_VIEW")) return true;
   return inScope(actor, "TASK_VIEW", agents);
 }
 
@@ -134,10 +152,16 @@ export function canRecordMilestone(
   actor: Actor,
   task: TaskAssignment,
   part: Part,
-  existing: { recordedById: string } | null,
+  existing: { recordedById: string; byTrainee?: boolean } | null,
 ): boolean {
+  // The trainee records the milestones of their part and corrects their own records (10. mérföldkő).
+  if (traineeOfPart(task, part) === actor.id && can(actor, "TASK_RECORD")) {
+    return !existing || existing.recordedById === actor.id;
+  }
   if (!inScope(actor, "TASK_RECORD", [agentOfPart(task, part)])) return false;
   if (!existing || existing.recordedById === actor.id) return true;
+  // The mentor, the agent of the part, corrects the trainee's records whatever the scope.
+  if (existing.byTrainee && agentOfPart(task, part) === actor.id) return true;
   return scopeOf(actor, "TASK_RECORD") !== "SELF";
 }
 

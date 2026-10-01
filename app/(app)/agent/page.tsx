@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Fragment } from "react";
-import { CancelBadges, DelayBadge, LateBadge, StatusBadge, TaskTypeBadge, TypeBadge } from "@/components/badges";
+import { CancelBadges, DelayBadge, LateBadge, OjtBadge, StatusBadge, TaskTypeBadge, TypeBadge } from "@/components/badges";
 import { DateNav } from "@/components/date-nav";
 import { TimeStack } from "@/components/time-stack";
 import type { BoardBlock } from "@/lib/board";
@@ -10,7 +10,7 @@ import { flightLabel } from "@/lib/flight";
 import { dayAnchors } from "@/lib/flight-day";
 import { messages } from "@/lib/messages";
 import { fmt } from "@/lib/messages/format";
-import { assignedParts, canViewOwnTasks, canViewTask } from "@/lib/permissions";
+import { assignedParts, canViewOwnTasks, canViewTask, traineeParts } from "@/lib/permissions";
 import { dateParam } from "@/lib/search-params";
 import { requireCapability, type CurrentUser } from "@/lib/session";
 import { formatTimeOnDay, toLocalDate } from "@/lib/time";
@@ -20,7 +20,10 @@ const t = messages.agent;
 const tt = messages.times;
 
 function TaskCard({ task, user, day }: { task: TaskView; user: CurrentUser; day: string }) {
-  const parts = assignedParts(user, taskAssignment(task));
+  const assignment = taskAssignment(task);
+  // A trainee works their parts next to the mentor (10. mérföldkő).
+  const practice = traineeParts(user, assignment);
+  const parts = [...assignedParts(user, assignment), ...practice];
   const next = task.timeline.rows.find((row) => parts.includes(row.milestone.part) && !row.actual);
 
   return (
@@ -32,6 +35,7 @@ function TaskCard({ task, user, day }: { task: TaskView; user: CurrentUser; day:
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-xl font-bold">{flightLabel(task.flight)}</span>
           <TaskTypeBadge taskType={task.taskType} />
+          {practice.length > 0 && <OjtBadge />}
           <StatusBadge status={task.status} />
           <TypeBadge type={task.timeline.shape.type} kind={task.timeline.activeKind ?? task.timeline.kind} />
           <LateBadge late={task.late} />
@@ -40,7 +44,9 @@ function TaskCard({ task, user, day }: { task: TaskView; user: CurrentUser; day:
         </div>
         <div className="text-neutral-700">
           {fmt(messages.task.stand, { stand: task.flight.stand ?? messages.flightForm.none })} ·{" "}
-          {fmt(t.myParts, { parts: parts.map((p) => messages.part[p]).join(", ") })}
+          {practice.length > 0
+            ? fmt(messages.ojt.myParts, { parts: practice.map((p) => messages.part[p]).join(", ") })
+            : fmt(t.myParts, { parts: parts.map((p) => messages.part[p]).join(", ") })}
         </div>
         <div className="grid grid-cols-2 gap-3 text-base">
           {hasPart(task.timeline.kind, "ARRIVAL_PART") && (
@@ -102,7 +108,14 @@ export default async function AgentPage(props: PageProps<"/agent">) {
   const { date: dateValue } = await props.searchParams;
   const date = dateParam(dateValue);
   const [taskViews, blocks] = await Promise.all([
-    listTaskViewsForDay(date, (view) => view.arrivalAgent?.id === user.id || view.departureAgent?.id === user.id),
+    listTaskViewsForDay(
+      date,
+      (view) =>
+        view.arrivalAgent?.id === user.id ||
+        view.departureAgent?.id === user.id ||
+        // The tasks the agent practises on as a trainee (10. mérföldkő).
+        view.ojt.some((session) => session.trainee.id === user.id),
+    ),
     listAgentBlocks(user.id, date),
   ]);
   const tasks = taskViews.filter((task) => canViewTask(user, taskAssignment(task)));

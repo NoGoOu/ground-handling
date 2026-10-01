@@ -1,14 +1,18 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { OjtMetricsView, Suitability } from "@/components/ojt-metrics";
 import { ProcessSummary } from "@/components/process-summary";
 import { listProcessAttempts } from "@/lib/data/attempts";
-import { getProcess, listTrainingSheets } from "@/lib/data/processes";
+import { listProcessSessions } from "@/lib/data/ojt";
+import { getProcess, listTrainingSheets, ojtRequirementOf } from "@/lib/data/processes";
+import { readMetrics } from "@/lib/exams/ojt";
+import { flightLabel } from "@/lib/flight";
 import { attemptState, formatPoints, percentOf } from "@/lib/exams/scoring";
 import { messages } from "@/lib/messages";
 import { fmt } from "@/lib/messages/format";
 import { canManageTraining, canOpenExamAttempt, canSeeInternalNotes, canViewProcessOf } from "@/lib/permissions";
 import { requireUser } from "@/lib/session";
-import { formatDateTime } from "@/lib/time";
+import { formatDateTime, toLocalDate } from "@/lib/time";
 import { openAttemptAction } from "../../attempts/actions";
 import { OpenAttemptForm } from "../../attempts/forms";
 import { abortProcessAction } from "../actions";
@@ -32,6 +36,8 @@ export default async function ProcessPage(props: PageProps<"/training/processes/
   const canOpen = canOpenExamAttempt(user) && running && process.training.theoryPart;
   const sheets = canOpen && !open ? await listTrainingSheets(process.trainingId) : [];
   const details = canSeeInternalNotes(user) || canOpenExamAttempt(user);
+  const sessions = process.training.practicalPart ? await listProcessSessions(process.id) : [];
+  const requirement = ojtRequirementOf(process.training);
 
   return (
     <div className="flex flex-col gap-4">
@@ -121,7 +127,39 @@ export default async function ProcessPage(props: PageProps<"/training/processes/
               {fmt(p.ojtProgress, { suitable: process.ojt.suitable, required: process.ojt.required })}
               {process.ojt.waiting > 0 && <> · {fmt(p.ojtWaiting, { n: process.ojt.waiting })}</>}
             </p>
-            {process.ojtSessions.length === 0 && <p className="text-neutral-600">{p.noOjt}</p>}
+            <p className="text-xs text-neutral-500">
+              {fmt(messages.ojt.thresholds, { completeness: requirement.minCompletenessPercent, onTime: requirement.minOnTimePercent })}
+            </p>
+            {sessions.length === 0 ? (
+              <p className="text-neutral-600">{p.noOjt}</p>
+            ) : (
+              <ul className="flex flex-col divide-y divide-neutral-100">
+                {sessions.map((session) => {
+                  const metrics = readMetrics(session.metrics);
+                  const day = session.task.flight.sta ?? session.task.flight.std;
+                  return (
+                    <li key={session.id} className="flex flex-col gap-1 py-2">
+                      <span className="flex flex-wrap items-center justify-between gap-2">
+                        <Link href={`/tasks/${session.task.id}`} className="font-medium text-sky-700 hover:underline">
+                          {fmt(messages.ojt.sessionRow, {
+                            flight: `${flightLabel(session.task.flight)} ${session.task.taskType.code}`,
+                            part: messages.part[session.part],
+                            date: day ? toLocalDate(day) : "–",
+                          })}
+                        </Link>
+                        <span>
+                          {session.verdict ? messages.ojt.verdicts[session.verdict] : messages.ojt.waiting}
+                          {session.mentor && <> · {fmt(messages.ojt.mentor, { name: session.mentor.name })}</>}
+                        </span>
+                      </span>
+                      {session.comment && <span className="text-neutral-600">{session.comment}</span>}
+                      {metrics && <OjtMetricsView metrics={metrics} />}
+                      <Suitability session={{ verdict: session.verdict, metrics }} requirement={requirement} />
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
           </section>
           <section className="flex flex-col gap-2 rounded-xl border border-neutral-200 bg-white p-4 text-sm">
             <h2 className="font-semibold">{p.practicalTitle}</h2>

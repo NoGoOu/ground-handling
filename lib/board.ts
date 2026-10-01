@@ -32,6 +32,8 @@ export interface BoardTask {
   /** As assigned; on a quick turnaround the arrival agent covers both parts. */
   departureAgentId: string | null;
   windows: OccupancyWindow[];
+  /** The trainees next to the agents, as stored (10. mérföldkő); on a quick turnaround the arrival one does both. */
+  trainees?: { arrival: string | null; departure: string | null };
 }
 
 /** One segment of the actual roster, operative or not. */
@@ -109,6 +111,8 @@ export interface BoardBox extends TimeWindow {
   conflicts: ConflictKind[];
   /** The missing or expired qualifications, named, with a QUALIFICATION conflict. */
   qualificationGaps?: string;
+  /** A trainee's box on their own lane (10. mérföldkő): not dragged, but checked for conflicts. */
+  ojt?: boolean;
 }
 
 export interface BoardLane {
@@ -143,6 +147,20 @@ export function taskBoxes(task: BoardTask): BoardBox[] {
     agentId: window.part === "DEPARTURE_PART" ? task.departureAgentId : task.arrivalAgentId,
     conflicts: [],
   }));
+}
+
+/**
+ * The trainees' boxes (CLAUDE.md, 10. mérföldkő): the same windows as the
+ * agents', on the trainee's lane, marked OJT. A quick turnaround's one box is
+ * the arrival trainee's.
+ */
+export function ojtBoxes(task: BoardTask): BoardBox[] {
+  if (!task.trainees) return [];
+  const { arrival, departure } = task.trainees;
+  return taskBoxes(task).flatMap((box) => {
+    const trainee = box.part === "DEPARTURE_PART" ? departure : arrival;
+    return trainee ? [{ ...box, id: `${box.id}:ojt`, agentId: trainee, ojt: true }] : [];
+  });
 }
 
 /** Merges touching or overlapping windows into continuous stretches. */
@@ -251,10 +269,11 @@ export function buildBoard({
   qualificationGaps?: (box: BoardBox, agentId: string) => string | null;
 }): Board {
   const boxes = tasks.flatMap(taskBoxes);
+  const practice = tasks.flatMap(ojtBoxes);
   const byId = new Map(agents.map((agent) => [agent.id, agent]));
   const laneIds = new Set<string>();
   for (const segment of segments) laneIds.add(segment.userId);
-  for (const box of boxes) if (box.agentId) laneIds.add(box.agentId);
+  for (const box of [...boxes, ...practice]) if (box.agentId) laneIds.add(box.agentId);
 
   const lanes = [...laneIds]
     .map((id) => {
@@ -263,7 +282,8 @@ export function buildBoard({
         .filter((segment) => segment.operative)
         .map(({ start, end }) => ({ start, end }));
       const agentBlocks = blocksOf(agentSegments);
-      const laneBoxes = boxes.filter((box) => box.agentId === id);
+      // A trainee's practice takes their time like a task of their own (10. mérföldkő).
+      const laneBoxes = [...boxes, ...practice].filter((box) => box.agentId === id);
       const conflicts = conflictsFor(laneBoxes, agentShifts, agentBlocks);
       return {
         agent: byId.get(id) ?? { id, name: id },
@@ -272,7 +292,8 @@ export function buildBoard({
         hasShift: agentShifts.length > 0,
         boxes: laneBoxes
           .map((box) => {
-            const gaps = qualificationGaps?.(box, id) ?? null;
+            // A trainee is still training: their qualifications are not asked for.
+            const gaps = box.ojt ? null : (qualificationGaps?.(box, id) ?? null);
             const kinds = conflicts.get(box.id) ?? [];
             return gaps
               ? { ...box, conflicts: [...kinds, "QUALIFICATION" as const], qualificationGaps: gaps }

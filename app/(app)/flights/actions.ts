@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { Prisma } from "@/generated/prisma/client";
 import { ActionError, actionUser, runAction, type ActionResult } from "@/lib/action";
 import { newFlightTasksByAirline } from "@/lib/data/task-types";
+import { mentorWarnings } from "@/lib/data/ojt";
 import { getTaskView, listFlightTasks, taskAssignment } from "@/lib/data/tasks";
 import { loadQualificationContext, taskQualificationWarnings } from "@/lib/data/training";
 import { findAssignableAgent } from "@/lib/data/users";
@@ -218,7 +219,9 @@ export async function assignAgents(
       updated && agentIds.length > 0
         ? taskQualificationWarnings(updated, await loadQualificationContext(agentIds))
         : [];
-    const warnings = [...(shared.length > 0 ? [messages.board.conflicts.SAME_FLIGHT] : []), ...qualification];
+    // A trainee on a part whose new agent may not mentor (10. mérföldkő).
+    const mentor = updated ? await mentorWarnings(updated, taskAssignment(updated)) : [];
+    const warnings = [...(shared.length > 0 ? [messages.board.conflicts.SAME_FLIGHT] : []), ...qualification, ...mentor];
     return { ok: true, warning: warnings.length > 0 ? warnings.join(" · ") : undefined };
   });
 }

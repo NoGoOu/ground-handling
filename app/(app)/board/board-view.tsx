@@ -43,7 +43,9 @@ function TaskBox({
   onDragStart: (event: DragEvent<HTMLAnchorElement>, box: BoardBox) => void;
 }) {
   const conflicted = box.conflicts.length > 0;
-  const title = `${box.taskTypeCode ? `${box.taskTypeCode} · ` : ""}${fmt(t.boxTitle, {
+  // A trainee's box is not dragged: the trainee is set on the task page (10. mérföldkő).
+  if (box.ojt) draggable = false;
+  const title = `${box.ojt ? `${messages.ojt.badge} · ` : ""}${box.taskTypeCode ? `${box.taskTypeCode} · ` : ""}${fmt(t.boxTitle, {
     flight: box.flightLabel,
     stand: box.stand,
     from: formatTimeOnDay(box.start, day),
@@ -63,10 +65,13 @@ function TaskBox({
       } ${
         conflicted
           ? "border-2 border-red-500 bg-red-50 text-red-900"
-          : "border-sky-300 bg-sky-100 text-sky-900 hover:bg-sky-200"
+          : box.ojt
+            ? "border-dashed border-fuchsia-400 bg-fuchsia-50 text-fuchsia-900 hover:bg-fuchsia-100"
+            : "border-sky-300 bg-sky-100 text-sky-900 hover:bg-sky-200"
       }`}
     >
       <span className="truncate font-semibold">
+        {box.ojt && <span className="mr-1 text-[10px] font-bold text-fuchsia-800">{messages.ojt.badge}</span>}
         {box.late && <span className="mr-1 text-orange-700">⏱</span>}
         {box.taskTypeCode && <span className="mr-1 font-mono text-[10px] text-violet-800">{box.taskTypeCode}</span>}
         {box.flightLabel}

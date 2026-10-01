@@ -11,7 +11,7 @@ import { flightPartAgents, getTaskView, taskAssignment, type TaskView } from "@/
 import { prisma } from "@/lib/db";
 import { messages } from "@/lib/messages";
 import { fmt } from "@/lib/messages/format";
-import { canChangeTaskStatus, canRecordDelayCodes, canRecordMilestone } from "@/lib/permissions";
+import { canChangeTaskStatus, canRecordDelayCodes, canRecordMilestone, traineeOfPart } from "@/lib/permissions";
 import { templateSnapshotJson } from "@/lib/snapshot";
 import { parseLocalDateTime } from "@/lib/time";
 import { hasPart, isPartCancelled, truncateToMinute } from "@/lib/turnaround";
@@ -53,11 +53,14 @@ async function saveMilestoneTime(taskId: string, milestoneId: string, time: Date
 
   const existing = await prisma.milestoneRecord.findUnique({
     where: { taskId_milestoneDefinitionId: { taskId, milestoneDefinitionId: milestoneId } },
-    select: { id: true, recordedById: true },
+    select: { id: true, recordedById: true, byTrainee: true },
   });
-  if (!canRecordMilestone(user, taskAssignment(task), milestone.part, existing)) {
+  const assignment = taskAssignment(task);
+  if (!canRecordMilestone(user, assignment, milestone.part, existing)) {
     throw new ActionError(messages.errors.forbidden);
   }
+  // The trainee's records are marked as theirs (10. mérföldkő).
+  const asTrainee = traineeOfPart(assignment, milestone.part) === user.id;
 
   // Rule 10: minute precision, seconds cut off.
   const actualTime = truncateToMinute(time);
@@ -66,11 +69,11 @@ async function saveMilestoneTime(taskId: string, milestoneId: string, time: Date
       if (existing) {
         await tx.milestoneRecord.update({
           where: { id: existing.id },
-          data: { actualTime, updatedById: user.id, updatedAt: new Date() },
+          data: { actualTime, updatedById: user.id, updatedAt: new Date(), updatedByTrainee: asTrainee },
         });
       } else {
         await tx.milestoneRecord.create({
-          data: { taskId, milestoneDefinitionId: milestoneId, actualTime, recordedById: user.id },
+          data: { taskId, milestoneDefinitionId: milestoneId, actualTime, recordedById: user.id, byTrainee: asTrainee },
         });
       }
       // The first recording starts the task.

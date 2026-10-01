@@ -336,3 +336,42 @@ describe("a missing qualification (6. mérföldkő)", () => {
     expect(board.lanes[0].boxes[0].qualificationGaps).toBeUndefined();
   });
 });
+
+describe("on the job training (10. mérföldkő)", () => {
+  it("puts a trainee's box on their own lane, marked and checked for conflicts", () => {
+    const practice = task({ id: "t3", trainees: { arrival: "dora", departure: null } });
+    // Dóra has a task of her own at the same time.
+    const own = task({ id: "t4", flightLabel: "ZZ1305", arrivalAgentId: "dora", departureAgentId: "dora" });
+    const board = buildBoard({
+      tasks: [practice, own],
+      segments: [segment("anna", "06:00", "14:00"), segment("dora", "06:00", "14:00")],
+      agents: [...agents, { id: "dora", name: "Dóra" }],
+    });
+    const dora = board.lanes.find((lane) => lane.agent.id === "dora")!;
+    expect(dora.boxes.map((box) => [box.id, box.ojt ?? false])).toEqual([
+      ["t4:WHOLE", false],
+      ["t3:WHOLE:ojt", true],
+    ]);
+    expect(dora.boxes.every((box) => box.conflicts.includes("OVERLAP"))).toBe(true);
+    // The mentor keeps her own box, and nothing goes to the unassigned lane.
+    expect(board.lanes.find((lane) => lane.agent.id === "anna")!.boxes.map((box) => box.id)).toEqual(["t3:WHOLE"]);
+    expect(board.unassigned).toEqual([]);
+  });
+
+  it("gives a trainee a lane without a shift, and does not ask for qualifications", () => {
+    const practice = task({ id: "t3", trainees: { arrival: "dora", departure: null } });
+    const board = buildBoard({ tasks: [practice], segments: [], agents, qualificationGaps: () => "DG" });
+    const dora = board.lanes.find((lane) => lane.agent.id === "dora")!;
+    expect(dora.hasShift).toBe(false);
+    expect(dora.boxes[0].conflicts).toEqual(["OUTSIDE_SHIFT"]);
+    expect(board.lanes.find((lane) => lane.agent.id === "anna")!.boxes[0].conflicts).toContain("QUALIFICATION");
+  });
+
+  it("puts the trainees of a long turnaround on their own parts", () => {
+    const practice = { ...longTask, trainees: { arrival: "dora", departure: "eve" } };
+    const board = buildBoard({ tasks: [practice], segments: [], agents });
+    const boxesOf = (id: string) => board.lanes.find((lane) => lane.agent.id === id)!.boxes.map((box) => box.part);
+    expect(boxesOf("dora")).toEqual(["ARRIVAL_PART"]);
+    expect(boxesOf("eve")).toEqual(["DEPARTURE_PART"]);
+  });
+});

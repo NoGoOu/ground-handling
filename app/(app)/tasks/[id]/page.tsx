@@ -6,6 +6,7 @@ import {
   DeviationBadge,
   LateBadge,
   MissingBadge,
+  OjtBadge,
   SlotBadge,
   StatusBadge,
   TaskTypeBadge,
@@ -41,6 +42,7 @@ import { warningText } from "@/lib/telex/describe";
 import { addDelayCode, addSlotDelayCode, changeStatus, recordNow, removeDelayCode, setMilestoneTime } from "./actions";
 import { AddDelayCodeForm, RemoveDelayCodeButton, SlotOfferButton } from "./delay-codes";
 import { MilestoneActions } from "./milestone-actions";
+import { OjtSection } from "./ojt-section";
 import { StatusControl } from "./status-control";
 import { TaskTabs } from "./tabs";
 
@@ -115,6 +117,7 @@ function Header({
         <h1 className="text-2xl font-bold">{flightLabel(flight)}</h1>
         <TaskTypeBadge taskType={task.taskType} />
         <StatusBadge status={task.status} />
+        {task.ojt.length > 0 && <OjtBadge />}
         <TypeBadge type={timeline.shape.type} kind={timeline.activeKind ?? timeline.kind} />
         <LateBadge late={task.late} />
         <CancelBadges arrival={flight.arrivalCancelled} departure={flight.departureCancelled} />
@@ -218,7 +221,7 @@ function RowActions({ ctx, row }: { ctx: ViewContext; row: TimelineRow }) {
   // A cancelled part is not worked ("Késés és törlés").
   if (row.cancelled) return null;
   const record = task.records.get(row.milestone.id);
-  const existing = record ? { recordedById: record.recordedBy.id } : null;
+  const existing = record ? { recordedById: record.recordedBy.id, byTrainee: record.byTrainee } : null;
   if (!canRecordMilestone(user, taskAssignment(task), row.milestone.part, existing)) return null;
   return (
     <MilestoneActions
@@ -229,6 +232,9 @@ function RowActions({ ctx, row }: { ctx: ViewContext; row: TimelineRow }) {
     />
   );
 }
+
+/** "Kiss Péter (gyakornok)": a record of the trainee shows as such (10. mérföldkő). */
+const traineeMark = (name: string, byTrainee: boolean) => (byTrainee ? `${name} (${messages.ojt.byTrainee})` : name);
 
 const rowGrid = "sm:grid sm:grid-cols-[2fr_1fr_2fr_1fr] sm:gap-4 lg:grid-cols-[2fr_1fr_2fr_1fr_15rem]";
 
@@ -273,9 +279,9 @@ function MilestoneRow({ ctx, row }: { ctx: ViewContext; row: TimelineRow }) {
         <div className="col-span-full flex flex-col gap-0.5 text-xs text-neutral-500">
           {record && (
             <span>
-              {fmt(t.recordedBy, { name: record.recordedBy.name, time: formatTime(record.recordedAt) })}
+              {fmt(t.recordedBy, { name: traineeMark(record.recordedBy.name, record.byTrainee), time: formatTime(record.recordedAt) })}
               {record.updatedBy && record.updatedAt && (
-                <> · {fmt(t.updatedBy, { name: record.updatedBy.name, time: formatTime(record.updatedAt) })}</>
+                <> · {fmt(t.updatedBy, { name: traineeMark(record.updatedBy.name, record.updatedByTrainee), time: formatTime(record.updatedAt) })}</>
               )}
             </span>
           )}
@@ -467,6 +473,7 @@ export default async function TaskPage(props: PageProps<"/tasks/[id]">) {
       )}
       <PartSection ctx={ctx} part="ARRIVAL_PART" />
       <PartSection ctx={ctx} part="DEPARTURE_PART" />
+      <OjtSection task={task} user={user} />
       {task.flight.std && reference && (
         <DelayCodes
           task={task}

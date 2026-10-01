@@ -4,7 +4,8 @@ import { refresh } from "next/cache";
 import { ActionError, actionUser, runAction, type ActionResult } from "@/lib/action";
 import { assignmentUpdate } from "@/lib/board";
 import { describeBoxConflicts, getBoardForDay } from "@/lib/data/board";
-import { getTaskView } from "@/lib/data/tasks";
+import { mentorWarnings } from "@/lib/data/ojt";
+import { getTaskView, taskAssignment } from "@/lib/data/tasks";
 import { findAssignableAgent } from "@/lib/data/users";
 import { prisma } from "@/lib/db";
 import { messages } from "@/lib/messages";
@@ -60,7 +61,11 @@ export async function assignBox(localDate: string, _previous: ActionResult | nul
     await prisma.task.update({ where: { id: taskId }, data: update });
     refresh();
 
-    if (!agentId) return { ok: true, warning: undefined };
-    return { ok: true, warning: await conflictWarning(localDate, `${taskId}:${part}`) };
+    // A trainee on a part whose new agent may not mentor (10. mérföldkő).
+    const updated = await getTaskView(taskId);
+    const mentor = updated ? await mentorWarnings(updated, taskAssignment(updated)) : [];
+    const conflicts = agentId ? await conflictWarning(localDate, `${taskId}:${part}`) : undefined;
+    const warnings = [...(conflicts ? [conflicts] : []), ...mentor];
+    return { ok: true, warning: warnings.length > 0 ? warnings.join(" · ") : undefined };
   });
 }

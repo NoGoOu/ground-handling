@@ -32,6 +32,8 @@ import {
   canViewStaffing,
   canViewTask,
   canViewTrainingOf,
+  traineeOfPart,
+  traineeParts,
   DEFAULT_ROLES,
   effectivePermissions,
   homePathFor,
@@ -171,6 +173,32 @@ describe("default roles keep the current behaviour", () => {
   it("lets the assigned agent change the status", () => {
     expect(canChangeTaskStatus(anna, longTask)).toBe(true);
     expect(canChangeTaskStatus(teamLeader, longTask)).toBe(false);
+  });
+
+  it("lets a trainee see the task and record on their part next to the mentor (10. mérföldkő)", () => {
+    const dora = actorWith("dora", ["Ügynök"]);
+    // Anna mentors the arrival, Béla the departure; Dóra practises on the departure.
+    const practice: TaskAssignment = { ...longTask, departureTraineeId: "dora" };
+    expect(traineeOfPart(practice, "DEPARTURE_PART")).toBe("dora");
+    expect(canViewTask(dora, practice)).toBe(true);
+    expect(canViewTask(dora, longTask)).toBe(false);
+    expect(canRecordMilestone(dora, practice, "DEPARTURE_PART", null)).toBe(true);
+    expect(canRecordMilestone(dora, practice, "ARRIVAL_PART", null)).toBe(false);
+    // Her own records she corrects; the mentor's she does not.
+    expect(canRecordMilestone(dora, practice, "DEPARTURE_PART", { recordedById: "dora", byTrainee: true })).toBe(true);
+    expect(canRecordMilestone(dora, practice, "DEPARTURE_PART", { recordedById: "bela" })).toBe(false);
+    // The mentor corrects the trainee's records, though his scope is his own; another agent's he does not.
+    expect(canRecordMilestone(bela, practice, "DEPARTURE_PART", { recordedById: "dora", byTrainee: true })).toBe(true);
+    expect(canRecordMilestone(bela, practice, "DEPARTURE_PART", { recordedById: "lead" })).toBe(false);
+    // The trainee does not change the status of the task.
+    expect(canChangeTaskStatus(dora, practice)).toBe(false);
+  });
+
+  it("gives both parts of a quick turnaround to the arrival trainee", () => {
+    const quickPractice: TaskAssignment = { ...quickTask, arrivalTraineeId: "dora", departureTraineeId: "eve" };
+    expect(traineeOfPart(quickPractice, "DEPARTURE_PART")).toBe("dora");
+    expect(traineeParts(actorWith("dora", ["Ügynök"]), quickPractice)).toEqual(["ARRIVAL_PART", "DEPARTURE_PART"]);
+    expect(canRecordMilestone(actorWith("eve", ["Ügynök"]), quickPractice, "DEPARTURE_PART", null)).toBe(false);
   });
 
   it("gives the planner the roster but no tasks", () => {

@@ -26,6 +26,10 @@ function toBoardTask(task: TaskView): BoardTask {
     arrivalAgentId: task.arrivalAgent?.id ?? null,
     departureAgentId: task.effectiveDepartureAgent?.id ?? null,
     windows: task.timeline.shape.windows,
+    trainees: {
+      arrival: task.ojt.find((session) => session.part === "ARRIVAL_PART")?.trainee.id ?? null,
+      departure: task.ojt.find((session) => session.part === "DEPARTURE_PART")?.trainee.id ?? null,
+    },
   };
 }
 
@@ -34,6 +38,7 @@ export async function getBoardForDay(localDate: string): Promise<Board> {
   const [tasks, shifts] = await Promise.all([listTaskViewsForDay(localDate), listShiftsForDay(localDate, "ACTUAL")]);
   const agents = await listAgentOptions([
     ...tasks.flatMap((task) => [task.arrivalAgent?.id ?? null, task.departureAgent?.id ?? null]),
+    ...tasks.flatMap((task) => task.ojt.map((session) => session.trainee.id)),
     ...shifts.map((shift) => shift.user.id),
   ]);
 

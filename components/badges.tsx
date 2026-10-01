@@ -147,3 +147,12 @@ export function PartStateBadge({ label, state }: { label: string; state: keyof t
     </span>
   );
 }
+
+/** A task with on the job training on it (10. mérföldkő). */
+export function OjtBadge() {
+  return (
+    <span className={`${base} bg-fuchsia-100 font-semibold text-fuchsia-800`} title={messages.ojt.title}>
+      {messages.ojt.badge}
+    </span>
+  );
+}

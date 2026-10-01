@@ -1,6 +1,7 @@
 import type { Prisma } from "@/generated/prisma/client";
 import type { EstimateSource, TaskStatus } from "@/generated/prisma/enums";
 import { prisma } from "@/lib/db";
+import { readMetrics, type OjtMetrics } from "@/lib/exams/ojt";
 import { lateness, type Lateness } from "@/lib/flight";
 import { candidateWindow, dayAnchors, tasksForDay } from "@/lib/flight-day";
 import { parseTemplateSnapshot } from "@/lib/snapshot";
@@ -14,6 +15,7 @@ import {
   effectiveDepartureAgentId,
   type DeviationThresholds,
   type MilestoneDef,
+  type Part,
   type TemplateParams,
   type TemplateParts,
   type Timeline,
@@ -48,6 +50,30 @@ const taskInclude = {
   arrivalAgent: personSelect,
   departureAgent: personSelect,
   records: { include: { recordedBy: personSelect, updatedBy: personSelect } },
+  // Trainees next to the agents (10. mérföldkő).
+  ojtSessions: {
+    include: {
+      trainee: personSelect,
+      mentor: personSelect,
+      addedBy: personSelect,
+      process: {
+        select: {
+          id: true,
+          status: true,
+          training: {
+            select: {
+              id: true,
+              name: true,
+              ojtRequiredCount: true,
+              ojtMinCompletenessPercent: true,
+              ojtMinOnTimePercent: true,
+              qualification: { select: { id: true, active: true } },
+            },
+          },
+        },
+      },
+    },
+  },
 } satisfies Prisma.TaskInclude;
 
 type TaskWithRelations = Prisma.TaskGetPayload<{ include: typeof taskInclude }>;
@@ -63,6 +89,36 @@ export interface RecordInfo {
   recordedAt: Date;
   updatedBy: PersonRef | null;
   updatedAt: Date | null;
+  /** Recorded, or last corrected, by the trainee of the part (10. mérföldkő). */
+  byTrainee: boolean;
+  updatedByTrainee: boolean;
+}
+
+/** A trainee next to the agent of a part, with the mentor's evaluation (10. mérföldkő). */
+export interface OjtSessionView {
+  id: string;
+  part: Part;
+  trainee: PersonRef;
+  process: {
+    id: string;
+    status: "IN_PROGRESS" | "RELEASED" | "ABORTED";
+    training: {
+      id: string;
+      name: string;
+      ojtRequiredCount: number;
+      ojtMinCompletenessPercent: number;
+      ojtMinOnTimePercent: number;
+      qualification: { id: string; active: boolean } | null;
+    };
+  };
+  addedBy: PersonRef;
+  addedAt: Date;
+  verdict: "PASS" | "FAIL" | null;
+  comment: string | null;
+  /** Frozen at the evaluation. */
+  metrics: OjtMetrics | null;
+  mentor: PersonRef | null;
+  evaluatedAt: Date | null;
 }
 
 /** Where the current ETA or ETD came from ("Késés és törlés"). */
@@ -129,6 +185,8 @@ export interface TaskView {
   /** Agent records keyed by milestone definition id. */
   records: Map<string, RecordInfo>;
   timeline: Timeline;
+  /** At most one per part, as stored; on a quick turnaround the arrival one covers both. */
+  ojt: OjtSessionView[];
 }
 
 function templateFor(task: TaskWithRelations): {
@@ -168,6 +226,8 @@ function toTaskView(task: TaskWithRelations, thresholds: DeviationThresholds): T
         recordedAt: r.recordedAt,
         updatedBy: r.updatedBy,
         updatedAt: r.updatedAt,
+        byTrainee: r.byTrainee,
+        updatedByTrainee: r.updatedByTrainee,
       },
     ]),
   );
@@ -233,15 +293,31 @@ function toTaskView(task: TaskWithRelations, thresholds: DeviationThresholds): T
     frozen,
     records,
     timeline,
+    ojt: task.ojtSessions.map((session) => ({
+      id: session.id,
+      part: session.part,
+      trainee: session.trainee,
+      process: session.process,
+      addedBy: session.addedBy,
+      addedAt: session.addedAt,
+      verdict: session.verdict,
+      comment: session.comment,
+      metrics: readMetrics(session.metrics),
+      mentor: session.mentor,
+      evaluatedAt: session.evaluatedAt,
+    })),
   };
 }
 
-/** The inputs of the permission rules for a task. */
+/** The inputs of the permission rules for a task, its trainees too (10. mérföldkő). */
 export function taskAssignment(task: TaskView) {
+  const traineeOf = (part: Part) => task.ojt.find((session) => session.part === part)?.trainee.id ?? null;
   return {
     arrivalAgentId: task.arrivalAgent?.id ?? null,
     departureAgentId: task.departureAgent?.id ?? null,
     type: task.timeline.shape.type,
+    arrivalTraineeId: traineeOf("ARRIVAL_PART"),
+    departureTraineeId: traineeOf("DEPARTURE_PART"),
   };
 }
 
