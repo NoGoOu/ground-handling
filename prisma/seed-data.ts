@@ -15,6 +15,8 @@ export const SEED_USERS = [
   { username: "ugynok2", name: "Nagy Eszter", roles: ["Ügynök"], agent: true },
   { username: "koordinator", name: "Oktató Olga", roles: ["Oktatási koordinátor"], agent: false },
   { username: "vizsgaztato", name: "Vizsga Vera", roles: ["Vizsgáztató"], agent: false },
+  // The technical staff: ground equipment and faults (11. mérföldkő).
+  { username: "muszaki", name: "Műszaki Márton", roles: ["Műszaki"], agent: false },
 ] as const;
 
 /** Every agent belongs to a team; the shift lead leads the demo team. */

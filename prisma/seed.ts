@@ -39,6 +39,7 @@ import {
   SEED_REQUIREMENTS,
   seedCertificatePdf,
 } from "./seed-training";
+import { seedEquipment } from "./seed-equipment-run";
 import { seedExams } from "./seed-exams-run";
 import {
   buildSeedMessages,
@@ -430,6 +431,9 @@ async function main() {
 
   // E-exams, OJT and release (10. mérföldkő): on top of the flights and the training records.
   await seedExams(localDate);
+
+  // Ground equipment and faults (11. mérföldkő).
+  await seedEquipment(localDate);
 
   console.log(`Seed done for ${localDate}. Users: ${SEED_USERS.map((u) => u.username).join(", ")} (password: ${DEMO_PASSWORD})`);
 }

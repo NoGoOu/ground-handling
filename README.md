@@ -109,6 +109,17 @@ A formátumok, a párosítás és a minták: [`docs/messages.md`](docs/messages.
 - **Kibocsátás** („Kibocsátás”: Oktatási koordinátor, Admin): a kibocsátható folyamatból egy gombbal létrejön a sikeres képzési rekord (a mai nappal, az érvényesség a jogosítás szerint, az utolsó sikeres e-vizsga eredményével), és ettől érvényes a jogosítás. A képzési rekord kézi rögzítése megmarad.
 - Vizsgáztatni és értékelni a jogosultsággal és a képzés aznap érvényes jogosításával lehet; tiszta függvények (`lib/exams/`) tesztekkel.
 
+**11. mérföldkő – földi eszközök és hibajegy**
+
+- **Eszköztípusok** (`Eszközök → Eszköztípusok`, „Eszközök kezelése”: Műszaki, Admin): név, kód, aktív, és a műszaki adatok mezőlistája sorrenddel. Mezőfajták: határidő (dátum), számláló (állás és opcionális esedékesség, pl. üzemóra vagy km) és szöveg. A mező fajtája csak addig módosítható, amíg nincs értéke; mező nem törölhető, csak inaktiválható.
+- **Eszközök** (`Eszközök`): típus, azonosító (pl. flottaszám), rendszám, leírás, megjegyzés, állapot (üzemképes, üzemképtelen, kivonva). Nem törölhető, csak kivonható. A listán az állapot, a nyitott jegyek száma és a legközelebbi határidő; a műszakvezető (és aki minden hibajegyet lát) olvassa, a Műszaki és az Admin szerkeszti.
+- **Adatlap:** a műszaki adatok szerkesztése mezőnként; minden változás naplózott (ki, mikor, régi és új érték). A határidő állapota érvényes, hamarosan lejár, lejárt vagy nincs megadva (mint a jogosításoknál, a lejárat napján még érvényes); a számláló „elérte”, ha az állás eléri az esedékességet. A szerviz esedékessége egy határidő-mező és a számláló esedékessége együtt. Dokumentumok (PDF, JPG, PNG, legfeljebb 10 MB) a meglévő tárhelyen; az eltávolítás naplózott. Az állapotváltások naplója a hibajegyre hivatkozik, ha onnan jött. Az eszköz hibajegyei.
+- **Lejáró határidők** (`Eszközök → Lejáró határidők`): két csoport, „hamarosan lejár” és „lejárt vagy elérte” (az esedékességet elért számlálók a lejártak között). Csak aktív típusú, nem kivont eszközök, aktív mezők. A „hamarosan lejár” napjai: `Admin → Beállítások` (helyőrző: 30).
+- **Hibajegy jelentése** (`Hibajegyek → Hiba jelentése`, az ügynök nézetéből és az eszköz adatlapjáról is; minden alapértelmezett szerepkör): eszköz a nem kivontak közül, leírás, legfeljebb 5 fotó (JPG, PNG vagy PDF, fájlonként 10 MB), és „üzemképtelen” jelölés. Telefonra méretezve. Az üzemképtelennek jelölt jelentés az eszközt azonnal üzemképtelenre állítja.
+- **Hibajegy kezelése** („Hibajegyek kezelése”: Műszaki, Admin): nyitott → folyamatban (átvétel) → lezárva (javítva vagy nem hiba); nyitott jegy közvetlenül is lezárható, visszanyitás nincs. Megjegyzéseket a Műszaki ír, a jegyet látók olvassák. Az eszköz üzemképesre állítása a Műszaki külön lépése: az adatlapon, vagy lezáráskor az „az eszköz üzemképes” pipával. Minden állapotváltás naplózott.
+- **Láthatóság:** a Műszaki és a műszakvezető minden jegyet lát, a jelentő a sajátjait; a fotók letöltését a szerver a jegy láthatósága szerint ellenőrzi. A Műszaki menüjében a „Hibajegyek” mellett a nyitott jegyek száma.
+- Tiszta függvények (`lib/equipment/`) tesztekkel: a határidő és a számláló állapota, a figyelmeztetések, a lejáró lista csoportjai, az eszköz és a jegy állapotátmenetei.
+
 ## Indítás Docker Compose-zal
 
 Követelmény: [Docker Desktop](https://www.docker.com/products/docker-desktop/) (Windows / macOS) vagy Docker Engine Compose-zal (Linux).
@@ -138,6 +149,7 @@ A demo beosztás a betöltés napjára és a következő napra publikált és va
 | `ugynok2` | Nagy Eszter | Ügynök |
 | `koordinator` | Oktató Olga | Oktatási koordinátor |
 | `vizsgaztato` | Vizsga Vera | Vizsgáztató |
+| `muszaki` | Műszaki Márton | Műszaki |
 
 ### A képzések kipróbálása
 
@@ -210,6 +222,15 @@ A seed a „Helyőrző A képzés”-t elméleti és gyakorlati résszel (az OJT
 3. A „Helyőrző C” ismétlő folyamat kibocsátható (sikeres e-vizsga, 100%): `koordinator`-ként a `Képzések → Képzési folyamatok` oldalon elöl áll; a „Kibocsátás” gomb létrehozza a képzési rekordot, és Nagy Eszternél a HC jogosítás érvényessé válik.
 4. `vezeto`-ként egy mai task oldalán az „On the job gyakorlás” szakaszban gyakornok vehető fel – csak olyan rész mellé, amelynek ügynöke mentorálhat (pl. Kiss Péter részei); a sávos nézeten a gyakornok sávján „OJT” doboz jelenik meg. (A ZZ1101-es gyakorlás 07:30-kor volt, Nagy Eszter műszakja előtt, ezért az ő sávján ez a doboz műszakon kívülinek jelölődik.)
 
+### Az eszközök és a hibajegyek kipróbálása
+
+A seed négy eszköztípust (Pushback, Szalagkocsi, Utasbusz és a nem motoros Utaslépcső) és hét eszközt tölt be. A határidők a betöltés napjához igazodnak, így minden állapot látszik: érvényes, hamarosan lejár (PB-01 szerviz, BLT-01 műszaki vizsga, BUS-01 szerviz), lejárt (PB-02 műszaki vizsga, BLT-02 szerviz), nincs megadva (BLT-02 műszaki vizsga), és az esedékességet elért üzemóra (PB-02). A BUS-02 kivont, ezért a lejárt határidői nem szerepelnek a lejáró listán.
+
+1. `muszaki`-ként az `Eszközök` listáján az állapot, a nyitott jegyek és a legközelebbi határidő; a `Lejáró határidők` oldalon a két csoport. A PB-01 adatlapján az üzemóra változásnaplója (1420 → 1480) és egy minta szervizlap (PDF).
+2. A `Hibajegyek` menüben (mellette a nyitott jegyek száma, 2) három jegy: a STR-01 korlátja nyitott (Nagy Eszter jelentette); a PB-02 folyamatban, üzemképtelennek jelentve, megjegyzéssel; a BUS-01 lezárva (javítva), az eszköz a lezáráskor üzemképesre állt – az adatlap állapotnaplójában mindkét sor a jegyre hivatkozik.
+3. A STR-01 jegyét vedd át, írj megjegyzést, majd zárd le „nem hiba”-ként. A PB-02-t lezárva az „az eszköz üzemképes” pipával az eszköz visszaáll; pipa nélkül üzemképtelen marad, és az adatlapon állítható vissza.
+4. `ugynok2`-ként az ügynök nézetben a „Hiba jelentése” gombbal telefonról jelenthető hiba, fotóval. Az ügynök a `Hibajegyek` menüben csak a saját jegyeit látja: `ugynok1`-ként a PB-02 jegye a Műszaki megjegyzésével (írni nem tud). `vezeto`-ként minden jegy és az eszközök állapota látszik, kezelés nélkül.
+
 ### Hasznos parancsok
 
 ```bash
@@ -228,7 +249,7 @@ docker compose down -v
 - Állíts be saját titkos kulcsot a munkamenetekhez: `AUTH_SECRET=<hosszú véletlen szöveg> docker compose up -d` (generálás: `npx auth secret` vagy `openssl rand -base64 32`).
 - Cseréld le az adatbázis jelszavát a `docker-compose.yml`-ben.
 - Változtasd meg vagy inaktiváld a demo felhasználókat.
-- A képzési rekordok fájljai és a légitársaságok késéskód-dokumentumai az `uploads` kötetben vannak; az adatbázissal együtt mentsd. Automatikus törlés nincs.
+- A képzési rekordok fájljai, a légitársaságok késéskód-dokumentumai, az eszközök dokumentumai és a hibajegyek fotói az `uploads` kötetben vannak; az adatbázissal együtt mentsd. Automatikus törlés nincs.
 - Üzenetküldés emailben: állítsd be az `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASSWORD` környezeti változókat az app szolgáltatásnál, és az `Admin → Üzenetküldés` oldalon a feladó címét. Cseréld le a demo címjegyzéket. Amíg nincs SMTP, a küldés csak naplóz; SITA-átjáró még nincs.
 
 ## Fejlesztés
@@ -267,6 +288,7 @@ Ha a Docker nem elérhető, a Prisma saját helyi Postgrese is megfelel fejleszt
 | `lib/planning/` | Tervezés: bemenet (napi ablakok), a pozíció szabályai, minimális pozíciószám, kiegyenlítés és mutatók, betölthetőség párosítással, a terv nézete, mentés a tervezetbe, kiosztás átvétele; tiszta függvények tesztekkel |
 | `lib/exams/` | Oktatás: a vizsgakísérlet másolata, az e-vizsga pontozása és eredménye, az OJT-mutatók és a követelmény, a folyamat állapota és a kibocsátás rekordja, a mentor és a vizsgáztató alkalmassága; a helyőrző alapértékek egy helyen (`defaults.ts`); tiszta függvények tesztekkel |
 | `lib/staffing/` | Létszámigény: a nap 15 perces sávjai óraátállítással, a sáv csúcsa feladattípusonként és összesen, a beosztás és a hiány, a nap összesítése, a grafikon és az áttekintés számításai; tiszta függvények tesztekkel |
+| `lib/equipment/` | Földi eszközök: a határidő és a számláló állapota, a figyelmeztetések és a legközelebbi határidő, a lejáró lista csoportjai, az eszköz és a hibajegy állapotátmenetei; tiszta függvények tesztekkel |
 | `lib/telex/` | Üzenetek: szétválasztás (COR, -TITLE), fejléc, MVT/LDM/CPM/UCM, PSM/PTM (csak darabszámok) és ADEXP (SAM, SRM) feldolgozók, párosítás, slot, ellenőrzések, hatás a járatra, infografika, MVT-előállítás (indulási, érkezési, korrekció), kézbesítési döntések; tiszta függvények, tesztek a docs/messages.md mintáival |
 | `lib/data/messages.ts`, `lib/data/outbound.ts` | Üzenetek tárolása, verziózása, hatása a járatra; kimenő üzenetek küldése címzettenkénti állapottal |
 | `lib/qualifications.ts`, `lib/training.ts` | Jogosítások: a rekordokból számolt érvényesség és állapot, a task részeinek követelménye és teljesülése; a rekord szabályai és a fájlok ellenőrzése |
