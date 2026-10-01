@@ -46,6 +46,8 @@ model Setting {
   senderTypeB               String?
   /// A slot warning when the planned off-block is later than the target off-block by more (8. mérföldkő).
   slotToleranceMinutes      Int      @default(10)
+  /// A deadline of ground equipment within this many days is "hamarosan lejár" (11. mérföldkő).
+  equipmentWarningDays      Int      @default(30)
   updatedAt                 DateTime @updatedAt
 }
 
@@ -103,6 +105,18 @@ model User {
   ojtAdded           OjtSession[]      @relation("OjtAdded")
   ojtAsMentor        OjtSession[]      @relation("OjtMentor")
   practicalExams     PracticalExam[]   @relation("PracticalExaminer")
+  // Ground equipment and faults (11. mérföldkő).
+  equipmentValues    EquipmentValue[]    @relation("EquipmentValuesUpdated")
+  equipmentChanges   EquipmentValueLog[] @relation("EquipmentValueChanges")
+  equipmentEvents    EquipmentEvent[]    @relation("EquipmentEvents")
+  equipmentDocsUp    EquipmentDocument[] @relation("EquipmentDocumentsUploaded")
+  equipmentDocsDown  EquipmentDocument[] @relation("EquipmentDocumentsRemoved")
+  faultsReported     Fault[]             @relation("FaultsReported")
+  faultsTaken        Fault[]             @relation("FaultsTaken")
+  faultsClosed       Fault[]             @relation("FaultsClosed")
+  faultPhotos        FaultPhoto[]        @relation("FaultPhotosUploaded")
+  faultComments      FaultComment[]      @relation("FaultComments")
+  faultEvents        FaultEvent[]        @relation("FaultEvents")
 }
 
 /// A role is a name plus the permissions ticked for it (CLAUDE.md, "Jogosultsági rendszer").
@@ -1231,4 +1245,236 @@ model PracticalExam {
   createdAt    DateTime        @default(now())
 
   @@index([processId])
+}
+
+// ---------------------------------------------------------------------------
+// Ground equipment and faults (11. mérföldkő): the technical register of every
+// piece of ground equipment, and the faults anyone may report on them.
+
+enum EquipmentFieldKind {
+  /// A date that expires, watched like a qualification.
+  DEADLINE
+  /// A reading (operating hours or km) with an optional due value.
+  COUNTER
+  TEXT
+}
+
+enum EquipmentStatus {
+  OPERATIONAL
+  OUT_OF_SERVICE
+  /// Taken out of use for good: equipment is never deleted.
+  RETIRED
+}
+
+enum FaultStatus {
+  OPEN
+  /// Taken over by the technical staff.
+  IN_PROGRESS
+  CLOSED
+}
+
+enum FaultResolution {
+  FIXED
+  NOT_A_FAULT
+}
+
+/// A kind of ground equipment, with the list of its technical data fields.
+model EquipmentType {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  code      String   @unique
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  fields    EquipmentField[]
+  equipment Equipment[]
+}
+
+/// One technical data field of a type; never deleted, only made inactive.
+model EquipmentField {
+  id        String             @id @default(cuid())
+  typeId    String
+  type      EquipmentType      @relation(fields: [typeId], references: [id])
+  name      String
+  kind      EquipmentFieldKind
+  /// The unit of a counter, e.g. "üzemóra" or "km".
+  unit      String?
+  order     Int
+  active    Boolean            @default(true)
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+
+  values EquipmentValue[]
+  logs   EquipmentValueLog[]
+
+  @@unique([typeId, name])
+}
+
+model Equipment {
+  id          String          @id @default(cuid())
+  typeId      String
+  type        EquipmentType   @relation(fields: [typeId], references: [id])
+  /// E.g. the fleet number.
+  identifier  String          @unique
+  plate       String?
+  description String?
+  status      EquipmentStatus @default(OPERATIONAL)
+  note        String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  values    EquipmentValue[]
+  valueLogs EquipmentValueLog[]
+  events    EquipmentEvent[]
+  documents EquipmentDocument[]
+  faults    Fault[]
+
+  @@index([typeId])
+}
+
+/// The value of one field of one piece of equipment.
+model EquipmentValue {
+  id          String         @id @default(cuid())
+  equipmentId String
+  equipment   Equipment      @relation(fields: [equipmentId], references: [id])
+  fieldId     String
+  field       EquipmentField @relation(fields: [fieldId], references: [id])
+  /// A deadline.
+  dateValue   DateTime?      @db.Date
+  /// The reading of a counter, and the reading it is due at.
+  numberValue Float?
+  dueValue    Float?
+  textValue   String?
+  updatedById String
+  updatedBy   User           @relation("EquipmentValuesUpdated", fields: [updatedById], references: [id])
+  updatedAt   DateTime       @updatedAt
+
+  @@unique([equipmentId, fieldId])
+}
+
+/// Every change of a value: who, when, the old and the new value.
+model EquipmentValueLog {
+  id          String         @id @default(cuid())
+  equipmentId String
+  equipment   Equipment      @relation(fields: [equipmentId], references: [id])
+  fieldId     String
+  field       EquipmentField @relation(fields: [fieldId], references: [id])
+  oldValue    Json?
+  newValue    Json?
+  changedById String
+  changedBy   User           @relation("EquipmentValueChanges", fields: [changedById], references: [id])
+  changedAt   DateTime       @default(now())
+
+  @@index([equipmentId])
+}
+
+/// A change of an equipment's status: a report, a repair, a retirement.
+model EquipmentEvent {
+  id          String           @id @default(cuid())
+  equipmentId String
+  equipment   Equipment        @relation(fields: [equipmentId], references: [id])
+  fromStatus  EquipmentStatus?
+  toStatus    EquipmentStatus
+  note        String?
+  /// The fault that made it, when one did.
+  faultId     String?
+  fault       Fault?           @relation(fields: [faultId], references: [id])
+  createdById String
+  createdBy   User             @relation("EquipmentEvents", fields: [createdById], references: [id])
+  createdAt   DateTime         @default(now())
+
+  @@index([equipmentId])
+}
+
+/// A file of a piece of equipment (registration, service sheet, photo). A
+/// removed file is gone from the disk; its row stays as the log.
+model EquipmentDocument {
+  id           String    @id @default(cuid())
+  equipmentId  String
+  equipment    Equipment @relation(fields: [equipmentId], references: [id])
+  fileName     String
+  mimeType     String
+  size         Int
+  storageKey   String?   @unique
+  uploadedById String
+  uploadedBy   User      @relation("EquipmentDocumentsUploaded", fields: [uploadedById], references: [id])
+  uploadedAt   DateTime  @default(now())
+  removedById  String?
+  removedBy    User?     @relation("EquipmentDocumentsRemoved", fields: [removedById], references: [id])
+  removedAt    DateTime?
+
+  @@index([equipmentId])
+}
+
+/// A fault reported on a piece of equipment, handled by the technical staff.
+model Fault {
+  id                   String           @id @default(cuid())
+  equipmentId          String
+  equipment            Equipment        @relation(fields: [equipmentId], references: [id])
+  description          String
+  /// The reporter marked the equipment out of service.
+  reportedOutOfService Boolean          @default(false)
+  status               FaultStatus      @default(OPEN)
+  /// Set exactly when closed.
+  resolution           FaultResolution?
+  reportedById         String
+  reportedBy           User             @relation("FaultsReported", fields: [reportedById], references: [id])
+  reportedAt           DateTime         @default(now())
+  takenById            String?
+  takenBy              User?            @relation("FaultsTaken", fields: [takenById], references: [id])
+  takenAt              DateTime?
+  closedById           String?
+  closedBy             User?            @relation("FaultsClosed", fields: [closedById], references: [id])
+  closedAt             DateTime?
+
+  photos          FaultPhoto[]
+  comments        FaultComment[]
+  events          FaultEvent[]
+  equipmentEvents EquipmentEvent[]
+
+  @@index([equipmentId])
+  @@index([status])
+  @@index([reportedById])
+}
+
+model FaultPhoto {
+  id           String   @id @default(cuid())
+  faultId      String
+  fault        Fault    @relation(fields: [faultId], references: [id])
+  fileName     String
+  mimeType     String
+  size         Int
+  storageKey   String   @unique
+  uploadedById String
+  uploadedBy   User     @relation("FaultPhotosUploaded", fields: [uploadedById], references: [id])
+  uploadedAt   DateTime @default(now())
+
+  @@index([faultId])
+}
+
+model FaultComment {
+  id        String   @id @default(cuid())
+  faultId   String
+  fault     Fault    @relation(fields: [faultId], references: [id])
+  text      String
+  authorId  String
+  author    User     @relation("FaultComments", fields: [authorId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@index([faultId])
+}
+
+/// Every change of a fault's status: who and when.
+model FaultEvent {
+  id          String       @id @default(cuid())
+  faultId     String
+  fault       Fault        @relation(fields: [faultId], references: [id])
+  fromStatus  FaultStatus?
+  toStatus    FaultStatus
+  createdById String
+  createdBy   User         @relation("FaultEvents", fields: [createdById], references: [id])
+  createdAt   DateTime     @default(now())
+
+  @@index([faultId])
 }

@@ -44,6 +44,11 @@ export const PERMISSIONS = {
   MENTORING: { label: "Mentorálás", scoped: false, group: "Képzések" },
   EXAMINING: { label: "Vizsgáztatás", scoped: false, group: "Képzések" },
   RELEASE: { label: "Kibocsátás", scoped: false, group: "Képzések" },
+  // Ground equipment and faults (11. mérföldkő).
+  EQUIPMENT_MANAGE: { label: "Eszközök kezelése", scoped: false, group: "Eszközök" },
+  FAULT_MANAGE: { label: "Hibajegyek kezelése", scoped: false, group: "Eszközök" },
+  FAULT_REPORT: { label: "Hiba jelentése", scoped: false, group: "Eszközök" },
+  FAULT_VIEW: { label: "Hibajegyek megtekintése", scoped: true, group: "Eszközök" },
   MESSAGE_VIEW: { label: "Üzenetek megtekintése", scoped: true, group: "Üzenetek" },
   MESSAGE_RECORD: { label: "Üzenetek rögzítése", scoped: false, group: "Üzenetek" },
   MESSAGE_SEND: { label: "Üzenetek küldése", scoped: true, group: "Üzenetek" },
@@ -86,6 +91,8 @@ export const TRAINING_COORDINATOR_ROLE = "Oktatási koordinátor";
 /** The new default roles of the 10. mérföldkő. */
 export const MENTOR_ROLE = "Mentor";
 export const EXAMINER_ROLE = "Vizsgáztató";
+/** The new default role of the 11. mérföldkő: the technical staff. */
+export const TECHNICIAN_ROLE = "Műszaki";
 
 export const DEFAULT_ROLES: { name: string; builtIn: boolean; permissions: Partial<Record<Permission, Scope>> }[] = [
   {
@@ -107,6 +114,8 @@ export const DEFAULT_ROLES: { name: string; builtIn: boolean; permissions: Parti
       PLANNING: "ALL",
       // The staffing demand against the actual roster (9. mérföldkő).
       STAFFING_VIEW: "ALL",
+      // Anyone may report a fault (11. mérföldkő).
+      FAULT_REPORT: "ALL",
     },
   },
   {
@@ -128,6 +137,9 @@ export const DEFAULT_ROLES: { name: string; builtIn: boolean; permissions: Parti
       MESSAGE_VIEW: "ALL",
       MESSAGE_RECORD: "ALL",
       MESSAGE_SEND: "ALL",
+      // Every fault and the state of the equipment (11. mérföldkő).
+      FAULT_REPORT: "ALL",
+      FAULT_VIEW: "ALL",
     },
   },
   {
@@ -140,17 +152,23 @@ export const DEFAULT_ROLES: { name: string; builtIn: boolean; permissions: Parti
       EXAM_EDIT: "ALL",
       EXAMINING: "ALL",
       RELEASE: "ALL",
+      FAULT_REPORT: "ALL",
     },
   },
   {
     name: MENTOR_ROLE,
     builtIn: false,
-    permissions: { MENTORING: "ALL" },
+    permissions: { MENTORING: "ALL", FAULT_REPORT: "ALL" },
   },
   {
     name: EXAMINER_ROLE,
     builtIn: false,
-    permissions: { EXAMINING: "ALL" },
+    permissions: { EXAMINING: "ALL", FAULT_REPORT: "ALL" },
+  },
+  {
+    name: TECHNICIAN_ROLE,
+    builtIn: false,
+    permissions: { EQUIPMENT_MANAGE: "ALL", FAULT_MANAGE: "ALL", FAULT_REPORT: "ALL", FAULT_VIEW: "ALL" },
   },
   {
     name: "Ügynök",
@@ -163,6 +181,9 @@ export const DEFAULT_ROLES: { name: string; builtIn: boolean; permissions: Parti
       // The messages of the flights of their tasks, sending on their own part (7. mérföldkő).
       MESSAGE_VIEW: "SELF",
       MESSAGE_SEND: "SELF",
+      // Reporting faults and seeing their own (11. mérföldkő).
+      FAULT_REPORT: "ALL",
+      FAULT_VIEW: "SELF",
     },
   },
 ];

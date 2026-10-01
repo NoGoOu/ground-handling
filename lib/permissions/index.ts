@@ -323,6 +323,36 @@ export function canOpenDelayDocument(actor: Actor, flightTasks: readonly TaskAss
   return canManageMessaging(actor) || canManageFlights(actor) || flightTasks.some((task) => canViewTask(actor, task));
 }
 
+// Ground equipment and faults (11. mérföldkő).
+
+/** Equipment types and their fields, equipment, technical data and documents. */
+export const canManageEquipment = (actor: Actor) => can(actor, "EQUIPMENT_MANAGE");
+/** Taking over, commenting, closing, and setting an equipment back to operational. */
+export const canManageFaults = (actor: Actor) => can(actor, "FAULT_MANAGE");
+export const canReportFault = (actor: Actor) => can(actor, "FAULT_REPORT");
+
+/**
+ * The equipment list and data sheets: the technical staff, and whoever sees
+ * every fault (the shift lead sees the state of the equipment).
+ */
+export function canViewEquipment(actor: Actor): boolean {
+  return canManageEquipment(actor) || canManageFaults(actor) || scopeOf(actor, "FAULT_VIEW") === "ALL";
+}
+
+/** A fault: its reporter always, the others by the scope of viewing faults. */
+export function canViewFault(actor: Actor, fault: { reportedById: string }): boolean {
+  return fault.reportedById === actor.id || canManageFaults(actor) || inScope(actor, "FAULT_VIEW", [fault.reportedById]);
+}
+
+/** Whose faults the actor may list, by reporter; null means everyone's. */
+export function faultVisibleReporterIds(actor: Actor): string[] | null {
+  if (canManageFaults(actor)) return null;
+  const scope = scopeOf(actor, "FAULT_VIEW");
+  if (scope === "ALL") return null;
+  if (scope === "TEAM") return [actor.id, ...actor.teamMemberIds];
+  return [actor.id];
+}
+
 /** The plan is read by whoever plans or takes its assignment over onto the tasks. */
 export const canViewPlans = (actor: Actor) => can(actor, "PLANNING") || can(actor, "TASK_ASSIGN");
 export const canManageUsers = (actor: Actor) => can(actor, "USER_MANAGE");
@@ -358,6 +388,8 @@ const ROUTE_PERMISSIONS: [prefix: string, permissions: Permission[]][] = [
   ["/shifts", ["ROSTER_VIEW", "ROSTER_DRAFT"]],
   ["/board", ["BOARD_VIEW"]],
   ["/staffing", ["STAFFING_VIEW"]],
+  ["/equipment", ["EQUIPMENT_MANAGE", "FAULT_MANAGE", "FAULT_VIEW"]],
+  ["/faults", ["FAULT_REPORT", "FAULT_VIEW", "FAULT_MANAGE"]],
   ["/agent", ["TASK_VIEW"]],
 ];
 

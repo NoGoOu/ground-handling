@@ -9,6 +9,12 @@ import {
   canRecordMilestone,
   canEditLayer,
   canEditExams,
+  canManageEquipment,
+  canManageFaults,
+  canReportFault,
+  canViewEquipment,
+  canViewFault,
+  faultVisibleReporterIds,
   canExamine,
   canManageMessaging,
   canMentor,
@@ -423,6 +429,28 @@ describe("messages (7. mérföldkő)", () => {
     expect(processVisibleUserIds(anna)).toEqual(["anna"]);
     expect([canOpenTrainingArea(examiner), canOpenTrainingArea(anna), canOpenTrainingArea(lead)]).toEqual([true, true, true]);
     expect(canOpenTrainingArea(actorWith("p", ["Tervező"]))).toBe(false);
+  });
+
+  it("gives the equipment to the technical staff and lets everyone report a fault (11. mérföldkő)", () => {
+    const technician = actorWith("tibor", ["Műszaki"]);
+    const coordinator = actorWith("olga", ["Oktatási koordinátor"]);
+    expect([canManageEquipment(technician), canManageFaults(technician), canViewEquipment(technician)]).toEqual([true, true, true]);
+    // The shift lead sees every fault and the state of the equipment, but does not manage them.
+    expect([canManageEquipment(lead), canManageFaults(lead), canViewEquipment(lead)]).toEqual([false, false, true]);
+    // Everyone reports; an agent and the coordinator see only their own.
+    for (const actor of [anna, planner, lead, coordinator, technician, admin]) expect(canReportFault(actor)).toBe(true);
+    expect(canViewEquipment(anna)).toBe(false);
+    expect(faultVisibleReporterIds(anna)).toEqual(["anna"]);
+    expect(faultVisibleReporterIds(coordinator)).toEqual(["olga"]);
+    expect(faultVisibleReporterIds(lead)).toBeNull();
+    expect(faultVisibleReporterIds(technician)).toBeNull();
+    expect(canViewFault(anna, { reportedById: "anna" })).toBe(true);
+    expect(canViewFault(anna, { reportedById: "bela" })).toBe(false);
+    expect(canViewFault(coordinator, { reportedById: "olga" })).toBe(true);
+    expect(canViewFault(lead, { reportedById: "bela" })).toBe(true);
+    expect(canAccessPath(anna, "/faults")).toBe(true);
+    expect(canAccessPath(anna, "/equipment")).toBe(true);
+    expect(canAccessPath(planner, "/equipment")).toBe(false);
   });
 
   it("shows the staffing demand to the planner, the shift lead and the admin", () => {

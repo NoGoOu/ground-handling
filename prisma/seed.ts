@@ -64,6 +64,9 @@ async function main() {
   const passwordHash = await bcrypt.hash(DEMO_PASSWORD, 10);
   // The files of the records the seed replaces go from the disk too.
   const oldFiles = await prisma.trainingFile.findMany({ where: { storageKey: { not: null } }, select: { storageKey: true } });
+  // So do the equipment documents and the fault photos (11. mérföldkő).
+  const oldEquipmentFiles = await prisma.equipmentDocument.findMany({ where: { storageKey: { not: null } }, select: { storageKey: true } });
+  const oldFaultPhotos = await prisma.faultPhoto.findMany({ select: { storageKey: true } });
   // So do the airlines' delay code documents (8. mérföldkő, utómunka).
   const oldDocuments = await prisma.delayCodeDocument.findMany({ where: { storageKey: { not: null } }, select: { storageKey: true } });
   let certificateRecordId: string | null = null;
@@ -83,6 +86,18 @@ async function main() {
     await tx.delayCodeDocument.deleteMany();
     await tx.airport.deleteMany();
     await tx.plan.deleteMany();
+    // Ground equipment and faults (11. mérföldkő) point at users.
+    await tx.faultComment.deleteMany();
+    await tx.faultPhoto.deleteMany();
+    await tx.faultEvent.deleteMany();
+    await tx.equipmentEvent.deleteMany();
+    await tx.fault.deleteMany();
+    await tx.equipmentValueLog.deleteMany();
+    await tx.equipmentValue.deleteMany();
+    await tx.equipmentDocument.deleteMany();
+    await tx.equipment.deleteMany();
+    await tx.equipmentField.deleteMany();
+    await tx.equipmentType.deleteMany();
     // Exams, OJT and processes (10. mérföldkő) point at trainings, tasks, records and users.
     await tx.practicalExam.deleteMany();
     await tx.ojtSession.deleteMany();
@@ -384,6 +399,8 @@ async function main() {
 
   // The demo airline's own delay code document: a sample we made (8. mérföldkő, utómunka).
   for (const document of oldDocuments) await storage.deleteStoredFile("delay-codes", document.storageKey!);
+  for (const document of oldEquipmentFiles) await storage.deleteStoredFile("equipment", document.storageKey!);
+  for (const photo of oldFaultPhotos) await storage.deleteStoredFile("faults", photo.storageKey);
   {
     const bytes = seedDelayCodePdf();
     const admin = await prisma.user.findUniqueOrThrow({ where: { username: "admin" }, select: { id: true } });

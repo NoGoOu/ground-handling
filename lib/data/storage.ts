@@ -7,8 +7,8 @@ import { UPLOAD_TYPES, type UploadType } from "@/lib/training";
 // in production, with a folder per kind of file. A stored file's name is ours
 // (a UUID and an extension), never the one the user gave.
 
-/** The folders of the storage: training attachments and the airlines' delay code documents. */
-export type StorageFolder = "training" | "delay-codes";
+/** The folders of the storage: training attachments, delay code documents, equipment documents and fault photos. */
+export type StorageFolder = "training" | "delay-codes" | "equipment" | "faults";
 
 /** The upload directory: UPLOAD_DIR, or "uploads" next to the app. */
 export function uploadDir(): string {

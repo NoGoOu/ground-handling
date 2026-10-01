@@ -1,24 +1,25 @@
 # Állapot – Ground Handling App
 
-*Frissítve: 2026. október 1. · CLAUDE.md verzió: 35*
+*Frissítve: 2026. október 2. · CLAUDE.md verzió: 35*
 
 ## Mi készült el
 
-- **A 10. mérföldkő utómunkája kész: kizáró szempontok a gyakorlati vizsgán.**
-  - A gyakorlati szempont „kizáró” jelölést kaphat (`Képzések → Vizsgák`, a képzés oldalán).
-  - Ha egy kizáró szempont „nem felelt meg”, a végeredmény automatikusan sikertelen: az űrlapon a végeredmény sikertelenre áll és nem módosítható, a szerver pedig az űrlapról érkező végeredményt figyelmen kívül hagyja. Ha minden kizáró szempont megfelelt, a végeredményt a vizsgáztató adja, mint eddig.
-  - A vizsga elmenti a szempontok akkori kizáró jelölését; a folyamat oldalán a kizáró szempontok jelölve, és kiírva, ha a végeredmény emiatt sikertelen. A korábbi vizsgák jelölés nélkül változatlanul látszanak.
-  - Tesztek (`lib/exams/practical.test.ts`, az űrlap ellenőrzése, a seed); seed: a „Biztonságos munkavégzés az előtéren” kizáró; README.
+- **11. mérföldkő, 1. lépés:** adatmodell és migráció.
+  - Eszköztípus a mezőlistájával (határidő, számláló mértékegységgel, szöveg; mező nem törölhető, csak inaktiválható); eszköz (azonosító, rendszám, leírás, állapot: üzemképes, üzemképtelen, kivonva; megjegyzés).
+  - Mezőértékek és minden változásuk naplója (ki, mikor, régi és új érték); az eszköz állapotváltásainak naplója (a kiváltó hibajegyre hivatkozva); eszközdokumentumok (az eltávolítás naplózott).
+  - Hibajegy (leírás, „üzemképtelen” jelölés, állapot: nyitott, folyamatban, lezárva; a lezárás eredménye: javítva vagy nem hiba), fotók, megjegyzések és az állapotváltások naplója.
+  - Az eszközök „hamarosan lejár” beállítása (alapból 30 nap). Az adatbázis őrzi: a lezárt jegynek van eredménye és lezárási ideje, a többinek nincs.
+  - Új jogosultságok: „Eszközök kezelése”, „Hibajegyek kezelése”, „Hiba jelentése” (minden alapértelmezett szerepkör), „Hibajegyek megtekintése” hatókörrel (Ügynök: saját; Műszakvezető, Műszaki, Admin: összes); új Műszaki alapértelmezett szerepkör. A jelentő a saját jegyeit mindig látja; az eszközlistát a Műszaki, az Admin és a műszakvezető látja. Tesztekkel.
+- A 10. mérföldkő utómunkája (`3c2069f`): kizáró szempontok a gyakorlati vizsgán.
 
 ## Állapot
 
-- Utolsó commit: `feat: fail the practical exam on a knock-out criterion` (ez a commit; előtte `ff95eaa`)
-- Tesztek: `npm test` → 757 teszt, mind zöld; `npm run lint` hibátlan, `npx tsc --noEmit` tiszta, `npm run build` sikeres
-- Bejelentkezve nem néztem meg; a döntést a szerver és az űrlap ugyanazzal a tiszta függvénnyel hozza.
+- Utolsó commit: `feat: add the data model of ground equipment and faults` (ez a commit; előtte `3c2069f`)
+- Tesztek: `npm test` → 758 teszt, mind zöld; `npm run lint` hibátlan, `npx tsc --noEmit` tiszta
 
 ## Eltérések a CLAUDE.md-től
 
-- Nincs. A jóváhagyott döntések: a kizáró jelölés változása csak a később rögzített vizsgákra hat; inaktív szempont új vizsgába nem kerül.
+- Nincs. A jóváhagyott 7 döntés szerint készül.
 
 ## Kérdések a tervezéshez
 
@@ -26,4 +27,4 @@
 
 ## Következő lépés
 
-- 11. mérföldkő (földi eszközök és hibajegy): a terv jóváhagyásra vár.
+- 2. lépés: tiszta függvények (`lib/equipment/`) – a határidő és a számláló állapota, a legközelebbi határidő, a hibajegy állapotátmenetei, az eszköz állapota jelentéskor; tesztekkel.
