@@ -25,6 +25,7 @@ import {
   canViewLayer,
   canViewPlans,
   canViewLayerOf,
+  canViewProcessOf,
   canViewRosterOf,
   canViewStaffing,
   canViewTask,
@@ -377,6 +378,15 @@ describe("messages (7. mérföldkő)", () => {
     expect([canEditExams, canMentor, canExamine, canRelease, canOpenExamAttempt, canSeeInternalNotes].some((f) => f(anna))).toBe(false);
     expect(canAccessPath(coordinator, "/training/exams")).toBe(true);
     expect(canAccessPath(examiner, "/training/exams")).toBe(false);
+    // An examiner reaches every process and attempt; an agent only their own process, never an attempt's details.
+    expect(canAccessPath(examiner, "/training/processes/p1")).toBe(true);
+    expect(canAccessPath(examiner, "/training/attempts/a1")).toBe(true);
+    expect(canAccessPath(anna, "/training/attempts/a1")).toBe(false);
+    expect(canAccessPath(anna, "/training/exam/a1")).toBe(true);
+    expect(canViewProcessOf(examiner, "anna")).toBe(true);
+    expect(canViewProcessOf(anna, "anna")).toBe(true);
+    expect(canViewProcessOf(anna, "bela")).toBe(false);
+    expect(canViewProcessOf(mentor, "anna")).toBe(false);
   });
 
   it("shows the staffing demand to the planner, the shift lead and the admin", () => {

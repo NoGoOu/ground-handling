@@ -62,6 +62,11 @@ export interface AttemptResult {
 /** Small enough to never change a decision, large enough to absorb float sums (1/3 + 2/3). */
 const EPSILON = 1e-9;
 
+/** The share of the points in whole percent, rounded down. */
+export function percentOf(scored: number, max: number): number {
+  return max === 0 ? 0 : Math.floor((scored * 100) / max + EPSILON);
+}
+
 export function attemptResult(passPercent: number, max: number, points: readonly (number | null)[]): AttemptResult {
   const pending = points.filter((value) => value === null).length;
   const scored = points.reduce<number>((sum, value) => sum + (value ?? 0), 0);
@@ -71,7 +76,7 @@ export function attemptResult(passPercent: number, max: number, points: readonly
     scored,
     max,
     pending,
-    percent: Math.floor((scored * 100) / max + EPSILON),
+    percent: percentOf(scored, max),
     passed: scored * 100 + EPSILON >= passPercent * max,
   };
 }

@@ -4,23 +4,24 @@
 
 ## Mi készült el
 
-- **10. mérföldkő, 3. lépés:** szerkesztőfelületek a `Képzések → Vizsgák` alatt, a „Vizsgák szerkesztése” jogosultsággal.
-  - Kérdésbank: kérdés, típus (egy helyes, több helyes, szöveges), pont, témakör, aktív; legfeljebb hat válaszlehetőség a helyes jelöléssel. A kérdés nem törölhető, csak inaktiválható; az inaktív kérdés új kísérletbe nem kerül.
-  - Vizsgalapok: név, képzés (csak dolgozattal és határral rendelkező), időkorlát, a többválaszos pontozás módja (paraméter); a kérdések sorrendje fel/le mozgatással, felvétel és eltávolítás; a ki nem tölthető vizsgalap figyelmeztet (pl. nincs helyes válasz).
-  - Képzésenként: elméleti és gyakorlati rész, az OJT-követelmény három paramétere (az alapértékek mellett helyőrzőként jelölve), a gyakorlati vizsga szempontjai (felvétel, szerkesztés, inaktiválás, sorrend).
-  - A képzés adatainál (6. mérföldkő) a dolgozat nem kapcsolható ki, ha a képzésnek elméleti része van.
-  - Adatbázison ellenőrizve: kérdés mentése és javítása, vizsgalap sorrendje, az inaktív kérdés kimarad a másolatból, a szabályt az adatbázis is őrzi.
-- 2. lépés (`95ae671`): tiszta függvények. 1. lépés (`db7c7e2`): adatmodell.
+- **10. mérföldkő, 4. lépés:** e-vizsga.
+  - Megnyitás a folyamat oldaláról („Vizsgáztatás” vagy „Képzések kezelése”): a kísérlet a vizsgalap aktív kérdéseinek másolatát kapja; egyszerre egy nyitott kísérlet, a ki nem tölthető vizsgalapot elutasítja.
+  - Kitöltés a vizsgázó saját belépésével, telefonra méretezve (nagy válaszgombok): a „Képzéseim” oldalon a nyitott vizsgák kiemelve; Kezdés gomb, onnan fut az időkorlát; minden módosítás azonnal mentődik (a szöveges válasz rövid szünet után); visszaszámláló; lejáratkor a mentett válaszok automatikusan beadódnak, utána mentés nem lehetséges.
+  - Javítás: a választós kérdéseket a rendszer pontozza beadáskor; a szöveges válaszokat a vizsgáztató pontozza, megjegyzéssel; az eredmény akkor áll elő, amikor már nincs javítatlan válasz. Visszajelzés és belső megjegyzés külön mezőben; a korábbi kísérletek belső megjegyzései látszanak.
+  - Pontozni és értékelni a „Vizsgáztatás” jogosultsággal és a képzés aznap érvényes jogosításával lehet.
+  - A vizsgázó a saját válaszait, pontjait és a visszajelzést látja; a helyes válaszok és a belső megjegyzés nem kerülnek az oldalára.
+  - A folyamat oldalának alapja (az elméleti rész a kísérletekkel); a folyamat indítása az adatrétegben megvan, a felülete az 5. lépésben jön.
+- 3. lépés (`2e1c820`): szerkesztőfelületek. 2. lépés (`95ae671`): tiszta függvények. 1. lépés (`db7c7e2`): adatmodell.
 
 ## Állapot
 
-- Utolsó commit: `feat: edit the question bank, exam sheets and training parts` (ez a commit; előtte `95ae671`)
+- Utolsó commit: `feat: open, fill and score e-exams` (ez a commit; előtte `2e1c820`)
 - Tesztek: `npm test` → 744 teszt, mind zöld; `npm run lint` hibátlan, `npx tsc --noEmit` tiszta, `npm run build` sikeres
-- A felületet bejelentkezve nem néztem meg (jelszót nem írok be).
+- Adatbázison végigpróbálva: folyamat indítása (a második elutasítva), kísérlet megnyitása (a második elutasítva), mentés kezdés előtt elutasítva, mentés, lejárat utáni automatikus beadás, kettős beadás hatástalan, szöveges válasz pontozása, eredmény (7,5 / 10 pont, 80%-os határ alatt: sikertelen), utána új kísérlet nyitható. A kitöltő nézetet telefonméretben statikusan renderelve néztem meg; bejelentkezve nem.
 
 ## Eltérések a CLAUDE.md-től
 
-- Nincs. Megvalósításban: ha a képzésnek dolgozata van, a gyakorlati rész mellé az elméleti rész is kell, mert a kibocsátott rekordba a dolgozat eredménye kerül (különben a rekord dolgozat-eredmény nélkül maradna).
+- Nincs. Megvalósításban: az időkorlát a vizsgázó Kezdés gombjától fut (az oldal megnyitása még nem indítja).
 
 ## Kérdések a tervezéshez
 
@@ -28,4 +29,4 @@
 
 ## Következő lépés
 
-- 4. lépés: e-vizsga – megnyitás, kitöltés (telefonon is), automatikus javítás, a szöveges válaszok javítása, visszajelzés és belső megjegyzés.
+- 5. lépés: képzési folyamat – indítás, megszakítás, áttekintés részenként (koordinátor, vizsgáztató, csapatvezető, ügynök).

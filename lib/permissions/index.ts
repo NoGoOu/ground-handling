@@ -231,6 +231,14 @@ export const canOpenExamAttempt = (actor: Actor) => can(actor, "EXAMINING") || c
 export const canSeeInternalNotes = (actor: Actor) =>
   can(actor, "EXAMINING") || can(actor, "RELEASE") || can(actor, "TRAINING_MANAGE");
 
+/**
+ * A training process and its results: by the scope of viewing training data,
+ * and for whoever examines, releases or manages trainings, everyone's.
+ */
+export function canViewProcessOf(actor: Actor, userId: string): boolean {
+  return canViewTrainingOf(actor, userId) || canSeeInternalNotes(actor);
+}
+
 /** One person's training data and files: the coordinator sees everyone, the others by scope. */
 export function canViewTrainingOf(actor: Actor, userId: string): boolean {
   return can(actor, "TRAINING_MANAGE") || inScope(actor, "TRAINING_VIEW", [userId]);
@@ -304,11 +312,13 @@ const ROUTE_PERMISSIONS: [prefix: string, permissions: Permission[]][] = [
   ["/import", ["SCHEDULE_IMPORT"]],
   ["/planning/settings", ["PLANNING"]],
   ["/training/exams", ["EXAM_EDIT"]],
+  ["/training/attempts", ["EXAMINING", "RELEASE", "TRAINING_MANAGE"]],
+  ["/training/processes", ["TRAINING_VIEW", "TRAINING_MANAGE", "EXAMINING", "RELEASE"]],
   ["/training/qualifications", ["TRAINING_MANAGE"]],
   ["/training/courses", ["TRAINING_MANAGE"]],
   ["/training/records", ["TRAINING_MANAGE"]],
   ["/training/expiring", ["TRAINING_MANAGE", "TRAINING_VIEW"]],
-  ["/training", ["TRAINING_VIEW", "TRAINING_MANAGE"]],
+  ["/training", ["TRAINING_VIEW", "TRAINING_MANAGE", "EXAMINING", "RELEASE", "EXAM_EDIT"]],
   ["/planning", ["PLANNING", "TASK_ASSIGN"]],
   ["/shifts/types", ["SEGMENT_TYPE_MANAGE"]],
   ["/shifts", ["ROSTER_VIEW", "ROSTER_DRAFT"]],
