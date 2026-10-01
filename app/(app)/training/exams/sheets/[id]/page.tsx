@@ -8,7 +8,8 @@ import { fmt } from "@/lib/messages/format";
 import { canEditExams } from "@/lib/permissions";
 import { requireCapability } from "@/lib/session";
 import { addSheetQuestionAction, moveSheetQuestionAction, removeSheetQuestionAction, saveSheetAction } from "../../actions";
-import { AddSheetQuestionForm, RowButton, SheetForm } from "../../forms";
+import { RowButton } from "@/components/row-button";
+import { AddSheetQuestionForm, SheetForm } from "../../forms";
 
 // One exam sheet: its settings and its questions in order (CLAUDE.md,
 // 10. mérföldkő). An attempt takes a copy when it is opened, so changes here

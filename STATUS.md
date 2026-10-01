@@ -4,19 +4,22 @@
 
 ## Mi készült el
 
-- **11. mérföldkő, 2. lépés:** tiszta függvények (`lib/equipment/`), tesztekkel.
-  - `status.ts`: a határidő állapota (érvényes, hamarosan lejár, lejárt, nincs megadva – a jogosításokkal azonos szabály: a saját napján még érvényes); a számláló állapota (esedékes, ha elérte az esedékességi értéket; esedékesség nélkül soha); ami figyelmet kér egy eszközön (lejáró és lejárt határidők, esedékes számlálók, az inaktív mezők nélkül); a legközelebbi határidő.
-  - `faults.ts`: a jegy állapotátmenetei (nyitott → folyamatban → lezárva, nyitottból közvetlenül is lezárható, újranyitás nincs); jelentéskor az „üzemképtelen” jelölés az üzemképes eszközt azonnal üzemképtelenre állítja; kivont eszközre nem lehet jelenteni; a kézi állapotváltások és hogy melyik jogosultság kell hozzájuk (kivonás és visszahozás: „Eszközök kezelése”, üzemképtelen és vissza: „Hibajegyek kezelése”).
-- 1. lépés (`cceb047`): adatmodell, migráció, jogosultságok, Műszaki szerepkör.
+- **11. mérföldkő, 3. lépés:** eszköztípusok és mezőlisták szerkesztése (`/equipment/types`, „Eszközök kezelése”).
+  - Eszköztípus: név, kód, aktív.
+  - Mezőlista: név, fajta (határidő, számláló, szöveg), számlálónál mértékegység (pl. üzemóra, km), aktív; sorrend fel/le mozgatással. A mező nem törölhető, csak inaktiválható; a fajta nem változtatható, ha a mezőnek már van értéke (a felület zárolja, a szerver is ellenőrzi). A mezőnév típuson belül egyedi.
+  - A sorrend-mozgatás és a sorgomb közös segédfüggvénybe, illetve komponensbe került (a vizsgáknál is ezt használja).
+  - Adatbázison ellenőrizve: mezők felvétele, sorrend, a fajta zárolása értékkel, átnevezés, a névütközés elutasítása.
+- 2. lépés (`b34a0a3`): tiszta függvények. 1. lépés (`cceb047`): adatmodell.
 
 ## Állapot
 
-- Utolsó commit: `feat: judge deadlines, counters and faults in pure functions` (ez a commit; előtte `cceb047`)
-- Tesztek: `npm test` → 769 teszt, mind zöld; `npm run lint` hibátlan, `npx tsc --noEmit` tiszta
+- Utolsó commit: `feat: edit equipment types and their fields` (ez a commit; előtte `b34a0a3`)
+- Tesztek: `npm test` → 772 teszt, mind zöld; `npm run lint` hibátlan, `npx tsc --noEmit` tiszta
+- A felületet bejelentkezve nem néztem meg; az oldalak az eszközlistából (4. lépés) érhetők el.
 
 ## Eltérések a CLAUDE.md-től
 
-- Nincs. Megvalósításban: kivont eszköz kezelője („Eszközök kezelése”) visszahozhatja üzemképesre, naplózva.
+- nincs
 
 ## Kérdések a tervezéshez
 
@@ -24,4 +27,4 @@
 
 ## Következő lépés
 
-- 3. lépés: eszköztípusok és mezőlisták szerkesztése.
+- 4. lépés: eszközök – lista, adatlap, a műszaki adatok szerkesztése naplóval, dokumentumok.

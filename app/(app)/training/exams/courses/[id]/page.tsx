@@ -7,7 +7,8 @@ import { fmt } from "@/lib/messages/format";
 import { canEditExams } from "@/lib/permissions";
 import { requireCapability } from "@/lib/session";
 import { addCriterionAction, moveCriterionAction, saveCriterionAction, savePartsAction } from "../../actions";
-import { CriterionForm, PartsForm, RowButton } from "../../forms";
+import { RowButton } from "@/components/row-button";
+import { CriterionForm, PartsForm } from "../../forms";
 
 // One training's parts, OJT requirement and practical criteria (CLAUDE.md,
 // 10. mérföldkő, "A képzés részei" and "Gyakorlati vizsga").

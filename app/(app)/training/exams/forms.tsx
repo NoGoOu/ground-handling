@@ -183,26 +183,6 @@ export function AddSheetQuestionForm({
   );
 }
 
-/** A small button that runs one action, e.g. moving or removing a row. */
-export function RowButton({ action, label, confirm }: { action: () => Promise<ActionResult>; label: string; confirm?: string }) {
-  const [result, formAction, pending] = useActionState(action, null);
-  return (
-    <form action={formAction} className="inline-flex items-center gap-1">
-      <button
-        type="submit"
-        disabled={pending}
-        className="btn btn-secondary px-2 py-0.5 text-xs"
-        onClick={(event) => {
-          if (confirm && !window.confirm(confirm)) event.preventDefault();
-        }}
-      >
-        {label}
-      </button>
-      {result?.ok === false && <ActionFeedback result={result} />}
-    </form>
-  );
-}
-
 export function PartsForm({
   action,
   initial,

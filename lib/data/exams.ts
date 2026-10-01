@@ -1,4 +1,5 @@
 import type { Prisma } from "@/generated/prisma/client";
+import { swapWithNeighbour } from "@/lib/data/order";
 import { prisma } from "@/lib/db";
 import { buildSnapshot, maxPointsOf, sheetProblems, type SheetProblem } from "@/lib/exams/snapshot";
 
@@ -108,22 +109,6 @@ export async function addSheetQuestion(sheetId: string, questionId: string): Pro
 
 export async function removeSheetQuestion(entryId: string): Promise<boolean> {
   return (await prisma.examSheetQuestion.deleteMany({ where: { id: entryId } })).count > 0;
-}
-
-/** Swaps an item with its neighbour above (-1) or below (1) in an ordered list. */
-async function swapWithNeighbour(
-  items: { id: string; order: number }[],
-  id: string,
-  direction: -1 | 1,
-  update: (id: string, order: number) => Promise<unknown>,
-): Promise<boolean> {
-  const sorted = [...items].sort((a, b) => a.order - b.order);
-  const index = sorted.findIndex((item) => item.id === id);
-  const other = sorted[index + direction];
-  if (index < 0 || !other) return false;
-  await update(sorted[index].id, other.order);
-  await update(other.id, sorted[index].order);
-  return true;
 }
 
 export async function moveSheetQuestion(entryId: string, direction: -1 | 1): Promise<boolean> {
