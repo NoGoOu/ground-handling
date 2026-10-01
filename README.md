@@ -98,6 +98,17 @@ A formátumok, a párosítás és a minták: [`docs/messages.md`](docs/messages.
 - **Óraátállítás:** a sávok a valós időt követik, a nap 92 vagy 100 sávból áll. Az áttekintés oszlopai a helyi óra negyedórái: tavasszal a nem létező óra cellái üresek, ősszel a kétszer előforduló óra cellája a nagyobb igényt és a nagyobb hiányt mutatja (a napi nézetben mindkét sáv látszik).
 - Tiszta függvények (`lib/staffing/`), külső AI nélkül. A sávos nézeten a létszámigény nem jelenik meg.
 
+**10. mérföldkő – oktatás: e-vizsga, on the job gyakorlás (OJT) és kibocsátás**
+
+- **A képzés részei** (`Képzések → Vizsgák`, „Vizsgák szerkesztése”: Oktatási koordinátor, Admin): elméleti rész e-vizsgával (csak dolgozattal és sikerességi határral rendelkező képzésnél), gyakorlati rész OJT-val és gyakorlati vizsgával. Az OJT-követelmény képzésenkénti paraméter: a megfelelő gyakorlások száma (alapból 10), a kötelező mérföldkövek teljessége (100%) és a zöld vagy sárga rögzítések aránya (0%, vagyis nincs küszöb); az alapértékek helyőrzők.
+- **Kérdésbank és vizsgalapok:** egy helyes, több helyes és szöveges kérdés; a vizsgalapon a kérdések sorrendje, időkorlát, és a többválaszos pontozás módja (paraméter: csak a teljesen helyes válasz ér pontot, vagy arányos). Kérdés és szempont nem törölhető, csak inaktiválható.
+- **Képzési folyamat** (`Képzések → Képzési folyamatok`): a koordinátor indítja és szakíthatja meg; egy ügynöknek egy képzésből egy nyitott folyamata lehet. Állapota folyamatban, kibocsátható, kibocsátva vagy megszakítva, részenként az előrehaladással. A koordinátor, a vizsgáztatók és a kibocsátásra jogosultak mindenkiét látják, a csapatvezető a csapatáét, az ügynök a sajátját („Képzéseim”).
+- **E-vizsga:** a vizsgáztató vagy a koordinátor nyitja meg; a vizsgázó a saját belépésével tölti ki, telefonon is. Minden válasz azonnal mentődik; az időkorlát a Kezdés gombtól fut, lejártakor a mentett válaszok beadódnak. A kísérlet a vizsgalap másolatát kapja, így a későbbi szerkesztés nem változtatja meg. A választós kérdéseket a rendszer pontozza, a szöveges válaszokat a vizsgáztató; sikeres, ha az eredmény eléri a képzés határát. Visszajelzés (a vizsgázó is látja) és belső megjegyzés (csak a vizsgáztatók, a kibocsátásra jogosultak és a koordinátor); a vizsgázó a helyes válaszokat nem látja.
+- **OJT a taskon:** aki a taskot kiosztja, a task részéhez gyakornokot vesz fel, ha a rész ügynöke mentorálhat („Mentorálás” és a képzés jogosítása a gyakorlás napján). A gyakornok az ügynök nézetében „OJT” jelöléssel látja a taskot, a rész mérföldköveit rögzítheti (a rögzítésnél „gyakornok” látszik), a mentor ezeket javíthatja. A task lezárása után a mentor értékel; a mutatók (teljesség, a gyakornok aránya, eltérések színenként) ekkor rögzülnek. A sávos nézeten a gyakornok sávján „OJT” doboz, amely az ütközésvizsgálatba beleszámít, a létszámigénybe nem.
+- **Gyakorlati vizsga:** a folyamat oldaláról, a vizsgázó elmúlt 14 napjának egy task részén, ahol ügynök vagy gyakornok volt; szempontonként megfelelt / nem felelt meg, végeredmény, visszajelzés, belső megjegyzés. Figyelmeztet, ha az OJT még nem teljesül.
+- **Kibocsátás** („Kibocsátás”: Oktatási koordinátor, Admin): a kibocsátható folyamatból egy gombbal létrejön a sikeres képzési rekord (a mai nappal, az érvényesség a jogosítás szerint, az utolsó sikeres e-vizsga eredményével), és ettől érvényes a jogosítás. A képzési rekord kézi rögzítése megmarad.
+- Vizsgáztatni és értékelni a jogosultsággal és a képzés aznap érvényes jogosításával lehet; tiszta függvények (`lib/exams/`) tesztekkel.
+
 ## Indítás Docker Compose-zal
 
 Követelmény: [Docker Desktop](https://www.docker.com/products/docker-desktop/) (Windows / macOS) vagy Docker Engine Compose-zal (Linux).
@@ -118,21 +129,15 @@ A demo légitársaságnak két feladattípusa van: az elsődleges „Alap” (a 
 
 A demo beosztás a betöltés napjára és a következő napra publikált és valós réteget tartalmaz: Nagy Eszter reggelén egy oktatás blokk van 20–20 perc utazási idővel, a második napon pedig a valós műszakja eltér a publikálttól.
 
-### A létszámigény kipróbálása
-
-1. `tervezo`-ként vagy `vezeto`-ként nyisd meg a `Létszámigény` menüt. A betöltés napján a csúcs 16:15-kor 4 fő (két átfedő forduló, feladattípusonként 2–2), miközben egy ügynök van beosztva: a legnagyobb hiány 3 fő. Reggel 06:15 és 08:15 között szintén hiány van, délben a két ügynök fedezi az igényt.
-2. 10:45-kor a beosztás még 1 fő: Nagy Eszter oktatása 10:30-ig tart, a 20 perces visszaút 10:50-ig, a műszakja 11:00-kor kezdődik.
-3. Az `Áttekintés` fülön mától egy hét látszik: a mai nap sora színes, a holnapi napnak van beosztása, de igénye nincs; az azutáni napoknak nincs valós beosztásuk (∅). Az importpróba után a 2024. szeptember 10-i hét igénye is megnézhető (ott még nincs beosztás, így hiány sem jelölődik).
-4. A tervezet összevetése: az importpróba és a tervezői nézet kipróbálása (lent) után, amikor a terv „Mentés a tervezetbe” gombbal a 2024. szeptember 10-i hét tervezetébe került, `tervezo`-ként nyisd meg az `Áttekintés` fület 2024-09-10 és 2024-09-16 között: a napok „T” jelölést kapnak, és az igény a tervezet műszakjaival vetődik össze. `vezeto`-ként ugyanitt csak az igény látszik, mert a napok még nincsenek publikálva.
-
 | Felhasználónév | Név | Szerepkör |
 |---|---|---|
 | `admin` | Admin Adél | Admin |
 | `vezeto` | Vezető Viktor | Műszakvezető (a demo csapat vezetője) |
 | `tervezo` | Tervező Tamás | Tervező |
-| `ugynok1` | Kiss Péter | Ügynök |
+| `ugynok1` | Kiss Péter | Ügynök, Mentor |
 | `ugynok2` | Nagy Eszter | Ügynök |
 | `koordinator` | Oktató Olga | Oktatási koordinátor |
+| `vizsgaztato` | Vizsga Vera | Vizsgáztató |
 
 ### A képzések kipróbálása
 
@@ -189,6 +194,22 @@ A seed felveszi a Ryanairt (`FR`, a demo sablon másolatával mint alapértelmez
 3. Adj neveket a pozícióknak, majd „Mentés a tervezetbe”. A `Műszakok` oldalon a 2024. 09. 10-i héten a tervezetben megjelennek a műszakok.
 4. `vezeto`-ként a terv oldalán „A nap kiosztásának átvétele” a még kiosztatlan részekre teszi a neveket; a sávos nézet (2024. 09. 10.) mutatja az eredményt.
 
+### A létszámigény kipróbálása
+
+1. `tervezo`-ként vagy `vezeto`-ként nyisd meg a `Létszámigény` menüt. A betöltés napján a csúcs 16:15-kor 4 fő (két átfedő forduló, feladattípusonként 2–2), miközben egy ügynök van beosztva: a legnagyobb hiány 3 fő. Reggel 06:15 és 08:15 között szintén hiány van, délben a két ügynök fedezi az igényt.
+2. 10:45-kor a beosztás még 1 fő: Nagy Eszter oktatása 10:30-ig tart, a 20 perces visszaút 10:50-ig, a műszakja 11:00-kor kezdődik.
+3. Az `Áttekintés` fülön mától egy hét látszik: a mai nap sora színes, a holnapi napnak van beosztása, de igénye nincs; az azutáni napoknak nincs valós beosztásuk (∅). Az importpróba után a 2024. szeptember 10-i hét igénye is megnézhető (ott még nincs beosztás, így hiány sem jelölődik).
+4. A tervezet összevetése: az importpróba és a tervezői nézet kipróbálása (fent) után, amikor a terv „Mentés a tervezetbe” gombbal a 2024. szeptember 10-i hét tervezetébe került, `tervezo`-ként nyisd meg az `Áttekintés` fület 2024-09-10 és 2024-09-16 között: a napok „T” jelölést kapnak, és az igény a tervezet műszakjaival vetődik össze. `vezeto`-ként ugyanitt csak az igény látszik, mert a napok még nincsenek publikálva.
+
+### Az oktatás kipróbálása
+
+A seed a „Helyőrző A képzés”-t elméleti és gyakorlati résszel (az OJT-követelmény a demóban 2 gyakorlás), a „Helyőrző C képzés”-t csak elméleti résszel tölti be, egy rövid kérdésbankkal, két vizsgalappal és három gyakorlati szemponttal. Kiss Péter mentor, Vizsga Vera vizsgáztató (mindkettőnek érvényes a jogosítása).
+
+1. `ugynok2`-ként (Nagy Eszter) a `Képzések → Saját jogosításaim` oldalon kiemelve látszik a nyitott e-vizsga: a Kezdés gombtól 20 perce van, telefonon is kitölthető. Lent a két képzési folyamata.
+2. A „Helyőrző A” folyamat félúton van: egy sikertelen kísérlet (5 / 10 pont, 50%, visszajelzéssel), egy nyitott kísérlet, 1 / 2 megfelelő gyakorlás (a ZZ1101 gyors fordulón, Kiss Péter mellett; az ügynök nézetben „OJT” jelöléssel), gyakorlati vizsga még nincs. `vizsgaztato`-ként a kísérlet részleteinél a helyes válaszok, a szöveges válasz pontozása és a belső megjegyzés is látszik; a folyamat oldalán gyakorlati vizsga rögzíthető (figyelmeztet, mert az OJT még nem teljesül).
+3. A „Helyőrző C” ismétlő folyamat kibocsátható (sikeres e-vizsga, 100%): `koordinator`-ként a `Képzések → Képzési folyamatok` oldalon elöl áll; a „Kibocsátás” gomb létrehozza a képzési rekordot, és Nagy Eszternél a HC jogosítás érvényessé válik.
+4. `vezeto`-ként egy mai task oldalán az „On the job gyakorlás” szakaszban gyakornok vehető fel – csak olyan rész mellé, amelynek ügynöke mentorálhat (pl. Kiss Péter részei); a sávos nézeten a gyakornok sávján „OJT” doboz jelenik meg. (A ZZ1101-es gyakorlás 07:30-kor volt, Nagy Eszter műszakja előtt, ezért az ő sávján ez a doboz műszakon kívülinek jelölődik.)
+
 ### Hasznos parancsok
 
 ```bash
@@ -244,6 +265,7 @@ Ha a Docker nem elérhető, a Prisma saját helyi Postgrese is megfelel fejleszt
 | `lib/roster.ts` | Beosztás-segédfüggvények: publikált napok, a publikált és a valós réteg eltérései |
 | `lib/task-types.ts` | Feladattípusok: egy új járat taskjai a légitársaság aktív feladattípusai szerint, és ugyanannak az embernek két feladattípusa egy járaton |
 | `lib/planning/` | Tervezés: bemenet (napi ablakok), a pozíció szabályai, minimális pozíciószám, kiegyenlítés és mutatók, betölthetőség párosítással, a terv nézete, mentés a tervezetbe, kiosztás átvétele; tiszta függvények tesztekkel |
+| `lib/exams/` | Oktatás: a vizsgakísérlet másolata, az e-vizsga pontozása és eredménye, az OJT-mutatók és a követelmény, a folyamat állapota és a kibocsátás rekordja, a mentor és a vizsgáztató alkalmassága; a helyőrző alapértékek egy helyen (`defaults.ts`); tiszta függvények tesztekkel |
 | `lib/staffing/` | Létszámigény: a nap 15 perces sávjai óraátállítással, a sáv csúcsa feladattípusonként és összesen, a beosztás és a hiány, a nap összesítése, a grafikon és az áttekintés számításai; tiszta függvények tesztekkel |
 | `lib/telex/` | Üzenetek: szétválasztás (COR, -TITLE), fejléc, MVT/LDM/CPM/UCM, PSM/PTM (csak darabszámok) és ADEXP (SAM, SRM) feldolgozók, párosítás, slot, ellenőrzések, hatás a járatra, infografika, MVT-előállítás (indulási, érkezési, korrekció), kézbesítési döntések; tiszta függvények, tesztek a docs/messages.md mintáival |
 | `lib/data/messages.ts`, `lib/data/outbound.ts` | Üzenetek tárolása, verziózása, hatása a járatra; kimenő üzenetek küldése címzettenkénti állapottal |

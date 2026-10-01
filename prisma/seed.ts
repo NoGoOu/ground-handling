@@ -39,6 +39,7 @@ import {
   SEED_REQUIREMENTS,
   seedCertificatePdf,
 } from "./seed-training";
+import { seedExams } from "./seed-exams-run";
 import {
   buildSeedMessages,
   SEED_ADDRESSES,
@@ -409,6 +410,9 @@ async function main() {
       sourceNote: null,
     });
   }
+
+  // E-exams, OJT and release (10. mérföldkő): on top of the flights and the training records.
+  await seedExams(localDate);
 
   console.log(`Seed done for ${localDate}. Users: ${SEED_USERS.map((u) => u.username).join(", ")} (password: ${DEMO_PASSWORD})`);
 }

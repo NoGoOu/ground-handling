@@ -10,9 +10,11 @@ export const SEED_USERS = [
   { username: "admin", name: "Admin Adél", roles: ["Admin"], agent: false },
   { username: "vezeto", name: "Vezető Viktor", roles: ["Műszakvezető"], agent: false },
   { username: "tervezo", name: "Tervező Tamás", roles: ["Tervező"], agent: false },
-  { username: "ugynok1", name: "Kiss Péter", roles: ["Ügynök"], agent: true },
+  // Kiss Péter also mentors trainees (10. mérföldkő).
+  { username: "ugynok1", name: "Kiss Péter", roles: ["Ügynök", "Mentor"], agent: true },
   { username: "ugynok2", name: "Nagy Eszter", roles: ["Ügynök"], agent: true },
   { username: "koordinator", name: "Oktató Olga", roles: ["Oktatási koordinátor"], agent: false },
+  { username: "vizsgaztato", name: "Vizsga Vera", roles: ["Vizsgáztató"], agent: false },
 ] as const;
 
 /** Every agent belongs to a team; the shift lead leads the demo team. */
