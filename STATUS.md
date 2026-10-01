@@ -4,22 +4,19 @@
 
 ## Mi készült el
 
-- **11. mérföldkő, 1. lépés:** adatmodell és migráció.
-  - Eszköztípus a mezőlistájával (határidő, számláló mértékegységgel, szöveg; mező nem törölhető, csak inaktiválható); eszköz (azonosító, rendszám, leírás, állapot: üzemképes, üzemképtelen, kivonva; megjegyzés).
-  - Mezőértékek és minden változásuk naplója (ki, mikor, régi és új érték); az eszköz állapotváltásainak naplója (a kiváltó hibajegyre hivatkozva); eszközdokumentumok (az eltávolítás naplózott).
-  - Hibajegy (leírás, „üzemképtelen” jelölés, állapot: nyitott, folyamatban, lezárva; a lezárás eredménye: javítva vagy nem hiba), fotók, megjegyzések és az állapotváltások naplója.
-  - Az eszközök „hamarosan lejár” beállítása (alapból 30 nap). Az adatbázis őrzi: a lezárt jegynek van eredménye és lezárási ideje, a többinek nincs.
-  - Új jogosultságok: „Eszközök kezelése”, „Hibajegyek kezelése”, „Hiba jelentése” (minden alapértelmezett szerepkör), „Hibajegyek megtekintése” hatókörrel (Ügynök: saját; Műszakvezető, Műszaki, Admin: összes); új Műszaki alapértelmezett szerepkör. A jelentő a saját jegyeit mindig látja; az eszközlistát a Műszaki, az Admin és a műszakvezető látja. Tesztekkel.
-- A 10. mérföldkő utómunkája (`3c2069f`): kizáró szempontok a gyakorlati vizsgán.
+- **11. mérföldkő, 2. lépés:** tiszta függvények (`lib/equipment/`), tesztekkel.
+  - `status.ts`: a határidő állapota (érvényes, hamarosan lejár, lejárt, nincs megadva – a jogosításokkal azonos szabály: a saját napján még érvényes); a számláló állapota (esedékes, ha elérte az esedékességi értéket; esedékesség nélkül soha); ami figyelmet kér egy eszközön (lejáró és lejárt határidők, esedékes számlálók, az inaktív mezők nélkül); a legközelebbi határidő.
+  - `faults.ts`: a jegy állapotátmenetei (nyitott → folyamatban → lezárva, nyitottból közvetlenül is lezárható, újranyitás nincs); jelentéskor az „üzemképtelen” jelölés az üzemképes eszközt azonnal üzemképtelenre állítja; kivont eszközre nem lehet jelenteni; a kézi állapotváltások és hogy melyik jogosultság kell hozzájuk (kivonás és visszahozás: „Eszközök kezelése”, üzemképtelen és vissza: „Hibajegyek kezelése”).
+- 1. lépés (`cceb047`): adatmodell, migráció, jogosultságok, Műszaki szerepkör.
 
 ## Állapot
 
-- Utolsó commit: `feat: add the data model of ground equipment and faults` (ez a commit; előtte `3c2069f`)
-- Tesztek: `npm test` → 758 teszt, mind zöld; `npm run lint` hibátlan, `npx tsc --noEmit` tiszta
+- Utolsó commit: `feat: judge deadlines, counters and faults in pure functions` (ez a commit; előtte `cceb047`)
+- Tesztek: `npm test` → 769 teszt, mind zöld; `npm run lint` hibátlan, `npx tsc --noEmit` tiszta
 
 ## Eltérések a CLAUDE.md-től
 
-- Nincs. A jóváhagyott 7 döntés szerint készül.
+- Nincs. Megvalósításban: kivont eszköz kezelője („Eszközök kezelése”) visszahozhatja üzemképesre, naplózva.
 
 ## Kérdések a tervezéshez
 
@@ -27,4 +24,4 @@
 
 ## Következő lépés
 
-- 2. lépés: tiszta függvények (`lib/equipment/`) – a határidő és a számláló állapota, a legközelebbi határidő, a hibajegy állapotátmenetei, az eszköz állapota jelentéskor; tesztekkel.
+- 3. lépés: eszköztípusok és mezőlisták szerkesztése.
