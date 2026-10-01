@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { deviationLevel } from "@/lib/turnaround";
 import { fieldErrors } from "@/lib/validation/form";
-import { expirySettingsSchema, settingsSchema, type SettingsFormInput } from "@/lib/validation/settings";
+import { equipmentExpirySettingsSchema, expirySettingsSchema, settingsSchema, type SettingsFormInput } from "@/lib/validation/settings";
 
 const valid: SettingsFormInput = { deviationGreenMaxMinutes: "0", deviationYellowMaxMinutes: "5" };
 
@@ -48,5 +48,14 @@ describe("expiry warning form (6. mérföldkő)", () => {
     expect(expirySettingsSchema.parse({ expiryWarningDays: "30" })).toEqual({ expiryWarningDays: 30 });
     expect(expirySettingsSchema.safeParse({ expiryWarningDays: "366" }).success).toBe(false);
     expect(expirySettingsSchema.safeParse({ expiryWarningDays: "" }).success).toBe(false);
+  });
+});
+
+describe("equipment expiry warning form (11. mérföldkő)", () => {
+  it("takes whole days up to a year", () => {
+    expect(equipmentExpirySettingsSchema.parse({ equipmentWarningDays: "0" })).toEqual({ equipmentWarningDays: 0 });
+    expect(equipmentExpirySettingsSchema.parse({ equipmentWarningDays: " 45 " })).toEqual({ equipmentWarningDays: 45 });
+    expect(equipmentExpirySettingsSchema.safeParse({ equipmentWarningDays: "-1" }).success).toBe(false);
+    expect(equipmentExpirySettingsSchema.safeParse({ equipmentWarningDays: "2.5" }).success).toBe(false);
   });
 });

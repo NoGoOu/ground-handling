@@ -72,3 +72,33 @@ export function nearestDeadline(
   }
   return nearest && { ...nearest, status: deadlineStatus(nearest.date, today, warningDays) };
 }
+
+export interface ExpiringRow<E> {
+  equipment: E;
+  alert: Alert;
+}
+
+/**
+ * The expiring deadlines list (CLAUDE.md, 11. mérföldkő): two groups. Expiring
+ * soon by date; expired by date (the longest expired first), then the counters
+ * that reached their due value (approved decision 2), by identifier.
+ */
+export function expiringGroups<E extends { identifier: string }>(
+  items: readonly { equipment: E; alerts: readonly Alert[] }[],
+): { expiring: ExpiringRow<E>[]; expired: ExpiringRow<E>[] } {
+  const rows = items.flatMap(({ equipment, alerts }) => alerts.map((alert) => ({ equipment, alert })));
+  const byDate = (a: ExpiringRow<E>, b: ExpiringRow<E>) => {
+    const dateA = a.alert.kind === "DEADLINE" ? a.alert.date : null;
+    const dateB = b.alert.kind === "DEADLINE" ? b.alert.date : null;
+    if (dateA !== dateB) {
+      if (dateA === null) return 1;
+      if (dateB === null) return -1;
+      return dateA < dateB ? -1 : 1;
+    }
+    return a.equipment.identifier.localeCompare(b.equipment.identifier, "hu") || a.alert.name.localeCompare(b.alert.name, "hu");
+  };
+  return {
+    expiring: rows.filter((row) => row.alert.status === "EXPIRING").sort(byDate),
+    expired: rows.filter((row) => row.alert.status !== "EXPIRING").sort(byDate),
+  };
+}

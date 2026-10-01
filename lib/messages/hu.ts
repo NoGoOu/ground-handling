@@ -16,6 +16,7 @@ export const hu = {
     training: "Képzések",
     equipment: "Eszközök",
     faults: "Hibajegyek",
+    openFaults: "{n} nyitott hibajegy",
     myTasks: "Taskjaim",
     messages: "Üzenetek",
     admin: "Admin",
@@ -423,6 +424,19 @@ export const hu = {
     intro: "A földi eszközök műszaki nyilvántartása: állapot, nyitott hibajegyek, a legközelebbi határidő. Eszköz nem törölhető, csak kivonható.",
     typesLink: "Eszköztípusok",
     expiringLink: "Lejáró határidők",
+    expiring: {
+      title: "Lejáró határidők",
+      intro:
+        "Az aktív típusú, nem kivont eszközök határidői. „Hamarosan lejár”: legfeljebb {days} nap van hátra (Admin → Beállítások). Az esedékességet elért számlálók a lejártak között vannak.",
+      expiring: "Hamarosan lejár",
+      expired: "Lejárt vagy elérte",
+      empty: "Nincs ilyen.",
+      columns: { equipment: "Eszköz", type: "Típus", status: "Állapot", field: "Mező", due: "Lejárat / állás", left: "Hátra" },
+      daysLeft: "{days} nap",
+      today: "ma jár le",
+      daysAgo: "{days} napja lejárt",
+      reached: "elérte",
+    },
     faultsLink: "Hibajegyek",
     createTitle: "Új eszköz",
     create: "Felvétel",
@@ -481,7 +495,6 @@ export const hu = {
     confirmRemove: "A fájl végleg törlődik a tárhelyről; csak a naplóbejegyzés marad meg. Folytatod?",
     open: "Megnyitás",
     uploadDone: "Feltöltve.",
-    faultsTitle: "Hibajegyek",
     errors: {
       type: "Válassz aktív eszköztípust.",
       identifier: "1–30 karakter: betű, számjegy, szóköz, pont, kötőjel, perjel.",
@@ -996,6 +1009,9 @@ export const hu = {
     expiryTitle: "Lejáró jogosítások",
     expiryHint: "Ennyi nappal a lejárat előtt „hamarosan lejár” állapotú egy jogosítás (6. mérföldkő).",
     expiryDays: "Figyelmeztetés a lejárat előtt",
+    equipmentExpiryTitle: "Lejáró eszköz-határidők",
+    equipmentExpiryHint:
+      "Ennyi nappal a lejárat előtt „hamarosan lejár” állapotú egy földi eszköz határideje, pl. a műszaki vizsga (11. mérföldkő).",
     daysUnit: "nap",
     errors: {
       minutes: "0 és 1440 közötti egész szám.",

@@ -13,6 +13,7 @@ import {
   canManageFaults,
   canReportFault,
   canViewEquipment,
+  canOpenFaults,
   canViewFault,
   faultVisibleReporterIds,
   canExamine,
@@ -438,7 +439,10 @@ describe("messages (7. mérföldkő)", () => {
     // The shift lead sees every fault and the state of the equipment, but does not manage them.
     expect([canManageEquipment(lead), canManageFaults(lead), canViewEquipment(lead)]).toEqual([false, false, true]);
     // Everyone reports; an agent and the coordinator see only their own.
-    for (const actor of [anna, planner, lead, coordinator, technician, admin]) expect(canReportFault(actor)).toBe(true);
+    for (const actor of [anna, planner, lead, coordinator, technician, admin]) {
+      expect(canReportFault(actor)).toBe(true);
+      expect(canOpenFaults(actor)).toBe(true);
+    }
     expect(canViewEquipment(anna)).toBe(false);
     expect(faultVisibleReporterIds(anna)).toEqual(["anna"]);
     expect(faultVisibleReporterIds(coordinator)).toEqual(["olga"]);

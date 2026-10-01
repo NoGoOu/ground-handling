@@ -339,6 +339,11 @@ export function canViewEquipment(actor: Actor): boolean {
   return canManageEquipment(actor) || canManageFaults(actor) || scopeOf(actor, "FAULT_VIEW") === "ALL";
 }
 
+/** The faults area: whoever reports, handles or views faults. */
+export function canOpenFaults(actor: Actor): boolean {
+  return canReportFault(actor) || canManageFaults(actor) || can(actor, "FAULT_VIEW");
+}
+
 /** A fault: its reporter always, the others by the scope of viewing faults. */
 export function canViewFault(actor: Actor, fault: { reportedById: string }): boolean {
   return fault.reportedById === actor.id || canManageFaults(actor) || inScope(actor, "FAULT_VIEW", [fault.reportedById]);

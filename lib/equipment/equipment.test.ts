@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { canMoveEquipment, canMoveFault, equipmentStepNeeds, isOpenFault, isReportable, statusOnReport } from "@/lib/equipment/faults";
-import { counterStatus, deadlineStatus, equipmentAlerts, nearestDeadline, type FieldValue } from "@/lib/equipment/status";
+import { counterStatus, deadlineStatus, equipmentAlerts, expiringGroups, nearestDeadline, type Alert, type FieldValue } from "@/lib/equipment/status";
 
 // Ground equipment and faults (CLAUDE.md, 11. mérföldkő).
 
@@ -54,6 +54,35 @@ describe("what needs attention on a piece of equipment", () => {
     expect(nearestDeadline(values, "2026-10-02", 30)).toEqual({ name: "Szerviz", date: "2026-09-30", status: "EXPIRED" });
     expect(nearestDeadline(values.slice(2), "2026-10-02", 30)).toEqual({ name: "Biztosítás", date: "2027-05-01", status: "VALID" });
     expect(nearestDeadline([], "2026-10-02", 30)).toBeNull();
+  });
+});
+
+describe("the expiring deadlines list", () => {
+  const deadline = (name: string, status: "EXPIRING" | "EXPIRED", date: string): Alert => ({ fieldId: name, name, kind: "DEADLINE", status, date });
+  const counter = (name: string): Alert => ({ fieldId: name, name, kind: "COUNTER", status: "DUE", value: 1510, due: 1500, unit: "üzemóra" });
+
+  it("groups expiring soon and expired, the counters reached with the expired ones after the dates", () => {
+    const { expiring, expired } = expiringGroups([
+      { equipment: { identifier: "PB-02" }, alerts: [deadline("Műszaki vizsga", "EXPIRING", "2026-10-20"), counter("Üzemóra")] },
+      { equipment: { identifier: "PB-01" }, alerts: [deadline("Szerviz", "EXPIRED", "2026-09-30"), deadline("Műszaki vizsga", "EXPIRING", "2026-10-05")] },
+      { equipment: { identifier: "GPU-1" }, alerts: [counter("Üzemóra"), deadline("Műszaki vizsga", "EXPIRED", "2026-08-01")] },
+      { equipment: { identifier: "BUS-1" }, alerts: [] },
+    ]);
+    expect(expiring.map((row) => `${row.equipment.identifier} ${row.alert.name}`)).toEqual(["PB-01 Műszaki vizsga", "PB-02 Műszaki vizsga"]);
+    expect(expired.map((row) => `${row.equipment.identifier} ${row.alert.name}`)).toEqual([
+      "GPU-1 Műszaki vizsga",
+      "PB-01 Szerviz",
+      "GPU-1 Üzemóra",
+      "PB-02 Üzemóra",
+    ]);
+  });
+
+  it("orders the same day by identifier", () => {
+    const { expiring } = expiringGroups([
+      { equipment: { identifier: "ST-2" }, alerts: [deadline("Műszaki vizsga", "EXPIRING", "2026-10-10")] },
+      { equipment: { identifier: "ST-1" }, alerts: [deadline("Műszaki vizsga", "EXPIRING", "2026-10-10")] },
+    ]);
+    expect(expiring.map((row) => row.equipment.identifier)).toEqual(["ST-1", "ST-2"]);
   });
 });
 

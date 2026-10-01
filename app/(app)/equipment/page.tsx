@@ -3,7 +3,7 @@ import { DeadlineBadge, EquipmentStatusBadge } from "@/components/badges";
 import { listActiveTypes, listEquipment } from "@/lib/data/equipment";
 import { messages } from "@/lib/messages";
 import { fmt } from "@/lib/messages/format";
-import { canManageEquipment, canViewEquipment } from "@/lib/permissions";
+import { canManageEquipment, canOpenFaults, canViewEquipment } from "@/lib/permissions";
 import { requireCapability } from "@/lib/session";
 import { getSettings } from "@/lib/settings";
 import { toLocalDate } from "@/lib/time";
@@ -36,6 +36,14 @@ export default async function EquipmentPage(props: PageProps<"/equipment">) {
         {manage && (
           <Link href="/equipment/types" className="btn btn-secondary">
             {e.typesLink}
+          </Link>
+        )}
+        <Link href="/equipment/expiring" className="btn btn-secondary">
+          {e.expiringLink}
+        </Link>
+        {canOpenFaults(user) && (
+          <Link href="/faults" className="btn btn-secondary">
+            {e.faultsLink}
           </Link>
         )}
         <Link href={showRetired ? "/equipment" : "/equipment?retired=1"} className="btn btn-secondary">

@@ -3,7 +3,7 @@ import { messages } from "@/lib/messages";
 import { canManageSettings } from "@/lib/permissions";
 import { requireCapability } from "@/lib/session";
 import { getSettings } from "@/lib/settings";
-import { updateExpirySettings, updateSettings } from "./actions";
+import { updateEquipmentExpirySettings, updateExpirySettings, updateSettings } from "./actions";
 import { ExpirySettingsForm } from "./expiry-form";
 import { SettingsForm } from "./settings-form";
 
@@ -11,7 +11,7 @@ const t = messages.settingsForm;
 
 export default async function SettingsPage() {
   await requireCapability(canManageSettings);
-  const { deviationThresholds, expiryWarningDays } = await getSettings();
+  const { deviationThresholds, expiryWarningDays, equipmentWarningDays } = await getSettings();
 
   return (
     <div className="flex flex-col gap-4">
@@ -31,7 +31,16 @@ export default async function SettingsPage() {
       </section>
       <section className="flex flex-col gap-3 rounded-xl border border-neutral-200 bg-white p-4">
         <h2 className="text-lg font-semibold">{t.expiryTitle}</h2>
-        <ExpirySettingsForm action={updateExpirySettings} initial={String(expiryWarningDays)} />
+        <ExpirySettingsForm action={updateExpirySettings} name="expiryWarningDays" hint={t.expiryHint} initial={String(expiryWarningDays)} />
+      </section>
+      <section className="flex flex-col gap-3 rounded-xl border border-neutral-200 bg-white p-4">
+        <h2 className="text-lg font-semibold">{t.equipmentExpiryTitle}</h2>
+        <ExpirySettingsForm
+          action={updateEquipmentExpirySettings}
+          name="equipmentWarningDays"
+          hint={t.equipmentExpiryHint}
+          initial={String(equipmentWarningDays)}
+        />
       </section>
     </div>
   );

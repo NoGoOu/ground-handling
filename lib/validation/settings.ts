@@ -33,3 +33,9 @@ export const EXPIRY_SETTINGS_FIELDS = ["expiryWarningDays"] as const;
 export type ExpirySettingsFormInput = Record<(typeof EXPIRY_SETTINGS_FIELDS)[number], string>;
 
 export const expirySettingsSchema = z.object({ expiryWarningDays: intField(0, 365, e.days) });
+
+/** "Hamarosan lejár" of the deadlines of ground equipment (11. mérföldkő), a form of its own. */
+export const EQUIPMENT_EXPIRY_SETTINGS_FIELDS = ["equipmentWarningDays"] as const;
+export type EquipmentExpirySettingsFormInput = Record<(typeof EQUIPMENT_EXPIRY_SETTINGS_FIELDS)[number], string>;
+
+export const equipmentExpirySettingsSchema = z.object({ equipmentWarningDays: intField(0, 365, e.days) });

@@ -3,7 +3,7 @@ import type { Prisma } from "@/generated/prisma/client";
 import * as storage from "@/lib/data/storage";
 import { prisma } from "@/lib/db";
 import { canMoveEquipment, type EquipmentStatus } from "@/lib/equipment/faults";
-import { equipmentAlerts, nearestDeadline, type FieldValue } from "@/lib/equipment/status";
+import { equipmentAlerts, expiringGroups, nearestDeadline, type FieldValue } from "@/lib/equipment/status";
 import { checkUpload, type UploadProblem } from "@/lib/training";
 import type { FieldValueData } from "@/lib/validation/equipment";
 
@@ -56,6 +56,19 @@ export async function listEquipment(options: { retired: boolean }, today: string
       alerts: equipmentAlerts(values, today, warningDays),
     };
   });
+}
+
+/**
+ * The expiring deadlines list (CLAUDE.md, 11. mérföldkő): only equipment of an
+ * active type that is not retired; inactive fields are passed over.
+ */
+export async function listExpiringEquipment(today: string, warningDays: number) {
+  const rows = await listEquipment({ retired: false }, today, warningDays);
+  return expiringGroups(
+    rows
+      .filter((row) => row.type.active)
+      .map((row) => ({ equipment: { id: row.id, identifier: row.identifier, status: row.status, type: { name: row.type.name } }, alerts: row.alerts })),
+  );
 }
 
 export async function getEquipment(id: string) {

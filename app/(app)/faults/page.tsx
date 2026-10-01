@@ -3,7 +3,7 @@ import { FaultStatusBadge } from "@/components/badges";
 import { listFaults } from "@/lib/data/faults";
 import { messages } from "@/lib/messages";
 import { fmt } from "@/lib/messages/format";
-import { canManageFaults, canReportFault, faultVisibleReporterIds } from "@/lib/permissions";
+import { canOpenFaults, canReportFault, faultVisibleReporterIds } from "@/lib/permissions";
 import { requireCapability } from "@/lib/session";
 import { formatDateTime } from "@/lib/time";
 
@@ -14,7 +14,7 @@ import { formatDateTime } from "@/lib/time";
 const f = messages.faults;
 
 export default async function FaultsPage(props: PageProps<"/faults">) {
-  const user = await requireCapability((u) => canReportFault(u) || canManageFaults(u) || faultVisibleReporterIds(u) === null);
+  const user = await requireCapability(canOpenFaults);
   const { show } = await props.searchParams;
   const all = show === "all";
   const faults = await listFaults(faultVisibleReporterIds(user), { open: !all });
