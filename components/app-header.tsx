@@ -9,6 +9,7 @@ import {
   canOpenTrainingArea,
   canRecordMessages,
   canViewBoard,
+  canViewEquipment,
   canViewOwnTasks,
   canViewPlans,
   canViewRoster,
@@ -26,6 +27,8 @@ function linksFor(user: CurrentUser) {
   if (canViewStaffing(user)) links.push({ href: "/staffing", label: messages.nav.staffing });
   if (canOpenTrainingArea(user)) links.push({ href: "/training", label: messages.nav.training });
   if (canRecordMessages(user)) links.push({ href: "/messages", label: messages.nav.messages });
+  // Ground equipment (11. mérföldkő).
+  if (canViewEquipment(user)) links.push({ href: "/equipment", label: messages.nav.equipment });
   // "My tasks" is the agents' view; agents are the users who belong to a team.
   if (user.teamId && canViewOwnTasks(user)) links.push({ href: "/agent", label: messages.nav.myTasks });
   if (canOpenAdmin(user)) links.push({ href: "/admin", label: messages.nav.admin });

@@ -156,3 +156,26 @@ export function OjtBadge() {
     </span>
   );
 }
+
+const equipmentStyle = {
+  OPERATIONAL: "bg-emerald-100 text-emerald-800",
+  OUT_OF_SERVICE: "bg-red-100 text-red-800",
+  RETIRED: "bg-neutral-100 text-neutral-500",
+} as const;
+
+/** The state of a piece of ground equipment (11. mérföldkő). */
+export function EquipmentStatusBadge({ status }: { status: keyof typeof equipmentStyle }) {
+  return <span className={`${base} ${equipmentStyle[status]}`}>{messages.equipment.statuses[status]}</span>;
+}
+
+const deadlineStyle = {
+  VALID: "bg-emerald-100 text-emerald-800",
+  EXPIRING: "bg-amber-100 text-amber-900",
+  EXPIRED: "bg-red-100 text-red-800",
+  MISSING: "bg-neutral-100 text-neutral-600",
+} as const;
+
+/** A deadline of ground equipment, like the status of a qualification (11. mérföldkő). */
+export function DeadlineBadge({ status, label }: { status: keyof typeof deadlineStyle; label?: string }) {
+  return <span className={`${base} ${deadlineStyle[status]}`}>{label ?? messages.equipment.deadlineStates[status]}</span>;
+}

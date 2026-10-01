@@ -4,22 +4,23 @@
 
 ## Mi készült el
 
-- **11. mérföldkő, 3. lépés:** eszköztípusok és mezőlisták szerkesztése (`/equipment/types`, „Eszközök kezelése”).
-  - Eszköztípus: név, kód, aktív.
-  - Mezőlista: név, fajta (határidő, számláló, szöveg), számlálónál mértékegység (pl. üzemóra, km), aktív; sorrend fel/le mozgatással. A mező nem törölhető, csak inaktiválható; a fajta nem változtatható, ha a mezőnek már van értéke (a felület zárolja, a szerver is ellenőrzi). A mezőnév típuson belül egyedi.
-  - A sorrend-mozgatás és a sorgomb közös segédfüggvénybe, illetve komponensbe került (a vizsgáknál is ezt használja).
-  - Adatbázison ellenőrizve: mezők felvétele, sorrend, a fajta zárolása értékkel, átnevezés, a névütközés elutasítása.
-- 2. lépés (`b34a0a3`): tiszta függvények. 1. lépés (`cceb047`): adatmodell.
+- **11. mérföldkő, 4. lépés:** eszközök (`Eszközök` menü; a Műszaki, az Admin és a műszakvezető látja, a Műszaki és az Admin szerkeszti).
+  - Lista: azonosító, rendszám, típus, állapot, nyitott jegyek száma, legközelebbi határidő az állapotával, figyelmeztetések száma; a kivont eszközök kérésre. Új eszköz felvétele a listáról.
+  - Adatlap: alapadatok (azonosító, rendszám, leírás, megjegyzés); a műszaki adatok mezőnként (határidő az állapotával, számláló az esedékességgel és „elérte” jelzéssel, szöveg), szerkesztésük; minden változás naplója a régi és az új értékkel (változatlan érték nem kerül a naplóba).
+  - Állapot: üzemképtelenre és vissza („Hibajegyek kezelése”), kivonás és visszahozás („Eszközök kezelése”), megjegyzéssel, naplózva.
+  - Dokumentumok: PDF, JPG, PNG, legfeljebb 10 MB, a tartalom alapján ellenőrizve; az eltávolítás a fájlt törli, a naplósor marad; a letöltést a szerver ellenőrzi.
+  - Adatbázison ellenőrizve: értékmentés és napló, rossz fajtájú érték elutasítva, állapotváltások (a nem megengedett elutasítva), a kivont eszköz a listán csak kérésre, figyelmeztetés az esedékes számlálóra, dokumentum feltöltése, rossz típus elutasítva, eltávolítás.
+- 3. lépés (`59412d9`): eszköztípusok és mezőlisták. 2. lépés (`b34a0a3`): tiszta függvények. 1. lépés (`cceb047`): adatmodell.
 
 ## Állapot
 
-- Utolsó commit: `feat: edit equipment types and their fields` (ez a commit; előtte `b34a0a3`)
-- Tesztek: `npm test` → 772 teszt, mind zöld; `npm run lint` hibátlan, `npx tsc --noEmit` tiszta
-- A felületet bejelentkezve nem néztem meg; az oldalak az eszközlistából (4. lépés) érhetők el.
+- Utolsó commit: `feat: keep the register of ground equipment` (ez a commit; előtte `59412d9`)
+- Tesztek: `npm test` → 776 teszt, mind zöld; `npm run lint` hibátlan, `npx tsc --noEmit` tiszta, `npm run build` sikeres
+- A felületet bejelentkezve nem néztem meg.
 
 ## Eltérések a CLAUDE.md-től
 
-- nincs
+- Nincs. Megvalósításban: az eszköz típusa nem változtatható, ha már van műszaki adata (a régi mezők értékei elárvulnának).
 
 ## Kérdések a tervezéshez
 
@@ -27,4 +28,4 @@
 
 ## Következő lépés
 
-- 4. lépés: eszközök – lista, adatlap, a műszaki adatok szerkesztése naplóval, dokumentumok.
+- 5. lépés: hibajegy jelentése telefonról, fotóval.

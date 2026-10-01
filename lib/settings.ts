@@ -13,10 +13,13 @@ export interface Settings {
   expiryWarningDays: number;
   /** A slot warning beyond this many minutes (8. mérföldkő). */
   slotToleranceMinutes: number;
+  /** A deadline of ground equipment within this many days is "hamarosan lejár" (11. mérföldkő). */
+  equipmentWarningDays: number;
 }
 
 export const DEFAULT_EXPIRY_WARNING_DAYS = 30;
 export const DEFAULT_SLOT_TOLERANCE_MINUTES = 10;
+export const DEFAULT_EQUIPMENT_WARNING_DAYS = 30;
 
 /** Read once per request; falls back to the defaults while the row is missing. */
 export const getSettings = cache(async (): Promise<Settings> => {
@@ -27,5 +30,6 @@ export const getSettings = cache(async (): Promise<Settings> => {
       : DEVIATION_THRESHOLDS,
     expiryWarningDays: row?.expiryWarningDays ?? DEFAULT_EXPIRY_WARNING_DAYS,
     slotToleranceMinutes: row?.slotToleranceMinutes ?? DEFAULT_SLOT_TOLERANCE_MINUTES,
+    equipmentWarningDays: row?.equipmentWarningDays ?? DEFAULT_EQUIPMENT_WARNING_DAYS,
   };
 });
