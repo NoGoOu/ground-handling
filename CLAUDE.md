@@ -1,6 +1,6 @@
 # Ground Handling App – projektleírás
 
-*Verzió: 33 · 2026. szeptember 30.*
+*Verzió: 34 · 2026. október 1.*
 
 Nyílt forráskódú webalkalmazás repülőtéri földi kiszolgálás (ground handling) szervezésére. Minden járatfordulóhoz feladattípusonként egy task tartozik, benne mérföldkövekkel, amelyeknek van tervezett és tényleges időpontja. A mérföldkövek légitársaságonként testreszabható sablonokból jönnek. A hozzáférés szerepkör alapú.
 
@@ -644,7 +644,7 @@ A 7. mérföldkő feldolgozója a 2026. szeptember 27-i mintacsomagon ezeken a p
 
 ## 9. mérföldkő – létszámigény
 
-**Kész** (2026. szeptember 30.), az utómunka kivételével: **most az utómunkát építjük** (lásd a szakasz végén). A leírás a megépült működés referenciája; a megvalósítás pontosításai a „További eldöntött szabályok” 66–70. pontjában. Hány ügynök kell egyszerre, 15 perces sávokban, a foglaltsági ablakokból, és ez hogyan viszonyul a valós beosztáshoz. Tiszta függvények, külső AI nélkül. A sávos idősoros nézeten továbbra sem jelenik meg, mert a tervezés más logika szerint működik. A légitársaságonkénti kimutatások később jönnek, a valós adatokkal.
+**Kész** (2026. szeptember 30.); az utómunkával együtt (2026. október 1.). A leírás a megépült működés referenciája; a megvalósítás pontosításai a „További eldöntött szabályok” 66–72. pontjában. Hány ügynök kell egyszerre, 15 perces sávokban, a foglaltsági ablakokból, és ez hogyan viszonyul a valós beosztáshoz. Tiszta függvények, külső AI nélkül. A sávos idősoros nézeten továbbra sem jelenik meg, mert a tervezés más logika szerint működik. A légitársaságonkénti kimutatások később jönnek, a valós adatokkal.
 
 ### Számítás
 
@@ -682,7 +682,7 @@ Külön oldal, asztali gépre; telefonon ne törjön el, de nem arra optimalizá
 
 ## 10. mérföldkő – oktatás: e-vizsga, on the job gyakorlás (OJT) és kibocsátás
 
-**Tervezett: a 9. mérföldkő utómunkája után jön,** a szokásos terv-jóváhagyással. A 6. mérföldkő képzéseire épül. Egy képzésnek lehet elméleti és gyakorlati része, mindkettő vizsgával. Akinek minden előírt része sikeres, azt egy jogosult ember kibocsátja: ettől dolgozhat önállóan, mert a kibocsátás hozza létre a sikeres képzési rekordot, és abból adódik a jogosítás (6. mérföldkő). A meglévő működés nem változik: a képzési rekord kézi rögzítése megmarad (pl. papíron vagy korábban teljesített képzésekhez), és ez adja az első mentorok és vizsgáztatók jogosítását is.
+**Ezt építjük most,** a szokásos terv-jóváhagyással. A 6. mérföldkő képzéseire épül. Egy képzésnek lehet elméleti és gyakorlati része, mindkettő vizsgával. Akinek minden előírt része sikeres, azt egy jogosult ember kibocsátja: ettől dolgozhat önállóan, mert a kibocsátás hozza létre a sikeres képzési rekordot, és abból adódik a jogosítás (6. mérföldkő). A meglévő működés nem változik: a képzési rekord kézi rögzítése megmarad (pl. papíron vagy korábban teljesített képzésekhez), és ez adja az első mentorok és vizsgáztatók jogosítását is.
 
 ### A képzés részei
 
@@ -818,10 +818,12 @@ Ezeket a kérdéseket a megrendelő 2026. szeptember 22-én jóváhagyta; a kód
 64. **Repülőtér:** nem törölhető.
 65. **Késéskód-dokumentum megnyitása:** a közös kódtábla helyben nyílik le, a légitársaság PDF-je új lapon. Megnyithatja az is, aki járatot kezel, vagy a dokumentumokat feltöltheti.
 66. **Létszámigény és státusz:** minden task beleszámít az igénybe, a státuszától függetlenül.
-67. **Beosztás nélküli nap:** az igény látszik, hiány nem jelölődik (a még nem publikált napokra lásd a 9. mérföldkő utómunkáját).
+67. **Beosztás nélküli nap:** ha a nap saját rétegében (publikált napon a valós, nem publikált napon a tervezet) nincs műszak, az igény látszik, hiány nem jelölődik; az előző napról átnyúló műszak sem teszi hiányossá.
 68. **Többnapos áttekintés:** az oszlopok a helyi óra negyedórái; óraátállításkor tavasszal üres cellák, ősszel a két azonos negyedóra közül a nagyobb igény és a nagyobb hiány, megjelölve. Alapból mától egy hét; a 31 napnál hosszabb időszakot elutasítja.
 69. **Beosztás a létszámigényhez:** mindenki beleszámít, akinek a valós rétegben operatív része van.
 70. **Nappal átfedő ablakok:** az előző és a következő nap járatai is betöltődnek; feltevés, mint a tervezőnél: egy ablak legfeljebb a szomszédos napra nyúlik át.
+71. **A műszak rétege a létszámigényben:** a műszak a kezdőnapja szerinti rétegből számít (publikált napon a valós, nem publikált napon a tervezet); a nem publikált napra felvitt valós műszak és a publikált napra felvitt tervezet nem számít.
+72. **Tervezet láthatósága a létszámigényben:** akinek nincs joga a tervezethez, a nem publikált napon csak az igényt látja, akkor is, ha valós műszak van rá.
 
 ## Később (most ne építsd)
 

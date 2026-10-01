@@ -1,6 +1,6 @@
 # Ground Handling App – projekt-összefoglaló
 
-*Verzió: 29 · 2026. szeptember 30.*
+*Verzió: 30 · 2026. október 1.*
 
 ## A projekt
 
@@ -115,6 +115,7 @@ A projekt gazdája a földi kiszolgálásban dolgozik, a domain-szabályok az ő
 93. **Visszajelzés és belső megjegyzés** külön mező: a visszajelzést a vizsgázó is látja, a belső megjegyzést (mi nem sikerült) csak a vizsgáztatók, a kibocsátásra jogosultak és a koordinátor.
 94. **Mentor és vizsgáztató:** jogosultság kell hozzá, és neki magának is érvényes legyen az adott jogosítás.
 95. **Járművek és hibajegy** (ötlet, a 10. mérföldkő után): a járművek műszaki nyilvántartása, meghibásodáskor hibajegy, amelyet a megfelelő emberek látnak.
+96. **Elfogadott pontosítások a 9. mérföldkő utómunkájából** (CLAUDE.md 67., 71–72.): a műszak a kezdőnapja szerinti rétegből számít; a tervezetből számolt beosztást csak az látja, aki a tervezetet is láthatja; ha a nap saját rétegében nincs műszak, hiány nem jelölődik.
 
 ## Még ellenőrizendő feltételezések
 
@@ -174,6 +175,6 @@ A projekt gazdája a földi kiszolgálásban dolgozik, a domain-szabályok az ő
 
 ## Következő lépés
 
-1. Az 1–9. mérföldkő kész (MVP; jogosultság, beosztás, sávos nézet; járatrend-import; tervezői nézet; feladattípusok; képzések és jogosítások; üzenetek; üzenetek bővítése; létszámigény, 689 zöld teszttel), a késéskód-dokumentumokkal együtt.
-2. Most: a 9. mérföldkő utómunkája, a tervezet a létszámigényben; utána a 10. mérföldkő, oktatás: e-vizsga, OJT és kibocsátás (CLAUDE.md 33. verzió). A 11. mérföldkő a járművek és a hibajegy, egyeztetés után.
+1. Az 1–9. mérföldkő kész (MVP; jogosultság, beosztás, sávos nézet; járatrend-import; tervezői nézet; feladattípusok; képzések és jogosítások; üzenetek; üzenetek bővítése; létszámigény a tervezettel együtt, 700 zöld teszttel), a késéskód-dokumentumokkal együtt.
+2. Most: a 10. mérföldkő, oktatás: e-vizsga, OJT és kibocsátás (CLAUDE.md 34. verzió). A 11. mérföldkő a járművek és a hibajegy, egyeztetés után.
 3. A projekt gazdájánál: a nyitott üzenet- és késéskódok; a SITA-átjáró; a valós GOU- és HDS-sablonok; a csatolt fájlok megőrzési ideje; az Ikarus-mentés ellenőrzése.
