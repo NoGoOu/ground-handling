@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { castsBlock, blockWindow } from "@/lib/board";
 import type { RosterShift } from "@/lib/data/shifts";
 import { messages } from "@/lib/messages";
@@ -109,5 +110,45 @@ export function RosterDayCard({ day, today }: { day: RosterDayView; today: strin
         </div>
       </details>
     </li>
+  );
+}
+
+/**
+ * The day's shift above the agent's tasks (CLAUDE.md, 12. mérföldkő, "Napi
+ * összefoglaló"): its times, the blocks with travel, and the difference.
+ */
+export function RosterDaySummary({ day }: { day: RosterDayView }) {
+  const headline = rosterHeadline(day);
+  const blocks = day.actualShifts
+    .flatMap((shift) => shift.segments)
+    .filter((segment) => castsBlock({ operative: segment.type.operative, createBlock: segment.createBlock }));
+  return (
+    <section className="flex flex-col gap-2 rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+        <h2 className="font-semibold">{r.summaryTitle}</h2>
+        <span className={headline.muted ? "text-base text-neutral-500" : "text-xl font-bold tabular-nums"}>{headline.text}</span>
+      </div>
+      <RosterDifference day={day} />
+      {blocks.length > 0 && (
+        <ul className="flex flex-col gap-1">
+          {blocks.map((segment) => {
+            const block = blockWindow(segment);
+            return (
+              <li key={segment.id} className="text-violet-900">
+                <span className="font-medium">{segment.type.name}</span>{" "}
+                <span className="tabular-nums">{timeSpan(segment.start, segment.end, day.day)}</span>
+                <span className="text-sm text-violet-800">
+                  {" · "}
+                  {fmt(r.block, { from: formatTimeOnDay(block.start, day.day), to: formatTimeOnDay(block.end, day.day) })}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      <Link href={`/agent/roster?date=${day.day}`} className="self-start text-sm text-sky-700 hover:underline">
+        {r.open}
+      </Link>
+    </section>
   );
 }

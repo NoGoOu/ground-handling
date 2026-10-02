@@ -895,6 +895,8 @@ export const hu = {
     segment: "{type} {time}",
     block: "Blokk az utazással: {from}–{to}",
     showParts: "Részletek",
+    summaryTitle: "Műszakod",
+    open: "Beosztásom megnyitása",
   },
   agent: {
     empty: "Erre a napra nincs hozzád rendelt task vagy blokk.",

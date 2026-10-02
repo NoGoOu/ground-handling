@@ -2,9 +2,10 @@ import Link from "next/link";
 import { Fragment } from "react";
 import { CancelBadges, DelayBadge, LateBadge, OjtBadge, StatusBadge, TaskTypeBadge, TypeBadge } from "@/components/badges";
 import { DateNav } from "@/components/date-nav";
+import { RosterDaySummary } from "@/components/roster-day";
 import { TimeStack } from "@/components/time-stack";
 import type { BoardBlock } from "@/lib/board";
-import { listAgentBlocks } from "@/lib/data/shifts";
+import { listAgentBlocks, listOwnRoster } from "@/lib/data/shifts";
 import { listTaskViewsForDay, taskAssignment, type TaskView } from "@/lib/data/tasks";
 import { flightLabel } from "@/lib/flight";
 import { dayAnchors } from "@/lib/flight-day";
@@ -107,7 +108,9 @@ export default async function AgentPage(props: PageProps<"/agent">) {
   const user = await requireCapability(canViewOwnTasks);
   const { date: dateValue } = await props.searchParams;
   const date = dateParam(dateValue);
-  const [taskViews, blocks] = await Promise.all([
+  // The day's own shift above the tasks (12. mérföldkő).
+  const showRoster = canViewRosterOf(user, user.id);
+  const [taskViews, blocks, rosterDays] = await Promise.all([
     listTaskViewsForDay(
       date,
       (view) =>
@@ -117,6 +120,7 @@ export default async function AgentPage(props: PageProps<"/agent">) {
         view.ojt.some((session) => session.trainee.id === user.id),
     ),
     listAgentBlocks(user.id, date),
+    showRoster ? listOwnRoster(user.id, date, 1) : Promise.resolve([]),
   ]);
   const tasks = taskViews.filter((task) => canViewTask(user, taskAssignment(task)));
 
@@ -150,6 +154,7 @@ export default async function AgentPage(props: PageProps<"/agent">) {
         </div>
       </div>
       <DateNav basePath="/agent" date={date} today={toLocalDate(new Date())} />
+      {rosterDays[0] && <RosterDaySummary day={rosterDays[0]} />}
       {items.length === 0 ? (
         <p className="rounded-lg border border-dashed border-neutral-300 p-8 text-center text-neutral-600">{t.empty}</p>
       ) : (
