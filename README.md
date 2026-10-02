@@ -120,6 +120,17 @@ A formátumok, a párosítás és a minták: [`docs/messages.md`](docs/messages.
 - **Láthatóság:** a Műszaki és a műszakvezető minden jegyet lát, a jelentő a sajátjait; a fotók letöltését a szerver a jegy láthatósága szerint ellenőrzi. A Műszaki menüjében a „Hibajegyek” mellett a nyitott jegyek száma.
 - Tiszta függvények (`lib/equipment/`) tesztekkel: a határidő és a számláló állapota, a figyelmeztetések, a lejáró lista csoportjai, az eszköz és a jegy állapotátmenetei.
 
+**12. mérföldkő – ügynöki beosztásnézet, naptárral**
+
+- **Jogosultság:** az Ügynök szerepkör saját hatókörrel kapja a „Beosztás megtekintése” jogosultságot. A `Műszakok` táblázatban csak a saját sorát látja, a tervezetet nem, szerkeszteni nem tud; belépés után továbbra is a saját taskjaira érkezik.
+- **„Beosztásom”** (az ügynök nézetéből, telefonra): heti lista hétfőtől, lapozással. Naponként a valós műszak ideje; „Még nincs publikálva” a nem publikált napon, „Szabad”, ha a publikált napon nincs műszak. Ahol a valós eltér a publikálttól, kiemelve: „Publikált: 14:00–22:00 → Valós: 16:00–22:00, módosult: 10. 02. 08:05” (a beosztás táblázatával azonos összevetés; a módosulás ideje a valós műszak vagy bármely részének legutóbbi változása; a valós rétegből törölt műszaknál idő nélkül). A napra koppintva a részek: típus, idő, helyszín, leírás, a blokk az utazással; eltérésnél a publikált részek is. Az éjfélen átnyúló műszak a kezdőnapjánál, „22:00–06:00 (+1)” alakban.
+- **Napi összefoglaló:** az ügynök napi taskjai fölött „Műszakod”: a napi műszak, a blokkok, az eltérés.
+- **Naptár:** szabványos iCalendar (.ics), bármelyik naptárral működik (Outlook és Microsoft 365, Google, Apple, Thunderbird). Külső szolgáltatás nem kell: a saját szerverünk adja.
+  - *Mentés a naptárba:* a megjelenített hét vagy egy választott időszak (legfeljebb 31 nap) letöltése. Egyszeri másolat, a későbbi változásokat nem követi.
+  - *Feliratkozás:* személyes link, amelyre a naptár URL-ből feliratkozik, és magától frissíti (lásd „Naptár-feliratkozás” lent).
+  - *Tartalom:* a publikált napok valós műszakjai (a feliratkozásban egy héttel visszamenőleg és minden jövőbeli publikált nap); tervezet és nem publikált nap nincs benne. Műszakonként egy esemény („Műszak 06:00–14:00”), a leírásban a részek, eltérésnél „Módosult: … Publikált: …”. Az esemény azonosítója a műszakhoz kötött, így módosításkor frissül, a törölt műszak eltűnik. Az időpontok UTC-ben, a naptár a saját időzónájára váltja.
+- Tiszta függvények (`lib/calendar/`, `lib/roster.ts`) tesztekkel: az .ics szövege (sortördelés, escape, fejléc), az események, óraátállítás, éjfélen átnyúló műszak, a nyilvános cím.
+
 ## Indítás Docker Compose-zal
 
 Követelmény: [Docker Desktop](https://www.docker.com/products/docker-desktop/) (Windows / macOS) vagy Docker Engine Compose-zal (Linux).
@@ -231,6 +242,14 @@ A seed négy eszköztípust (Pushback, Szalagkocsi, Utasbusz és a nem motoros U
 3. A STR-01 jegyét vedd át, írj megjegyzést, majd zárd le „nem hiba”-ként. A PB-02-t lezárva az „az eszköz üzemképes” pipával az eszköz visszaáll; pipa nélkül üzemképtelen marad, és az adatlapon állítható vissza.
 4. `ugynok2`-ként az ügynök nézetben a „Hiba jelentése” gombbal telefonról jelenthető hiba, fotóval. Az ügynök a `Hibajegyek` menüben csak a saját jegyeit látja: `ugynok1`-ként a PB-02 jegye a Műszaki megjegyzésével (írni nem tud). `vezeto`-ként minden jegy és az eszközök állapota látszik, kezelés nélkül.
 
+### Az ügynöki beosztásnézet kipróbálása
+
+1. `ugynok2`-ként (Nagy Eszter) a `Taskjaim` oldalon a taskok fölött „Műszakod”: 09:00–19:00, az oktatás blokkjával (utazással 08:40–10:50). Holnapra lapozva: „Publikált: 14:00–22:00 → Valós: 16:00–22:00”, a módosulás idejével.
+2. A „Beosztásom” gombbal a hét: a betöltés napja és a következő nap publikált, a többi „Még nincs publikálva”. A napra koppintva a részek. A `Műszakok` menüben a táblázatban csak a saját sora látszik.
+3. Lent a „Naptár” részben „A megjelenített hét letöltése (.ics)” egy fájlt ad, amelyet a naptár importál.
+4. A feliratkozáshoz a szervernek nyilvános HTTPS-cím kell (lásd „Naptár-feliratkozás” lent). Helyi próbához indítsd így: `APP_PUBLIC_URL=http://localhost:3000 docker compose up -d`. Ekkor a „Feliratkozási link kérése” gomb ad egy linket, amely a böngészőben megnyitva a naptárfájlt adja, és a gépen futó naptárprogram (pl. Thunderbird, asztali Outlook) is feliratkozhat rá; a felhős naptárak (Outlook a weben, Google) a `localhost`-ot nem érik el.
+5. `admin`-ként az `Admin → Felhasználók` listán a „Naptárlink” oszlop mutatja, kinek van élő linkje és mikor kérték le utoljára; a felhasználó oldalán visszavonható. A javasolt frissítési idő: `Admin → Beállítások`.
+
 ### Hasznos parancsok
 
 ```bash
@@ -250,7 +269,36 @@ docker compose down -v
 - Cseréld le az adatbázis jelszavát a `docker-compose.yml`-ben.
 - Változtasd meg vagy inaktiváld a demo felhasználókat.
 - A képzési rekordok fájljai, a légitársaságok késéskód-dokumentumai, az eszközök dokumentumai és a hibajegyek fotói az `uploads` kötetben vannak; az adatbázissal együtt mentsd. Automatikus törlés nincs.
+- Naptár-feliratkozás: állítsd be az `APP_PUBLIC_URL`-t a szerver nyilvános HTTPS-címére (lásd lent).
 - Üzenetküldés emailben: állítsd be az `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASSWORD` környezeti változókat az app szolgáltatásnál, és az `Admin → Üzenetküldés` oldalon a feladó címét. Cseréld le a demo címjegyzéket. Amíg nincs SMTP, a küldés csak naplóz; SITA-átjáró még nincs.
+
+### Naptár-feliratkozás
+
+Az ügynök személyes linkjét (`https://<cím>/api/calendar/<kulcs>.ics`) a naptárprogram tölti le, belépés nélkül, ezért:
+
+- **Nyilvános HTTPS-cím kell.** Az Outlook a weben és a Google Naptár a saját szervereiről kéri le a linket, tehát a szervernek az internetről, HTTPS-sel elérhetőnek kell lennie. A legegyszerűbb egy fordított proxy automatikus tanúsítvánnyal, például [Caddy](https://caddyserver.com/) egy saját domainnel:
+
+  ```
+  beosztas.example.com {
+      reverse_proxy localhost:3000
+  }
+  ```
+
+- **Az `APP_PUBLIC_URL` környezeti változó** a nyilvános cím, ebből készülnek a linkek: `APP_PUBLIC_URL=https://beosztas.example.com docker compose up -d`. Ha nincs beállítva (vagy nem HTTPS; a sima HTTP csak `localhost`-on elfogadott), feliratkozási link nem kérhető, csak a letöltés működik, és a felület ezt jelzi.
+- **A link titkos:** a felhasználóhoz kötött kulcsot tartalmaz, csak olvasásra jó, és csak a saját beosztását adja. A kulcsot hash-elve tároljuk, a link csak létrehozáskor látszik. Új link kérésekor a régi megszűnik; az ügynök és az admin vissza is vonhatja. Inaktív felhasználó linkje nem működik.
+- **Frissítés:** a gyakoriságot a naptárprogram dönti el. A javasolt idő (`Admin → Beállítások`, alapból 1 óra) csak javaslat: az Outlook a weben nagyjából 3 óránként, de akár 24 óránál is ritkábban, a Google akár naponta egyszer frissít. Azonnali értesítésre ezért nem alkalmas.
+- **Céges Microsoft 365:** az IT a külső naptárra való feliratkozást korlátozhatja; ha a lenti lépés nem érhető el, az IT-tól kell engedélyt kérni.
+
+Feliratkozás a gyakori naptárakban (a menük neve verziónként kicsit eltérhet):
+
+| Naptár | Lépések |
+|---|---|
+| Outlook a weben, új Outlook | Naptár → Naptár hozzáadása → Feliratkozás a webről → a link beillesztése, név → Importálás |
+| Klasszikus asztali Outlook | Naptár → Naptár hozzáadása → Internetről → a link beillesztése |
+| Google Naptár | Gépen, böngészőben: Egyéb naptárak → + → URL-ből → a link beillesztése. Telefonon nem adható hozzá, de a hozzáadott naptár ott is megjelenik. |
+| iPhone, iPad | Beállítások → Naptár → Fiókok → Fiók hozzáadása → Egyéb → Feliratkozott naptár hozzáadása |
+| Mac Naptár | Fájl → Új naptár-előfizetés → a link beillesztése |
+| Thunderbird | Új naptár → Hálózaton → a link beillesztése |
 
 ## Fejlesztés
 
@@ -283,7 +331,8 @@ Ha a Docker nem elérhető, a Prisma saját helyi Postgrese is megfelel fejleszt
 |---|---|
 | `lib/turnaround.ts` | Időszámítási és foglaltsági szabályok, tiszta függvények tesztekkel |
 | `lib/board.ts` | A sávos nézet modellje: dobozok, sávok, blokkok, a háromféle ütközés |
-| `lib/roster.ts` | Beosztás-segédfüggvények: publikált napok, a publikált és a valós réteg eltérései |
+| `lib/roster.ts` | Beosztás-segédfüggvények: publikált napok, a publikált és a valós réteg eltérései, az ügynök napjai a módosulás idejével |
+| `lib/calendar/` | A beosztás naptárként: az .ics szöveg (RFC 5545: sortördelés, escape, UTC, fejléc), az események a műszakokból, a letöltés és a feliratkozás időszaka, a nyilvános cím; tiszta függvények tesztekkel |
 | `lib/task-types.ts` | Feladattípusok: egy új járat taskjai a légitársaság aktív feladattípusai szerint, és ugyanannak az embernek két feladattípusa egy járaton |
 | `lib/planning/` | Tervezés: bemenet (napi ablakok), a pozíció szabályai, minimális pozíciószám, kiegyenlítés és mutatók, betölthetőség párosítással, a terv nézete, mentés a tervezetbe, kiosztás átvétele; tiszta függvények tesztekkel |
 | `lib/exams/` | Oktatás: a vizsgakísérlet másolata, az e-vizsga pontozása és eredménye, az OJT-mutatók és a követelmény, a folyamat állapota és a kibocsátás rekordja, a mentor és a vizsgáztató alkalmassága; a helyőrző alapértékek egy helyen (`defaults.ts`); tiszta függvények tesztekkel |
