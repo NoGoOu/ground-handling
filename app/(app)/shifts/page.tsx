@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { WeekNav } from "@/components/week-nav";
 import type { RosterLayer } from "@/generated/prisma/client";
 import { isPublished, listPublicationsInRange } from "@/lib/data/publications";
 import { listRosterAgents, listShiftsInRange, type RosterShift } from "@/lib/data/shifts";
@@ -73,36 +74,6 @@ function LayerLine({ layer, shifts, day }: { layer: RosterLayer; shifts: RosterS
   );
 }
 
-function WeekNav({ weekStart, thisWeek }: { weekStart: string; thisWeek: string }) {
-  const href = (date: string) => `/shifts?date=${date}`;
-  return (
-    <div className="flex flex-wrap items-center gap-2">
-      <Link href={href(addDays(weekStart, -DAYS))} className="btn btn-secondary">
-        <span className="sm:hidden">‹</span>
-        <span className="hidden sm:inline">{t.previousWeek}</span>
-      </Link>
-      <form action="/shifts" className="flex items-center gap-2">
-        <label className="sr-only" htmlFor="date">
-          {messages.dateNav.date}
-        </label>
-        <input id="date" type="date" name="date" defaultValue={weekStart} className="input w-auto py-1.5" />
-        <button type="submit" className="btn btn-secondary">
-          {messages.dateNav.show}
-        </button>
-      </form>
-      <Link href={href(addDays(weekStart, DAYS))} className="btn btn-secondary">
-        <span className="sm:hidden">›</span>
-        <span className="hidden sm:inline">{t.nextWeek}</span>
-      </Link>
-      {weekStart !== thisWeek && (
-        <Link href="/shifts" className="btn btn-secondary">
-          {t.thisWeek}
-        </Link>
-      )}
-    </div>
-  );
-}
-
 export default async function RosterPage(props: PageProps<"/shifts">) {
   const user = await requireCapability(canViewRoster);
   const { date: dateValue } = await props.searchParams;
@@ -136,7 +107,7 @@ export default async function RosterPage(props: PageProps<"/shifts">) {
           </Link>
         )}
       </div>
-      <WeekNav weekStart={weekStart} thisWeek={startOfWeek(today)} />
+      <WeekNav basePath="/shifts" weekStart={weekStart} thisWeek={startOfWeek(today)} />
 
       {canPublishRoster(user) && (
         <PublishForm action={publishPeriod} defaultStart={weekStart} defaultEnd={weekEnd} />

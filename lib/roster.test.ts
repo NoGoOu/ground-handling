@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isPublished, ownRosterDays, sameSegments, segmentDifferences, type DayShift } from "@/lib/roster";
+import { formatChangeTime, isPublished, ownRosterDays, sameSegments, segmentDifferences, shiftsSpan, timeSpan, type DayShift } from "@/lib/roster";
 import { localDayRange } from "@/lib/time";
 
 const period = (start: string, end: string) => ({
@@ -129,5 +129,31 @@ describe("the agent's own roster (12. mérföldkő)", () => {
 
   it("is free on a published day without a shift in either layer", () => {
     expect(ownRosterDays(["2026-10-05"], publications, [], [])[0]).toMatchObject({ published: true, differs: false, actualShifts: [] });
+  });
+});
+
+describe("shift times on the agent's roster", () => {
+  it("writes a day's span in Budapest time, marking a shift that ends on the next day", () => {
+    expect(timeSpan(new Date("2026-10-05T04:00Z"), new Date("2026-10-05T12:00Z"), "2026-10-05")).toBe("06:00–14:00");
+    expect(timeSpan(new Date("2026-10-07T20:00Z"), new Date("2026-10-08T04:00Z"), "2026-10-07")).toBe("22:00–06:00 (+1)");
+    // Ending at midnight is still the same day's shift.
+    expect(timeSpan(new Date("2026-10-07T14:00Z"), new Date("2026-10-07T22:00Z"), "2026-10-07")).toBe("16:00–00:00");
+  });
+
+  it("follows the clock change: the last Sunday of October has 25 hours", () => {
+    expect(timeSpan(new Date("2026-10-24T22:00Z"), new Date("2026-10-25T07:00Z"), "2026-10-25")).toBe("00:00–08:00");
+  });
+
+  it("joins several shifts of a day, and has nothing for a free day", () => {
+    const shifts = [
+      { start: new Date("2026-10-05T04:00Z"), end: new Date("2026-10-05T08:00Z") },
+      { start: new Date("2026-10-05T14:00Z"), end: new Date("2026-10-05T18:00Z") },
+    ];
+    expect(shiftsSpan(shifts, "2026-10-05")).toBe("06:00–10:00, 16:00–20:00");
+    expect(shiftsSpan([], "2026-10-05")).toBeNull();
+  });
+
+  it("writes the time of a change short", () => {
+    expect(formatChangeTime(new Date("2026-10-02T05:30Z"))).toBe("10. 02. 07:30");
   });
 });

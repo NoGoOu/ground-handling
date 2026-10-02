@@ -1,4 +1,4 @@
-import { localDayRange, toLocalDate } from "@/lib/time";
+import { formatDayShort, formatTime, localDayRange, toLocalDate } from "@/lib/time";
 
 // Pure roster helpers (CLAUDE.md, "2. mérföldkő"). No database access, so they
 // can be unit tested on their own.
@@ -132,4 +132,21 @@ export function ownRosterDays<S extends DayShift>(
       : null;
     return { day, published: true, publishedShifts, actualShifts, differs, changedAt };
   });
+}
+
+/** "06:00–14:00" on the shift's own day; "22:00–06:00 (+1)" when it ends on a later day. */
+export function timeSpan(start: Date, end: Date, day: string): string {
+  const later = toLocalDate(end) > day && end.getTime() !== localDayRange(toLocalDate(end)).start.getTime();
+  return `${formatTime(start)}–${formatTime(end)}${later ? " (+1)" : ""}`;
+}
+
+/** The time spans of a day's shifts, or null when there is none. */
+export function shiftsSpan(shifts: readonly { start: Date | null; end: Date | null }[], day: string): string | null {
+  const spans = shifts.filter((s) => s.start && s.end).map((s) => timeSpan(s.start!, s.end!, day));
+  return spans.length ? spans.join(", ") : null;
+}
+
+/** "10. 02. 07:30": when the actual shift changed. */
+export function formatChangeTime(instant: Date): string {
+  return `${formatDayShort(toLocalDate(instant))} ${formatTime(instant)}`;
 }
