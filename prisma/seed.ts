@@ -8,6 +8,8 @@ import * as storage from "@/lib/data/storage";
 import { deleteStoredFile, storeFile } from "@/lib/data/training-files";
 import { DEFAULT_PLANNING_SETTINGS } from "@/lib/planning/settings";
 import { NETLINE_FINGERPRINT, NETLINE_MAPPING, NETLINE_PROFILE_NAME } from "@/lib/import/netline";
+import { messages } from "@/lib/messages";
+import { seedAllowed } from "@/lib/ops/config";
 import { DEFAULT_ROLES } from "@/lib/permissions";
 import { SETTINGS_ID } from "@/lib/settings";
 import { templateSnapshotJson } from "@/lib/snapshot";
@@ -56,6 +58,8 @@ import {
 // With --if-empty it does nothing when the database already has users.
 
 async function main() {
+  // The demo data replaces every row, so production refuses it (13. mérföldkő).
+  if (!seedAllowed(process.env)) throw new Error(messages.ops.seedRefused);
   if (process.argv.includes("--if-empty") && (await prisma.user.count()) > 0) {
     console.log("Seed skipped: the database already has data.");
     return;

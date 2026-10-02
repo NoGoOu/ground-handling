@@ -44,8 +44,9 @@ next-env.d.ts
 /.claude/launch.json
 /.claude/settings.local.json
 
-# env example is committed
+# env examples are committed, never the filled-in files
 !.env.example
+!.env.production.example
 
 # generated Prisma client
 /generated

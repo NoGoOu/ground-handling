@@ -2280,6 +2280,35 @@ export const hu = {
       noAirport: "a célrepülőtér nincs a repülőtér-táblában",
     },
   },
+  // Operating the production server (13. mérföldkő): texts of the console scripts.
+  ops: {
+    config: {
+      problem: "{name}: {text}",
+      missing: "hiányzik",
+      domain: "a szerver domainneve kell, séma és útvonal nélkül (pl. beosztas.example.com)",
+      publicUrl: "https:// kezdetű nyilvános cím kell (pl. https://beosztas.example.com)",
+      publicUrlDomain: "a gépneve nem egyezik a DOMAIN-nel",
+      demoValue: "a demo értéke; éles módban saját érték kell",
+      tooShort: "legalább {min} karakter kell",
+      port: "1 és 65535 közötti szám kell",
+      trueFalse: "true vagy false lehet",
+      failed: "Az alkalmazás nem indul el, mert hiányzik vagy hibás egy beállítás (.env):",
+      ok: "A beállítások rendben.",
+    },
+    seedRefused: "Éles módban (APP_ENV=production) a demo adat nem tölthető be: minden adatot lecserélne.",
+    admin: {
+      title: "Az első admin felhasználó létrehozása",
+      exists: "Már van aktív admin felhasználó; ez a parancs csak az elsőt hozza létre. A többit az admin a felületen veszi fel.",
+      name: "Név: ",
+      username: "Felhasználónév: ",
+      password: "Jelszó (legalább 8 karakter, nem látszik gépeléskor): ",
+      passwordAgain: "Jelszó még egyszer: ",
+      mismatch: "A két jelszó nem egyezik.",
+      taken: "Ilyen felhasználónév már van.",
+      created: "Létrejött: {name} ({username}), Admin szerepkörrel. Most már be tudsz lépni.",
+      cancelled: "Megszakítva.",
+    },
+  },
 } as const;
 
 export type Messages = typeof hu;
