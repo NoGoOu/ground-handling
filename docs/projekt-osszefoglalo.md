@@ -1,6 +1,6 @@
 # Ground Handling App – projekt-összefoglaló
 
-*Verzió: 35 · 2026. október 2.*
+*Verzió: 36 · 2026. október 2.*
 
 ## A projekt
 
@@ -123,6 +123,7 @@ A projekt gazdája a földi kiszolgálásban dolgozik, a domain-szabályok az ő
 101. **Ügynöki beosztásnézet (12. mérföldkő):** az ügynök a telefonján látja a saját publikált és valós beosztását, az eltéréseket kiemelve; ehhez az Ügynök szerepkör saját hatókörrel megkapja a beosztás megtekintését.
 102. **Beosztás a naptárban:** az ügynök .ics fájlként letöltheti a beosztását, vagy személyes linkkel feliratkozhat rá, így a változások maguktól megjelennek a naptárában. A link titkos kulcsot tartalmaz, újragenerálható és visszavonható.
 103. **Naptár: szabványos, saját üzemeltetésű.** A naptár szabványos .ics, bármelyik naptárprogrammal működik, és a saját szerverünk adja, külső szolgáltatás és céges IT-engedély nélkül; a projekt gazdája üzemelteti. Az Outlook-kompatibilitásra külön figyelünk. Ha a valós műszak eltér a publikálttól, a megjegyzésben a publikált műszak és a módosulás ideje is szerepel; a „Beosztásom” nézetben is.
+104. **Elfogadott pontosítások a 12. mérföldkőből** (CLAUDE.md 88–90.): a hét hétfőtől; az ügynök belépés után a taskjaira érkezik; a feliratkozási link csak `https`-sel (fejlesztéskor `localhost`), és 404 zárja ki a rossz kulcsot, az inaktív felhasználót és a jogát vesztettet.
 
 ## Még ellenőrizendő feltételezések
 
@@ -185,5 +186,5 @@ A projekt gazdája a földi kiszolgálásban dolgozik, a domain-szabályok az ő
 ## Következő lépés
 
 1. Az 1–9. mérföldkő kész (MVP; jogosultság, beosztás, sávos nézet; járatrend-import; tervezői nézet; feladattípusok; képzések és jogosítások; üzenetek; üzenetek bővítése; létszámigény a tervezettel együtt, 700 zöld teszttel), a késéskód-dokumentumokkal együtt.
-2. A 10. mérföldkő (oktatás: e-vizsga, OJT és kibocsátás, kizáró szempontokkal) és a 11. mérföldkő (földi eszközök és hibajegy) kész, 787 zöld teszttel. Most: a 12. mérföldkő, ügynöki beosztásnézet, naptármentéssel és feliratkozással (CLAUDE.md 38. verzió). A 11. mérföldkő a járművek és a hibajegy, egyeztetés után.
+2. A 10. mérföldkő (oktatás: e-vizsga, OJT és kibocsátás, kizáró szempontokkal) és a 11. mérföldkő (földi eszközök és hibajegy) kész, 787 zöld teszttel. A 12. mérföldkő (ügynöki beosztásnézet, naptármentéssel és feliratkozással) is kész, 814 zöld teszttel. Most: a következő mérföldkő kiválasztása (CLAUDE.md 40. verzió). A 11. mérföldkő a járművek és a hibajegy, egyeztetés után.
 3. A projekt gazdájánál: a nyitott üzenet- és késéskódok; a SITA-átjáró; a valós GOU- és HDS-sablonok; a csatolt fájlok megőrzési ideje; az Ikarus-mentés ellenőrzése.
