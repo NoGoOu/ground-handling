@@ -120,6 +120,14 @@ A formátumok, a párosítás és a minták: [`docs/messages.md`](docs/messages.
 - **Láthatóság:** a Műszaki és a műszakvezető minden jegyet lát, a jelentő a sajátjait; a fotók letöltését a szerver a jegy láthatósága szerint ellenőrzi. A Műszaki menüjében a „Hibajegyek” mellett a nyitott jegyek száma.
 - Tiszta függvények (`lib/equipment/`) tesztekkel: a határidő és a számláló állapota, a figyelmeztetések, a lejáró lista csoportjai, az eszköz és a jegy állapotátmenetei.
 
+**13. mérföldkő – üzemeltetés: éles telepítés bérelt szerverre** (részletesen: „Éles üzemeltetés”)
+
+- Külön éles Compose-fájl Caddyvel: automatikus HTTPS, HSTS, biztonságos sütik, kívülről csak a 80-as és a 443-as port.
+- Éles módban a beállítások ellenőrzése induláskor, demo adat nélkül; az első admin egy paranccsal.
+- Belépési korlát (felhasználónévenként és IP-nként), naplózással; a fogadó API és a naptárlink kéréskorlátja.
+- Napi és kézi mentés, visszaállítás, próba-visszaállítás; a legutóbbi mentés és a futó verzió az admin oldalon.
+- Frissítés egy paranccsal, állapotellenőrzéssel; állapotvégpont, Docker-állapotfigyelés, naplóforgatás.
+
 **12. mérföldkő – ügynöki beosztásnézet, naptárral**
 
 - **Jogosultság:** az Ügynök szerepkör saját hatókörrel kapja a „Beosztás megtekintése” jogosultságot. A `Műszakok` táblázatban csak a saját sorát látja, a tervezetet nem, szerkeszteni nem tud; belépés után továbbra is a saját taskjaira érkezik.
@@ -265,6 +273,8 @@ docker compose down -v
 
 ### Éles használat előtt
 
+Éles telepítéshez a `docker-compose.prod.yml`-t használd: abban van HTTPS, mentés, frissítés és állapotfigyelés, és nincs demo adat (lásd „Éles üzemeltetés” lent). Ha mégis a demo összeállítást tennéd elérhetővé:
+
 - Állíts be saját titkos kulcsot a munkamenetekhez: `AUTH_SECRET=<hosszú véletlen szöveg> docker compose up -d` (generálás: `npx auth secret` vagy `openssl rand -base64 32`).
 - Cseréld le az adatbázis jelszavát a `docker-compose.yml`-ben.
 - Változtasd meg vagy inaktiváld a demo felhasználókat.
@@ -276,15 +286,8 @@ docker compose down -v
 
 Az ügynök személyes linkjét (`https://<cím>/api/calendar/<kulcs>.ics`) a naptárprogram tölti le, belépés nélkül, ezért:
 
-- **Nyilvános HTTPS-cím kell.** Az Outlook a weben és a Google Naptár a saját szervereiről kéri le a linket, tehát a szervernek az internetről, HTTPS-sel elérhetőnek kell lennie. A legegyszerűbb egy fordított proxy automatikus tanúsítvánnyal, például [Caddy](https://caddyserver.com/) egy saját domainnel:
-
-  ```
-  beosztas.example.com {
-      reverse_proxy localhost:3000
-  }
-  ```
-
-- **Az `APP_PUBLIC_URL` környezeti változó** a nyilvános cím, ebből készülnek a linkek: `APP_PUBLIC_URL=https://beosztas.example.com docker compose up -d`. Ha nincs beállítva (vagy nem HTTPS; a sima HTTP csak `localhost`-on elfogadott), feliratkozási link nem kérhető, csak a letöltés működik, és a felület ezt jelzi.
+- **Nyilvános HTTPS-cím kell.** Az Outlook a weben és a Google Naptár a saját szervereiről kéri le a linket, tehát a szervernek az internetről, HTTPS-sel elérhetőnek kell lennie. Az éles összeállítás ezt adja: a Caddy automatikus tanúsítvánnyal (lásd „Éles üzemeltetés”).
+- **Az `APP_PUBLIC_URL` környezeti változó** a nyilvános cím, ebből készülnek a linkek; élesben a `.env`-ben van. Ha nincs beállítva (vagy nem HTTPS; a sima HTTP csak `localhost`-on elfogadott), feliratkozási link nem kérhető, csak a letöltés működik, és a felület ezt jelzi.
 - **A link titkos:** a felhasználóhoz kötött kulcsot tartalmaz, csak olvasásra jó, és csak a saját beosztását adja. A kulcsot hash-elve tároljuk, a link csak létrehozáskor látszik. Új link kérésekor a régi megszűnik; az ügynök és az admin vissza is vonhatja. Inaktív felhasználó linkje nem működik.
 - **Frissítés:** a gyakoriságot a naptárprogram dönti el. A javasolt idő (`Admin → Beállítások`, alapból 1 óra) csak javaslat: az Outlook a weben nagyjából 3 óránként, de akár 24 óránál is ritkábban, a Google akár naponta egyszer frissít. Azonnali értesítésre ezért nem alkalmas.
 - **Céges Microsoft 365:** az IT a külső naptárra való feliratkozást korlátozhatja; ha a lenti lépés nem érhető el, az IT-tól kell engedélyt kérni.
@@ -299,6 +302,154 @@ Feliratkozás a gyakori naptárakban (a menük neve verziónként kicsit eltérh
 | iPhone, iPad | Beállítások → Naptár → Fiókok → Fiók hozzáadása → Egyéb → Feliratkozott naptár hozzáadása |
 | Mac Naptár | Fájl → Új naptár-előfizetés → a link beillesztése |
 | Thunderbird | Új naptár → Hálózaton → a link beillesztése |
+
+## Éles üzemeltetés
+
+Ez a fejezet egy bérelt Linux szerverre (VPS) telepíti az alkalmazást, saját domainnel és HTTPS-sel. A demo `docker-compose.yml` helyett a `docker-compose.prod.yml` fut: az alkalmazás, az adatbázis, a napi mentés és egy Caddy fordított proxy, amely automatikusan szerez és megújít Let's Encrypt-tanúsítványt. Kívülről csak a 80-as és a 443-as port látszik. Éles módban nincs demo adat. A domainen és a szerveren kívül más szolgáltatás nem kell.
+
+### Mire van szükség
+
+- **Szerver:** Linux VPS, például Ubuntu 24.04 LTS vagy Debian 12. Ajánlott: 2 vCPU, 2 GB RAM és 2 GB swap (az alkalmazás a szerveren épül, az építéshez kell a memória), legalább 20 GB lemez. Ezek helyőrző értékek: a lemezigény a feltöltött fájlokkal és a mentésekkel nő.
+- **Domain**, amelynek a DNS-ét beállíthatod (pl. `beosztas.example.com`).
+- SMTP-szerver, ha emailben is küldesz üzenetet (nem kötelező).
+
+### 1. A szerver előkészítése
+
+Belépés után, rendszergazdaként:
+
+```bash
+apt update && apt upgrade -y
+apt install -y git
+curl -fsSL https://get.docker.com | sh
+```
+
+Tűzfal: csak az SSH, a HTTP és a HTTPS legyen nyitva (a szolgáltató tűzfalán is):
+
+```bash
+ufw allow 22/tcp
+ufw allow 80/tcp
+ufw allow 443/tcp
+ufw allow 443/udp
+ufw enable
+```
+
+Swap (ha a szervernek nincs):
+
+```bash
+fallocate -l 2G /swapfile && chmod 600 /swapfile && mkswap /swapfile && swapon /swapfile
+echo '/swapfile none swap sw 0 0' >> /etc/fstab
+```
+
+### 2. A domain beállítása
+
+A domain DNS-ében egy `A` rekord (IPv6-nál egy `AAAA` is) mutasson a szerver IP-címére. Ellenőrzés a saját gépedről: `nslookup beosztas.example.com`. Amíg ez nem a szervert adja, a tanúsítvány nem készül el.
+
+### 3. Telepítés és első indítás
+
+```bash
+git clone <a repó címe> ground-handling
+cd ground-handling
+cp .env.production.example .env
+chmod 600 .env
+nano .env
+```
+
+A `.env`-ben töltsd ki:
+
+- `DOMAIN`: a domain, `https://` nélkül;
+- `APP_PUBLIC_URL`: `https://` és a domain;
+- `AUTH_SECRET`: generáld így: `openssl rand -base64 32`;
+- `POSTGRES_PASSWORD`: generáld így: `openssl rand -hex 24`;
+- ha kell, az SMTP-t és a mentés idejét (`BACKUP_TIME`, `BACKUP_KEEP_DAYS`).
+
+A `.env` titkokat tartalmaz: ne kerüljön a repóba, és ne küldd el senkinek. Az első indítás ugyanaz a parancs, mint a frissítés:
+
+```bash
+ops/update.sh
+```
+
+Az alkalmazás induláskor ellenőrzi a beállításokat. Ha valami hiányzik vagy hibás, nem indul el, és a naplóban megnevezi, mi az (`docker compose -f docker-compose.prod.yml logs app`). Ezután lefutnak a migrációk; ha egy migráció hibázik, az alkalmazás nem indul el. A Caddy az első kéréskor megszerzi a tanúsítványt.
+
+### 4. Az első admin
+
+Az éles adatbázis üres: nincs demo adat, és a demo betöltése éles módban le is van tiltva. Az első admin felhasználót egy parancs hozza létre; bekéri a nevet, a felhasználónevet és kétszer a jelszót (gépeléskor nem látszik). Ha már van aktív admin, megtagadja.
+
+```bash
+docker compose -f docker-compose.prod.yml exec app npx tsx scripts/create-admin.ts
+```
+
+Utána a `https://<domain>` címen belépve az `Admin` oldalon vedd fel, amit a demó magától hozott: a felhasználókat és a csapatokat, a légitársaságokat a feladattípusaikkal és a sablonjaikkal, a késéskódokat és a repülőtereket (`Admin → Üzenetküldés`), a beállításokat. A szerepkörök, a „Műszak” és „TRN” résztípus, az „Alap” feladattípus és a BUD repülőtér már megvan.
+
+### Biztonság
+
+- Csak HTTPS: a HTTP átirányít, a böngésző a HSTS miatt egy évig csak HTTPS-en jön vissza, a sütik csak HTTPS-en mennek.
+- **Belépés:** felhasználónévenként 5, IP-címenként 20 sikertelen kísérlet után 15 percig nem lehet belépni (helyőrzők; az IP-nkénti korlát azért nagyobb, mert a repülőtéren sok ügynök ugyanarról a nyilvános címről lép be). Minden kísérlet naplózott (`LoginAttempt` tábla, 30 napig). Zárolt felhasználót a várakozás old fel; sürgős esetben az admin a naplóból törölheti a nevét:
+
+  ```bash
+  docker compose -f docker-compose.prod.yml exec db psql -U ground_handling -d ground_handling -c "DELETE FROM \"LoginAttempt\" WHERE username = 'kiss.peter'"
+  ```
+
+- **Nyilvános végpontok:** a fogadó API és a naptárlink túl sok kérésre 429-et ad (`Retry-After`-rel).
+- Titok csak a `.env`-ben van; a napló és az ellenőrzés a beállítás nevét írja ki, az értékét soha.
+
+### Mentés
+
+- **Napi automatikus mentés** `BACKUP_TIME`-kor (alapból 03:30, budapesti idő szerint): az adatbázis és a feltöltött fájlok egy csomagba, a szerver `backups` könyvtárába (`backup-ÉÉÉÉHHNN-ÓÓPPMM.tar.gz`). A `BACKUP_KEEP_DAYS`-nél (alapból 14) régebbiek törlődnek. A mentés a Compose része, a szerver crontabja nem kell hozzá.
+- **Kézi mentés**, pl. egy nagyobb módosítás előtt: `ops/backup.sh`.
+- Az `Admin` oldal „Üzemeltetés” kártyája mutatja a legutóbbi sikeres mentést; ha 2 napnál régebbi, vagy nincs, piros figyelmeztetést ad. A mentés naplója: `docker compose -f docker-compose.prod.yml logs backup`.
+- **Másolat a szerveren kívülre** – ez az üzemeltető dolga, mert a szerverrel együtt a mentés is elveszhet. A legegyszerűbb a saját gépedről, `rsync`-kel (rendszeresen, pl. hetente):
+
+  ```bash
+  rsync -av --ignore-existing <felhasználó>@<szerver>:ground-handling/backups/ ~/ground-handling-mentesek/
+  ```
+
+- A mentés személyes adatokat tartalmaz (pl. képzési rekordok és csatolmányaik): a másolatot is biztonságos helyen tárold.
+
+### Visszaállítás
+
+```bash
+ops/restore.sh                                  # a mentések listája, a legújabb elöl
+ops/restore.sh backup-20261002-033000.tar.gz    # visszaállítás
+```
+
+A szkript megerősítést kér (be kell írni: `VISSZAÁLLÍT`), előtte a mostani állapotról is mentést készít, leállítja az alkalmazást, az adatbázist teljesen újra létrehozza a mentésből, a feltöltött fájlokat kicseréli, majd elindítja az alkalmazást, és megvárja, hogy egészséges legyen. Ami a mentés óta történt, elvész.
+
+- **Új szerverre:** telepítsd a 3. lépésig, másold a mentést a `backups` könyvtárba, és futtasd az `ops/restore.sh`-t.
+- **Verzió:** a mentést ugyanazzal vagy újabb verzióval állítsd vissza; egy régebbi mentést az induló migrációk felhoznak. Újabb verzió mentését régebbi verzióra ne állítsd vissza.
+- **Próba-visszaállítás:** `ops/restore-test.sh` (vagy a mentés nevével) egy ideiglenes, üres adatbázisba tölti a mentést, és kiírja, mi van benne (táblák, felhasználók, járatok, taskok, műszakok, képzési rekordok, eszközök, hibajegyek, fájlok). Az éleshez nem nyúl. Érdemes havonta lefuttatni: így derül ki, hogy a mentés tényleg használható.
+
+### Frissítés
+
+```bash
+ops/update.sh
+```
+
+1. mentés,
+2. az új verzió letöltése (`git pull`),
+3. építés,
+4. újraindítás (a migrációk induláskor lefutnak),
+5. állapotellenőrzés: megvárja, hogy az állapotvégpont az új verziót és „ok”-t mutasson.
+
+Ha már az új verzió fut, nincs teendő (újraépítés: `ops/update.sh --force`). Ha az állapotellenőrzés 5 perc alatt sem sikerül, a szkript megáll, és kiírja a visszaállás lépéseit: az előző verzió (`git reset --hard <előző>` és újraépítés), és ha a migráció már lefutott, a frissítés előtti mentés visszaállítása. A futó verzió (commit és dátum) az `Admin` oldalon és az állapotvégponton látszik.
+
+### Állapotfigyelés
+
+- **Állapotvégpont:** `https://<domain>/api/health`, belépés nélkül. Megmondja, elérhető-e az adatbázis, írható-e a feltöltési könyvtár, és melyik verzió fut; hibánál 503-at ad. Érzékeny adat nincs benne.
+- **Docker:** ugyanezt kérdezi 30 másodpercenként; ha háromszor egymás után hibát kap, újraindítja az alkalmazást. Állapot: `docker compose -f docker-compose.prod.yml ps`.
+- **Naplók:** `docker compose -f docker-compose.prod.yml logs <app|db|backup|caddy>`. Szolgáltatásonként legfeljebb 5 × 10 MB, a régebbi magától törlődik, így a lemez nem telik meg.
+- **Külső figyelő (nem kötelező):** egy ingyenes uptime-figyelő (pl. UptimeRobot, vagy a saját gépeden futó Uptime Kuma) 5 percenként kérje le a `https://<domain>/api/health` címet. Riasszon, ha a válasz nem 200, vagy nincs benne `"status":"ok"`.
+
+### Hibaelhárítás
+
+| Jelenség | Mit nézz meg |
+|---|---|
+| Az alkalmazás nem indul | `docker compose -f docker-compose.prod.yml logs app`: az induláskori ellenőrzés megnevezi a hiányzó vagy hibás beállítást; migrációs hiba is itt látszik. A `.env` javítása után: `docker compose -f docker-compose.prod.yml up -d`. |
+| Nincs tanúsítvány, a böngésző hibát jelez | A domain a szerverre mutat-e (2. lépés); nyitva van-e a 80-as és a 443-as port (a szolgáltató tűzfalán is). Napló: `docker compose -f docker-compose.prod.yml logs caddy`. Sok sikertelen próbálkozás után a Let's Encrypt egy ideig vár. |
+| 502-es hiba | A Caddy fut, de az alkalmazás nem: `docker compose -f docker-compose.prod.yml ps` és `logs app`. |
+| Nem lehet belépni („Túl sok sikertelen…”) | 15 perc várakozás, vagy a fenti `LoginAttempt` törlés. Elfelejtett admin jelszó: egy másik admin állít újat. Ha nincs másik: az elfelejtett admint inaktiváld (`docker compose -f docker-compose.prod.yml exec db psql -U ground_handling -d ground_handling -c "UPDATE \"User\" SET active = false WHERE username = '<név>'"`), hozz létre új admint az első admin parancsával, és vele állíts új jelszót a régi fióknak, majd aktiváld újra. |
+| Az admin oldal régi mentést jelez | `docker compose -f docker-compose.prod.yml logs backup`; kézi mentés: `ops/backup.sh`; elég-e a lemez: `df -h`. |
+| Fogy a lemez | `df -h`, `docker system df`; a frissítések után megmaradt régi image-ek: `docker image prune -f`; a mentések megőrzése: `BACKUP_KEEP_DAYS`. |
+| Az építés megszakad (kevés memória) | Swap (1. lépés), vagy nagyobb szerver. |
 
 ## Fejlesztés
 
@@ -332,6 +483,8 @@ Ha a Docker nem elérhető, a Prisma saját helyi Postgrese is megfelel fejleszt
 | `lib/turnaround.ts` | Időszámítási és foglaltsági szabályok, tiszta függvények tesztekkel |
 | `lib/board.ts` | A sávos nézet modellje: dobozok, sávok, blokkok, a háromféle ütközés |
 | `lib/roster.ts` | Beosztás-segédfüggvények: publikált napok, a publikált és a valós réteg eltérései, az ügynök napjai a módosulás idejével |
+| `lib/ops/` | Üzemeltetés: az éles beállítások ellenőrzése, az első admin, a belépési korlát és a kéréskorlátok, a mentések állapota, a futó verzió; tesztekkel |
+| `ops/`, `docker/` | Az éles szerver szkriptjei (frissítés, mentés, visszaállítás, próba-visszaállítás); a konténerek indító, mentő és állapotellenőrző szkriptjei, a Caddyfile |
 | `lib/calendar/` | A beosztás naptárként: az .ics szöveg (RFC 5545: sortördelés, escape, UTC, fejléc), az események a műszakokból, a letöltés és a feliratkozás időszaka, a nyilvános cím; tiszta függvények tesztekkel |
 | `lib/task-types.ts` | Feladattípusok: egy új járat taskjai a légitársaság aktív feladattípusai szerint, és ugyanannak az embernek két feladattípusa egy járaton |
 | `lib/planning/` | Tervezés: bemenet (napi ablakok), a pozíció szabályai, minimális pozíciószám, kiegyenlítés és mutatók, betölthetőség párosítással, a terv nézete, mentés a tervezetbe, kiosztás átvétele; tiszta függvények tesztekkel |

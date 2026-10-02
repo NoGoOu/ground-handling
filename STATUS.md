@@ -4,32 +4,28 @@
 
 ## Mi készült el
 
-- **13. mérföldkő, 5. lépés:** frissítés.
-  - `ops/update.sh` lépései:
-    1. mentés (`before-update`);
-    2. `git pull --ff-only`;
-    3. építés a commit azonosítójával és dátumával;
-    4. újraindítás, a migrációk induláskor lefutnak;
-    5. várakozás, amíg az állapotvégpont az új commitot és „ok”-t mutat (legfeljebb 5 perc).
-  - Hibánál megáll, és kiírja a naplóparancsot és a visszaállás lépéseit: `git reset --hard <előző>`, újraépítés, és ha a migráció már lefutott, `ops/restore.sh <a frissítés előtti mentés>`.
-  - Ha már az új verzió fut, nincs teendő; a `--force` újraépít. Az első indításra is jó, ilyenkor a mentés kimarad.
-  - A futó verzió (commit és dátum) az admin oldal „Üzemeltetés” kártyáján és a `/api/health`-en látszik; nem éles építésnél „ismeretlen”.
-  - Javítás: az éles Compose `AUTH_URL`-ként átadja az `APP_PUBLIC_URL`-t. Nélküle az Auth.js a Caddy mögött a belső címre (`:3000`) irányított volna belépés után.
-  - Helyben kipróbálva:
-    - frissítés mentéssel, új verzióval és egészséges állapottal; ismételt futtatásnál „nincs teendő”;
-    - szándékosan hibás beállítással megállt, és kiírta a visszaállás lépéseit; utána a helyes beállítással visszaállt;
-    - belépés után az átirányítás a nyilvános címre mutat;
-    - az admin kártyán látszik a verzió és a legutóbbi mentés.
-- 4. (`a4ae87d`) mentés és visszaállítás; 3. (`0defd69`) korlátozások; 2. (`483828a`) éles Compose Caddyvel; 1. (`8df7a26`) éles mód.
+- **13. mérföldkő kész** (üzemeltetés, éles telepítés bérelt szerverre), a 6. lépéssel:
+  - README „Éles üzemeltetés” fejezet:
+    - szerverigény (helyőrző értékek);
+    - a VPS előkészítése: Docker, tűzfal a 22-es, 80-as és 443-as portra, swap;
+    - DNS, telepítés, a `.env` kitöltése generált titkokkal, első indítás (`ops/update.sh`);
+    - az első admin, és mit kell az üres éles adatbázisba felvenni;
+    - biztonság, mentés (és másolat a saját gépre `rsync`-kel), visszaállítás (új szerverre is), próba-visszaállítás, frissítés;
+    - állapotfigyelés (külső uptime-figyelővel is);
+    - hibaelhárítási táblázat, benne a zárolt belépés feloldása és az egyetlen admin elfelejtett jelszava. Ez utóbbit helyben ki is próbáltam.
+  - A „Mit tud” részben a 13. mérföldkő; a „Felépítés” táblában a `lib/ops/`, az `ops/` és a `docker/`. A demo „Éles használat előtt” és a „Naptár-feliratkozás” rész az éles összeállításra mutat.
+  - Tiszta demo indítás (`docker compose down -v`, `up --build`): 23 migráció, a demo seed lefut (nem éles módban), `/api/health` rendben, a verzió „unknown”.
+- Korábbi lépések: 5. (`66f55d5`) frissítés; 4. (`a4ae87d`) mentés és visszaállítás; 3. (`0defd69`) korlátozások; 2. (`483828a`) éles Compose Caddyvel; 1. (`8df7a26`) éles mód.
 
 ## Állapot
 
-- Utolsó commit: `feat: update the production server in one step` (ez a commit; előtte `a4ae87d`)
+- Utolsó commit: `docs: describe running the app in production on a rented server` (ez a commit; előtte `66f55d5`)
 - Tesztek: `npm test` → 836 teszt, mind zöld; `npm run lint` hibátlan, `npx tsc --noEmit` tiszta, `npm run build` sikeres
+- A teljes éles összeállítást helyben próbáltam ki, `DOMAIN=localhost`-tal és a Caddy helyi tanúsítványával: indítás, első admin, korlátok, mentés, visszaállítás, frissítés. Valódi VPS-en és valódi Let's Encrypt-tanúsítvánnyal nem.
 
 ## Eltérések a CLAUDE.md-től
 
-- nincs
+- nincs. Megvalósításban: a beteg alkalmazást a healthcheck-szkript állítja le, és a restart-szabály indítja újra (a sima Compose magától nem teszi; jóváhagyott 2. döntés); visszaállítás előtt a mostani állapotról is mentés készül; az éles Compose `AUTH_URL`-ként átadja a nyilvános címet.
 
 ## Kérdések a tervezéshez
 
@@ -37,4 +33,4 @@
 
 ## Következő lépés
 
-- 6. lépés: README „Éles üzemeltetés” fejezet, STATUS.md.
+- A 13. mérföldkő lezárása a CLAUDE.md-ben (a jóváhagyott döntések szabályként), és a következő mérföldkő terve.
