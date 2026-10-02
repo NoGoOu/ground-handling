@@ -2290,6 +2290,7 @@ export const hu = {
       publicUrlDomain: "a gépneve nem egyezik a DOMAIN-nel",
       demoValue: "a demo értéke; éles módban saját érték kell",
       tooShort: "legalább {min} karakter kell",
+      urlSafe: "csak betű, számjegy és a - _ . ~ jelek lehetnek benne (pl. openssl rand -hex 24)",
       port: "1 és 65535 közötti szám kell",
       trueFalse: "true vagy false lehet",
       failed: "Az alkalmazás nem indul el, mert hiányzik vagy hibás egy beállítás (.env):",

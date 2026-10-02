@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { isProduction, productionConfigProblems, seedAllowed } from "@/lib/ops/config";
+import { appVersion } from "@/lib/ops/version";
 import { parseFirstAdmin } from "@/lib/ops/first-admin";
 
 // Production mode (CLAUDE.md, 13. mérföldkő, "Telepítés").
@@ -45,6 +46,10 @@ describe("the production settings", () => {
       "POSTGRES_PASSWORD: a demo értéke; éles módban saját érték kell",
     ]);
     expect(productionConfigProblems({ ...good, AUTH_SECRET: "x".repeat(31) })).toEqual(["AUTH_SECRET: legalább 32 karakter kell"]);
+    // The database password goes into DATABASE_URL as it is.
+    expect(productionConfigProblems({ ...good, POSTGRES_PASSWORD: "p@ss:word/with#marks" })).toEqual([
+      "POSTGRES_PASSWORD: csak betű, számjegy és a - _ . ~ jelek lehetnek benne (pl. openssl rand -hex 24)",
+    ]);
   });
 
   it("want an https public address on the domain", () => {
@@ -86,5 +91,13 @@ describe("the first admin", () => {
     expect(parseFirstAdmin({ name: "", username: "admin", password: "hosszu-jelszo" }).ok).toBe(false);
     expect(parseFirstAdmin({ name: "Ödön", username: "a b", password: "hosszu-jelszo" }).ok).toBe(false);
     expect(parseFirstAdmin({ name: "Ödön", username: "admin", password: "rovid" }).ok).toBe(false);
+  });
+});
+
+describe("the running version", () => {
+  it("comes from the build, or is unknown", () => {
+    expect(appVersion({ APP_COMMIT: "8df7a26", APP_BUILD_DATE: "2026-10-02T10:00:00Z" })).toEqual({ commit: "8df7a26", date: "2026-10-02T10:00:00Z" });
+    expect(appVersion({})).toEqual({ commit: "unknown", date: "unknown" });
+    expect(appVersion({ APP_COMMIT: " " })).toEqual({ commit: "unknown", date: "unknown" });
   });
 });

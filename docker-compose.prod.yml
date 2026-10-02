@@ -1,0 +1,95 @@
+# Production on a rented Linux server (CLAUDE.md, 13. mérföldkő). The settings
+# come from ".env" next to this file (see .env.production.example):
+#
+#   docker compose -f docker-compose.prod.yml up -d --build
+#
+# Only Caddy is reachable from outside, on ports 80 and 443; the app and the
+# database are not published. docker-compose.yml stays the demo setup.
+
+name: ground-handling-prod
+
+# Every service keeps at most 5 × 10 MB of logs, so the disk does not fill up.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ground_handling
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is missing from .env}
+      POSTGRES_DB: ground_handling
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ground_handling -d ground_handling"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    logging: *logging
+
+  app:
+    build:
+      context: .
+      args:
+        # The running version, shown on the admin page and by /api/health.
+        APP_COMMIT: ${APP_COMMIT:-unknown}
+        APP_BUILD_DATE: ${APP_BUILD_DATE:-unknown}
+    restart: unless-stopped
+    environment:
+      APP_ENV: production
+      DATABASE_URL: postgresql://ground_handling:${POSTGRES_PASSWORD}@db:5432/ground_handling
+      # Also given on their own, so the start can check them.
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      DOMAIN: ${DOMAIN:-}
+      APP_PUBLIC_URL: ${APP_PUBLIC_URL:-}
+      AUTH_SECRET: ${AUTH_SECRET:-}
+      AUTH_TRUST_HOST: "true"
+      UPLOAD_DIR: /app/uploads
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-}
+      SMTP_SECURE: ${SMTP_SECURE:-}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+    volumes:
+      - uploads:/app/uploads
+    expose:
+      - "3000"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "docker/healthcheck.mjs"]
+      interval: 30s
+      timeout: 10s
+      start_period: 90s
+      retries: 3
+    logging: *logging
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    environment:
+      DOMAIN: ${DOMAIN:?DOMAIN is missing from .env}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./docker/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - app
+    logging: *logging
+
+volumes:
+  db-data:
+  uploads:
+  # Caddy's certificates and keys: keep them, or Let's Encrypt is asked again.
+  caddy-data:
+  caddy-config:

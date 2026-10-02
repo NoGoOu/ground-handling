@@ -5,6 +5,8 @@ import type { NextAuthConfig } from "next-auth";
 export const authConfig = {
   pages: { signIn: "/login" },
   session: { strategy: "jwt" },
+  // In production only secure (HTTPS-only) cookies (13. mérföldkő).
+  useSecureCookies: process.env.APP_ENV === "production",
   providers: [],
   callbacks: {
     session({ session, token }) {

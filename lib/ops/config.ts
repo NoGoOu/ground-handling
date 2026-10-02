@@ -51,6 +51,8 @@ export function productionConfigProblems(env: Env): string[] {
   if (!dbPassword) add("POSTGRES_PASSWORD", c.missing);
   else if (dbPassword === DEMO_DB_PASSWORD) add("POSTGRES_PASSWORD", c.demoValue);
   else if (dbPassword.length < MIN_DB_PASSWORD_LENGTH) add("POSTGRES_PASSWORD", fmt(c.tooShort, { min: MIN_DB_PASSWORD_LENGTH }));
+  // It goes into DATABASE_URL as it is, so it must not need escaping there.
+  else if (!/^[A-Za-z0-9._~-]+$/.test(dbPassword)) add("POSTGRES_PASSWORD", c.urlSafe);
 
   if (!value(env, "DATABASE_URL")) add("DATABASE_URL", c.missing);
 

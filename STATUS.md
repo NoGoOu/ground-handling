@@ -4,18 +4,21 @@
 
 ## Mi készült el
 
-- **13. mérföldkő, 1. lépés:** éles mód.
-  - `APP_ENV=production` esetén az indítószkript a migrációk előtt ellenőrzi a beállításokat (`lib/ops/config.ts`, tiszta függvény): `DOMAIN` (gépnév), `APP_PUBLIC_URL` (https, a gépneve a `DOMAIN`), `AUTH_SECRET` (legalább 32 karakter, nem a demo értéke), `POSTGRES_PASSWORD` (legalább 16 karakter, nem a demo értéke), `DATABASE_URL`, és ha van SMTP, a port és a `SMTP_SECURE` alakja. Hiba esetén nem indul el, és felsorolja a beállítások nevét, az értéküket soha. Migrációs hiba esetén szintén leáll.
-  - Éles módban nincs demo adat: az indítás nem tölti be, és a seed kézi futtatását is megtagadja.
-  - Első admin: `npx tsx scripts/create-admin.ts` (a konténerben); bekéri a nevet, a felhasználónevet és kétszer a jelszót (gépeléskor nem látszik), a felhasználói űrlap szabályaival; ha már van aktív admin, megtagadja.
-  - `.env.production.example`: a beállítások mintája értékek nélkül, magyarázattal és a generálás parancsaival; a `.gitignore` csak a mintákat engedi a repóba.
-  - Ellenőrizve: üres, csak migrált adatbázison az első admin létrejön Admin szerepkörrel; eltérő jelszavaknál és második futtatáskor elutasít. Egy friss, migrált adatbázisban a szerepkörök jogosultságai pontosan megegyeznek az alapértelmezettekkel, a „Műszak” és „TRN” résztípus, az „Alap” feladattípus, a tervezési beállítások és a BUD repülőtér megvan.
-  - Tesztek: a beállítások ellenőrzése (hiányzó, demo, rövid, nem https, más domain, SMTP), a seed tiltása, az első admin adatai.
+- **13. mérföldkő, 2. lépés:** éles Compose-fájl Caddyvel.
+  - `docker-compose.prod.yml` (külön Compose-projekt, a demótól független kötetekkel): adatbázis, alkalmazás, Caddy. Kifelé csak a 80-as és a 443-as port látszik; az adatbázis és az alkalmazás nincs kiengedve.
+  - `docker/Caddyfile`: automatikus Let's Encrypt-tanúsítvány a `DOMAIN`-re, a HTTP átirányít HTTPS-re, HSTS (1 év), `nosniff`, `Referrer-Policy`, `X-Frame-Options`, a `Server` fejléc nélkül. `DOMAIN=localhost`-tal helyi tanúsítvány, így a gépen is kipróbálható.
+  - Éles módban csak biztonságos (`__Secure-`, `__Host-`) sütik.
+  - Naplóforgatás minden szolgáltatásnál: legfeljebb 5 × 10 MB.
+  - `/api/health`: adatbázis, a feltöltési könyvtár írhatósága, verzió (commit és építési idő, az image-be építve); belépés nélkül, érzékeny adat nélkül; hibánál 503.
+  - Docker-állapotfigyelés (jóváhagyott 2. döntés): a healthcheck-szkript 3 egymást követő hiba után leállítja az alkalmazást, és a `restart: unless-stopped` újraindítja.
+  - Az adatbázis jelszava csak URL-ben escape-elés nélkül használható karakterekből állhat (a `DATABASE_URL` része); az indítás ezt is ellenőrzi.
+  - Helyben kipróbálva (`DOMAIN=localhost`): a beállítások rendben, a 22 migráció lefut, seed nincs; `/api/health` 200 a verzióval; a `http://` 308-cal HTTPS-re irányít; a fejlécek és a Secure sütik megvannak; az első admin létrejött, demo adat nincs; a seed a konténerben is elutasít. Leállított adatbázisnál az állapot 503, az alkalmazás a harmadik hiba után újraindul, az adatbázis visszatérése után magától helyreáll.
+- 1. lépés (`8df7a26`): éles mód.
 
 ## Állapot
 
-- Utolsó commit: `feat: check the production settings and make the first admin by command` (ez a commit; előtte `f203490`)
-- Tesztek: `npm test` → 821 teszt, mind zöld; `npm run lint` hibátlan, `npx tsc --noEmit` tiszta, `npm run build` sikeres
+- Utolsó commit: `feat: run production behind Caddy with HTTPS and health checks` (ez a commit; előtte `8df7a26`)
+- Tesztek: `npm test` → 822 teszt, mind zöld; `npm run lint` hibátlan, `npx tsc --noEmit` tiszta, `npm run build` sikeres
 
 ## Eltérések a CLAUDE.md-től
 
@@ -27,4 +30,4 @@
 
 ## Következő lépés
 
-- 2. lépés: éles Compose-fájl Caddyvel (HTTPS, HSTS, csak 80 és 443), naplóforgatás, bővített állapotvégpont és Docker-állapotfigyelés.
+- 3. lépés: a belépési kísérletek és a nyilvános végpontok korlátozása, naplózással; tesztek.
