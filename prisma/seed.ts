@@ -91,6 +91,8 @@ async function main() {
     await tx.delayCodeDocument.deleteMany();
     await tx.airport.deleteMany();
     await tx.plan.deleteMany();
+    // The sign-in log (13. mérföldkő) goes with the users.
+    await tx.loginAttempt.deleteMany();
     // Ground equipment and faults (11. mérföldkő) point at users.
     await tx.faultComment.deleteMany();
     await tx.faultPhoto.deleteMany();

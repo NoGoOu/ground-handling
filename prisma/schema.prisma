@@ -1493,3 +1493,25 @@ model CalendarFeed {
   createdAt  DateTime  @default(now())
   lastUsedAt DateTime?
 }
+
+enum LoginResult {
+  SUCCESS
+  FAILURE
+  /// Refused without checking the password: too many failures before (13. mérföldkő).
+  BLOCKED
+}
+
+/// Sign-in attempts (CLAUDE.md, 13. mérföldkő, "Biztonság"): too many failures
+/// lock a user name or an address for a while. The user name as typed, also
+/// when no such user exists, so the lock does not tell which names exist.
+model LoginAttempt {
+  id       String      @id @default(cuid())
+  username String
+  ip       String
+  result   LoginResult
+  at       DateTime    @default(now())
+
+  @@index([username, at])
+  @@index([ip, at])
+  @@index([at])
+}

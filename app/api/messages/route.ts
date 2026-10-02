@@ -2,6 +2,8 @@ import type { NextRequest } from "next/server";
 import { findActiveKey, logApiCall } from "@/lib/data/api-keys";
 import { processText, type ProcessedMessage } from "@/lib/data/messages";
 import { messages } from "@/lib/messages";
+import { limiters } from "@/lib/ops/limits";
+import { clientIp } from "@/lib/ops/rate-limit";
 import { bearerKey, MAX_API_BYTES, readApiBody } from "@/lib/telex/api-request";
 import { resultSummary, unmatchedText, warningText } from "@/lib/telex/describe";
 
@@ -19,12 +21,13 @@ const ERRORS = {
   badSource: { status: 400, code: "bad_source", text: t.badSource },
   badReceivedAt: { status: 400, code: "bad_received_at", text: t.badReceivedAt },
   noMessage: { status: 422, code: "no_message", text: t.noMessage },
+  tooMany: { status: 429, code: "too_many_requests", text: t.tooMany },
 } as const;
 
-async function fail(apiKeyId: string | null, error: keyof typeof ERRORS) {
+async function fail(apiKeyId: string | null, error: keyof typeof ERRORS, retryAfter?: number) {
   const { status, code, text } = ERRORS[error];
   await logApiCall(apiKeyId, status, text);
-  return Response.json({ error: code, message: text }, { status });
+  return Response.json({ error: code, message: text }, { status, headers: retryAfter ? { "Retry-After": String(retryAfter) } : undefined });
 }
 
 function apiResult(result: ProcessedMessage) {
@@ -50,9 +53,19 @@ function apiResult(result: ProcessedMessage) {
 }
 
 export async function POST(request: NextRequest) {
+  // Too many requests (13. mérföldkő): an address guessing keys is held back,
+  // and so is a key sending too much.
+  const ip = clientIp(request.headers);
+  const held = limiters.messagesBadKeyPerIp.retryAfter(ip);
+  if (held) return fail(null, "tooMany", held);
   const key = bearerKey(request.headers.get("authorization"));
   const apiKey = key ? await findActiveKey(key) : null;
-  if (!apiKey) return fail(null, "invalidKey");
+  if (!apiKey) {
+    limiters.messagesBadKeyPerIp.hit(ip);
+    return fail(null, "invalidKey");
+  }
+  const wait = limiters.messagesPerKey.hit(apiKey.id);
+  if (wait) return fail(apiKey.id, "tooMany", wait);
   if (Number(request.headers.get("content-length") ?? 0) > MAX_API_BYTES) return fail(apiKey.id, "tooLarge");
 
   const body = readApiBody(request.headers.get("content-type"), await request.text(), new Date());

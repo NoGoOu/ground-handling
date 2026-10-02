@@ -2,8 +2,10 @@
 
 import { AuthError } from "next-auth";
 import { signIn } from "@/auth";
+import { lockedMinutes } from "@/lib/auth-errors";
 import { prisma } from "@/lib/db";
 import { messages } from "@/lib/messages";
+import { fmt } from "@/lib/messages/format";
 import { canAccessPath, homePathFor } from "@/lib/permissions";
 import { safeCallbackPath } from "@/lib/safe-redirect";
 import { loadUser } from "@/lib/session";
@@ -32,6 +34,8 @@ export async function login(_previous: LoginState, formData: FormData): Promise<
     });
     return {};
   } catch (error) {
+    const minutes = lockedMinutes(error);
+    if (minutes) return { error: fmt(messages.login.locked, { minutes }) };
     if (error instanceof AuthError) return { error: messages.login.invalid };
     // signIn signals success by throwing a redirect.
     throw error;

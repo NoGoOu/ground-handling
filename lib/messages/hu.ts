@@ -163,6 +163,7 @@ export const hu = {
     submit: "Belépés",
     submitting: "Belépés…",
     invalid: "Hibás felhasználónév vagy jelszó.",
+    locked: "Túl sok sikertelen belépési kísérlet. Próbáld újra {minutes} perc múlva.",
   },
   status: {
     PLANNED: "Tervezett",
@@ -2262,6 +2263,7 @@ export const hu = {
       summary: "{count} üzenet: {stored} tárolva (ebből {unmatched} párosítatlan), {duplicate} duplikátum, {unsupported} nem támogatott.",
       errors: {
         invalidKey: "Érvénytelen vagy visszavont API-kulcs.",
+        tooMany: "Túl sok kérés; próbáld újra később.",
         tooLarge: "A kérés nagyobb a megengedett 256 KB-nál.",
         badJson: "A JSON nem értelmezhető.",
         noText: "Hiányzik az üzenet szövege.",

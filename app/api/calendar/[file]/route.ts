@@ -2,6 +2,8 @@ import type { NextRequest } from "next/server";
 import { keyFromFileName } from "@/lib/calendar/public-url";
 import { feedRange } from "@/lib/calendar/roster";
 import { findCalendarFeed, lastPublishedDay, markCalendarFeedUsed, rosterCalendarText } from "@/lib/data/calendar";
+import { limiters, tooManyRequests } from "@/lib/ops/limits";
+import { clientIp } from "@/lib/ops/rate-limit";
 import { canViewRosterOf } from "@/lib/permissions";
 import { loadUser } from "@/lib/session";
 import { getSettings } from "@/lib/settings";
@@ -27,9 +29,19 @@ const headers = {
   "X-Content-Type-Options": "nosniff",
 };
 
-export async function GET(_request: NextRequest, ctx: RouteContext<"/api/calendar/[file]">) {
+export async function GET(request: NextRequest, ctx: RouteContext<"/api/calendar/[file]">) {
+  // Too many requests (13. mérföldkő): an address guessing keys is held back,
+  // and so is a link fetched far more often than a calendar would.
+  const ip = clientIp(request.headers);
+  const held = limiters.calendarBadKeyPerIp.retryAfter(ip);
+  if (held) return tooManyRequests(held);
   const found = await feedUser(ctx);
-  if (!found) return new Response("Not found", { status: 404 });
+  if (!found) {
+    limiters.calendarBadKeyPerIp.hit(ip);
+    return new Response("Not found", { status: 404 });
+  }
+  const wait = limiters.calendarPerKey.hit(found.feed.id);
+  if (wait) return tooManyRequests(wait);
   await markCalendarFeedUsed(found.feed.id);
   const today = toLocalDate(new Date());
   const [lastDay, settings] = await Promise.all([lastPublishedDay(), getSettings()]);
