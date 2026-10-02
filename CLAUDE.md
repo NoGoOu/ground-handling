@@ -1,6 +1,6 @@
 # Ground Handling App – projektleírás
 
-*Verzió: 40 · 2026. október 2.*
+*Verzió: 41 · 2026. október 2.*
 
 Nyílt forráskódú webalkalmazás repülőtéri földi kiszolgálás (ground handling) szervezésére. Minden járatfordulóhoz feladattípusonként egy task tartozik, benne mérföldkövekkel, amelyeknek van tervezett és tényleges időpontja. A mérföldkövek légitársaságonként testreszabható sablonokból jönnek. A hozzáférés szerepkör alapú.
 
@@ -827,6 +827,54 @@ Külön oldal, asztali gépre; telefonon ne törjön el, de nem arra optimalizá
 4. Naptár: az .ics előállítása tiszta függvényként (tesztek: stabil eseményazonosító, óraátállítás, éjfélen átnyúló műszak, a módosulás és a publikált műszak a leírásban, a szöveg szabványos escape-elése és sortördelése, az Outlook-kompatibilis fejléc); letöltés; feliratkozási link (kulcs hash-elve, újragenerálás, visszavonás, utolsó lekérés), tesztekkel
 5. Seed (ha kell: legalább egy eltérő és egy nem publikált nap a demo ügynököknél), README (a feliratkozás beállítása a gyakori naptárakban: Outlook, Google, Apple; az üzemeltetés feltételei: nyilvános HTTPS-cím, például fordított proxyval és automatikus tanúsítvánnyal, és az `APP_PUBLIC_URL`), STATUS.md
 
+## 13. mérföldkő – üzemeltetés: éles telepítés bérelt szerverre
+
+**Ezt építjük most,** a szokásos terv-jóváhagyással. A projekt gazdája egy bérelt Linux szerveren (VPS) üzemelteti az alkalmazást, saját domainnel és HTTPS-sel. A cél: egy ember néhány paranccsal telepíteni, frissíteni, menteni és visszaállítani tudja, és lássa, ha baj van. A domainen és a szerveren kívül külső szolgáltatás nem kell.
+
+### Telepítés
+
+- Külön éles Compose-fájl (pl. `docker-compose.prod.yml`): az alkalmazás, az adatbázis, a mentés és egy Caddy fordított proxy, amely automatikusan szerez és megújít tanúsítványt (Let's Encrypt) a megadott domainre. Kívülről csak a 80-as és a 443-as port látszik; az adatbázisé és az alkalmazásé nem.
+- A beállítások egy `.env` fájlban; a mintája a repóban van, értékek nélkül: domain, `APP_PUBLIC_URL`, az Auth.js titka, az adatbázis jelszava, SMTP. Titok nem kerül a repóba és a naplóba. Ha egy kötelező beállítás hiányzik, az alkalmazás nem indul el, és megmondja, mi hiányzik.
+- **Éles módban nincs demo adat:** a demo seed éles módban nem fut le (megtagadja). Az első admin felhasználót egy egyszeri parancs hozza létre (név, felhasználónév, jelszó bekérve), ha még nincs admin.
+- Induláskor a migrációk lefutnak; ha egy migráció hibázik, az alkalmazás nem indul el.
+
+### Biztonság
+
+- Csak HTTPS (a HTTP átirányít), HSTS, biztonságos sütik.
+- **Belépési kísérletek korlátozása:** felhasználónként és IP-címenként legfeljebb 5 sikertelen kísérlet 15 percen belül (helyőrző), utána várakozni kell; naplózva. A fogadó API és a naptárvégpont is korlátozott a túl sok kérés ellen (helyőrző értékekkel).
+
+### Mentés és visszaállítás
+
+- **Napi automatikus mentés:** az adatbázis és a feltöltött fájlok egy időbélyeges csomagba, a szerver mentési könyvtárába; a régebbiek törlődnek (helyőrző: 14 napot őrzünk). A mentés a Compose része, nem kell hozzá a szerver crontabja.
+- **Kézi mentés** egy paranccsal (pl. frissítés előtt).
+- **Visszaállítás** egy paranccsal, egy kiválasztott mentésből, megerősítéssel. A README lépésről lépésre leírja, és egy próba-visszaállítást is egy üres környezetbe, hogy kiderüljön, működik-e a mentés.
+- A mentés szerveren kívüli másolata az üzemeltető dolga; a README egyszerű módot javasol (pl. letöltés a saját gépre `rsync`-kel).
+- Az admin oldalon látszik a legutóbbi sikeres mentés ideje; ha 2 napnál régebbi (helyőrző), figyelmeztetés.
+
+### Frissítés
+
+- Egy szkript: mentés, az új verzió letöltése (git), építés, újraindítás a migrációkkal, végül állapotellenőrzés. Ha az állapotellenőrzés hibát ad, a szkript megáll, és leírja, hogyan lehet visszaállni (az előző verzió és a mentés).
+- A futó verzió (commit és dátum) az admin oldalon és az állapotvégponton látszik.
+
+### Állapotfigyelés
+
+- **Állapotvégpont** (pl. `/api/health`): elérhető-e az adatbázis, írható-e a feltöltési könyvtár, melyik a verzió; belépés nélkül, de érzékeny adat nélkül. A Docker ebből látja, ha az alkalmazás beteg, és újraindítja.
+- A naplók forgatása méretkorláttal, hogy ne teljen be a lemez.
+- A README leírja, hogyan állítható egy külső figyelő (pl. egy ingyenes uptime-figyelő) a végpontra; ez opcionális.
+
+### Dokumentáció
+
+- README „Éles üzemeltetés” fejezet: a szerverigény (memória, lemez; helyőrző értékekkel), a VPS előkészítése (Docker, tűzfal: 22, 80, 443), a domain DNS-beállítása, az első indítás, az első admin, a mentés, a visszaállítás, a frissítés, a hibaelhárítás.
+
+### Lépésterv
+
+1. Éles mód: a beállítások ellenőrzése induláskor, a `.env` mintája, a seed tiltása éles módban, az első admin létrehozása paranccsal; tesztek
+2. Éles Compose-fájl Caddyvel (HTTPS, HSTS, csak 80 és 443), naplóforgatás, állapotvégpont és Docker-állapotfigyelés
+3. A belépési kísérletek és a nyilvános végpontok korlátozása, naplózással; tesztek
+4. Mentés (napi és kézi) és visszaállítás szkriptekkel, megőrzési idővel; a legutóbbi mentés az admin oldalon; próba-visszaállítás
+5. Frissítési szkript állapotellenőrzéssel; a verzió az admin oldalon
+6. README „Éles üzemeltetés”, STATUS.md
+
 ## További eldöntött szabályok
 
 Ezeket a kérdéseket a megrendelő 2026. szeptember 22-én jóváhagyta; a kód is ezekre a számokra hivatkozik.
@@ -929,7 +977,6 @@ Ezeket a kérdéseket a megrendelő 2026. szeptember 22-én jóváhagyta; a kód
 - A beosztás TRN részének összekötése egy konkrét képzéssel
 - Földi eszközök: az eszköz hozzárendelése a taskhoz; emailes értesítés a hibajegyekről
 - Naptár: a kiosztott taskok is a naptárban; értesítés a beosztás változásáról (email vagy push)
-- Üzemeltetés: éles telepítés saját szerverre (domain, HTTPS fordított proxyval, az adatbázis és a feltöltött fájlok mentése és visszaállítása, a frissítés menete, állapotfigyelés)
 - E-vizsga: véletlen kérdéshúzás a kérdésbankból, képek a kérdésekben
 - További slotüzenetek (pl. slottörlés), minta után
 - Az SI elemeinek feldolgozása (DAA, célállomásonkénti nettó bontás, poggyászdarabszámok, LOAD IN CPTS, B-sorok), ha a minták alapján egységesíthető
