@@ -1,6 +1,6 @@
 # Ground Handling App – projektleírás
 
-*Verzió: 37 · 2026. október 2.*
+*Verzió: 38 · 2026. október 2.*
 
 Nyílt forráskódú webalkalmazás repülőtéri földi kiszolgálás (ground handling) szervezésére. Minden járatfordulóhoz feladattípusonként egy task tartozik, benne mérföldkövekkel, amelyeknek van tervezett és tényleges időpontja. A mérföldkövek légitársaságonként testreszabható sablonokból jönnek. A hozzáférés szerepkör alapú.
 
@@ -806,25 +806,25 @@ Külön oldal, asztali gépre; telefonon ne törjön el, de nem arra optimalizá
 - **„Beosztásom” nézet,** telefonra optimalizálva, az ügynök nézetéből elérhetően:
   - heti lista, lapozható, a beosztás táblázatának heti ablakához igazodva; naponként a műszak kezdete és vége;
   - a napra koppintva a műszak részei: típus, kezdet, vég, helyszín, leírás; a blokk az oda- és visszautazási idővel;
-  - a valós réteg az elsődleges; ahol eltér a publikálttól, kiemelve, a publikált mellette (pl. „Publikált: 06:00–14:00 → Valós: 08:00–16:00”). Az eltérés ugyanazzal az összevetéssel számol, mint a beosztás táblázatában;
+  - a valós réteg az elsődleges; ahol eltér a publikálttól, kiemelve, a publikált mellette, és hogy mikor módosult (pl. „Publikált: 06:00–14:00 → Valós: 08:00–16:00, módosult: 10. 02. 07:30”). Az eltérés ugyanazzal az összevetéssel számol, mint a beosztás táblázatában. A módosulás ideje a valós műszak vagy bármely részének legutóbbi változása; ehhez a műszak módosítási ideje a részek változásakor is frissül;
   - a még nem publikált napon „Még nincs publikálva”; a nap, amelyen nincs műszakja, „Szabad”.
 - **Napi összefoglaló:** az ügynök napi taskjai fölött a napi műszak (kezdet, vég, a blokkok), az eltérés jelölésével.
 - Az éjfélen átnyúló műszak a kezdése napjánál jelenik meg (2. mérföldkő).
-- **Naptár:**
+- **Naptár:** elsőként a Microsoft-környezetre készül, mert a cégek jellemzően azt használják: Outlook (Microsoft 365, Outlook a weben, az új és a klasszikus Outlook, Outlook mobil). A tesztelés és a README elsősorban erre szól; a Google és az Apple naptár is működjön.
   - **Mentés a naptárba:** a „Beosztásom” nézetből .ics fájl tölthető le a megjelenített hétre vagy egy választott időszakra (legfeljebb 31 nap), amelyet a telefon vagy a gép naptára importál. Ez egyszeri másolat, a későbbi változásokat nem követi.
-  - **Feliratkozás:** az ügynök személyes feliratkozási linket kér, és a naptárában (Google, Apple, Outlook) URL-ből feliratkozik rá; a naptár ezután magától frissíti a beosztását.
+  - **Feliratkozás:** az ügynök személyes feliratkozási linket kér, és a naptárában URL-ből feliratkozik rá (Outlookban: „Naptár hozzáadása → Feliratkozás a webről”); a naptár ezután magától frissíti a beosztását.
   - A link a felhasználóhoz kötött titkos kulcsot tartalmaz, mert a naptárprogram nem tud belépni. Csak olvasásra jó, és csak a saját beosztását adja. A kulcsot hash-elve tároljuk; a link csak létrehozáskor látszik (mint az API-kulcsnál); újragenerálással a régi érvénytelenné válik. Inaktív felhasználó linkje nem működik. Látszik az utolsó lekérés ideje; az admin a felhasználó oldalán visszavonhatja.
-  - **Tartalom** (a letöltésben és a feliratkozásban ugyanaz): a publikált napok valós műszakjai; a feliratkozásban a mai naptól 7 napra visszamenőleg és minden jövőbeli publikált nap (helyőrző). Nem publikált nap és tervezet nincs benne. Műszakonként egy esemény: a cím a műszak ideje (pl. „Műszak 06:00–14:00”), a leírásban a részek (típus, idő, helyszín, leírás, a blokk az utazási idővel), és ha a valós eltér a publikálttól, „Módosult, publikált: …”. Az esemény azonosítója a műszakhoz kötött, így módosításkor frissül, nem duplikálódik; a törölt műszak eltűnik.
-  - Az idők Europe/Budapest szerint, óraátállítással helyesek.
-  - A frissítés gyakoriságát a naptárprogram dönti el (a Google akár naponta csak egyszer frissít), ezért azonnali értesítésre nem alkalmas. A feliratkozáshoz a szervernek elérhetőnek kell lennie onnan, ahonnan a naptár lekéri (a Google a saját szervereiről kéri le, tehát interneten át, HTTPS-sel); ezt a README írja le.
+  - **Tartalom** (a letöltésben és a feliratkozásban ugyanaz): a publikált napok valós műszakjai; a feliratkozásban a mai naptól 7 napra visszamenőleg és minden jövőbeli publikált nap (helyőrző). Nem publikált nap és tervezet nincs benne. Műszakonként egy esemény: a cím a műszak ideje (pl. „Műszak 06:00–14:00”), a leírásban a részek (típus, idő, helyszín, leírás, a blokk az utazási idővel), és ha a valós eltér a publikálttól, a megjegyzésben: „Módosult: <a módosulás ideje>. Publikált: <a publikált műszak ideje és részei>”. Az esemény azonosítója a műszakhoz kötött, így módosításkor frissül, nem duplikálódik; a törölt műszak eltűnik.
+  - Az idők Europe/Budapest szerint, óraátállítással helyesek. Az Outlook-kompatibilitás miatt: az időpontok UTC-ben (az Outlook a saját időzónájára váltja), a naptár neve „Beosztás – <név>”, a javasolt frissítési idő 1 óra (`REFRESH-INTERVAL`, `X-PUBLISHED-TTL`; helyőrző, a naptárprogram figyelmen kívül hagyhatja), a link `https`, és `.ics`-re végződik.
+  - A frissítés gyakoriságát a naptárprogram dönti el (az Outlook a weben nagyjából 3 óránként, de akár 24 óránál is lassabban; a Google akár naponta egyszer), ezért azonnali értesítésre nem alkalmas. A feliratkozáshoz a szervernek elérhetőnek kell lennie onnan, ahonnan a naptár lekéri (az Outlook a weben és a Google a saját szervereiről, tehát interneten át, HTTPS-sel); a céges Microsoft 365-ben az IT a külső naptárra való feliratkozást korlátozhatja. Ezt a README írja le.
 
 ### Lépésterv
 
 1. Jogosultság (az Ügynök szerepkör saját hatókörrel, migrációval) és adatréteg: az ügynök saját publikált és valós műszakjai egy hétre, az eltérés a meglévő összevetéssel; tesztek
 2. „Beosztásom” nézet telefonra: heti lista, napi részletek, eltérés kiemelése, „Még nincs publikálva”, „Szabad”
 3. Napi összefoglaló az ügynök nézetében
-4. Naptár: az .ics előállítása tiszta függvényként (tesztek: stabil eseményazonosító, óraátállítás, éjfélen átnyúló műszak, eltérés a leírásban, a szöveg szabványos escape-elése és sortördelése); letöltés; feliratkozási link (kulcs hash-elve, újragenerálás, visszavonás, utolsó lekérés), tesztekkel
-5. Seed (ha kell: legalább egy eltérő és egy nem publikált nap a demo ügynököknél), README (a feliratkozás beállítása Google, Apple és Outlook naptárban, és az elérhetőség feltétele), STATUS.md
+4. Naptár: az .ics előállítása tiszta függvényként (tesztek: stabil eseményazonosító, óraátállítás, éjfélen átnyúló műszak, a módosulás és a publikált műszak a leírásban, a szöveg szabványos escape-elése és sortördelése, az Outlook-kompatibilis fejléc); letöltés; feliratkozási link (kulcs hash-elve, újragenerálás, visszavonás, utolsó lekérés), tesztekkel
+5. Seed (ha kell: legalább egy eltérő és egy nem publikált nap a demo ügynököknél), README (a feliratkozás beállítása elsőként Outlookban, majd Google és Apple naptárban, és az elérhetőség feltétele), STATUS.md
 
 ## További eldöntött szabályok
 
@@ -924,7 +924,7 @@ Ezeket a kérdéseket a megrendelő 2026. szeptember 22-én jóváhagyta; a kód
 - A lezárt taskok utólagos javításának jogosultsága
 - A beosztás TRN részének összekötése egy konkrét képzéssel
 - Földi eszközök: az eszköz hozzárendelése a taskhoz; emailes értesítés a hibajegyekről
-- Naptár: a kiosztott taskok is a naptárban; értesítés a beosztás változásáról (email vagy push)
+- Naptár: a kiosztott taskok is a naptárban; értesítés a beosztás változásáról (email vagy push); közvetlen írás az Outlook-naptárba a Microsoft Graphon keresztül (szinte azonnali, és a szervernek nem kell kívülről elérhetőnek lennie, de a cég IT-jának kell engedélyeznie egy alkalmazás-regisztrációt)
 - E-vizsga: véletlen kérdéshúzás a kérdésbankból, képek a kérdésekben
 - További slotüzenetek (pl. slottörlés), minta után
 - Az SI elemeinek feldolgozása (DAA, célállomásonkénti nettó bontás, poggyászdarabszámok, LOAD IN CPTS, B-sorok), ha a minták alapján egységesíthető
