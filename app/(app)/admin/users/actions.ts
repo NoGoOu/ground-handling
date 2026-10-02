@@ -3,6 +3,7 @@
 import bcrypt from "bcryptjs";
 import { redirect } from "next/navigation";
 import { Prisma } from "@/generated/prisma/client";
+import { revokeCalendarFeed } from "@/lib/data/calendar";
 import { countActiveAdmins } from "@/lib/data/users";
 import { prisma } from "@/lib/db";
 import { messages } from "@/lib/messages";
@@ -154,4 +155,13 @@ export async function updateUser(userId: string, _previous: UserFormState, formD
     throw error;
   }
   redirect("/admin/users");
+}
+
+/** The admin revokes a user's roster calendar link (12. mérföldkő). */
+export async function revokeUserCalendarFeed(userId: string): Promise<ActionResult> {
+  return runAction(async () => {
+    await actionUser(canManageUsers);
+    await revokeCalendarFeed(userId);
+    refresh();
+  });
 }

@@ -1,7 +1,10 @@
 import { notFound } from "next/navigation";
+import { RowButton } from "@/components/row-button";
+import { getCalendarFeed } from "@/lib/data/calendar";
 import { listRoles, listTeams } from "@/lib/data/users";
 import { prisma } from "@/lib/db";
 import { messages } from "@/lib/messages";
+import { fmt } from "@/lib/messages/format";
 import {
   canManageUsers,
   INDIVIDUAL_SOURCE,
@@ -13,7 +16,8 @@ import {
   type Scope,
 } from "@/lib/permissions";
 import { loadUser, requireCapability } from "@/lib/session";
-import { saveUserPermissions, updateUser } from "../actions";
+import { formatDateTime } from "@/lib/time";
+import { revokeUserCalendarFeed, saveUserPermissions, updateUser } from "../actions";
 import { UserPermissionsForm } from "../permissions-form";
 import { UserForm } from "../user-form";
 
@@ -22,12 +26,14 @@ const t = messages.userPermissions;
 export default async function EditUserPage(props: PageProps<"/admin/users/[id]">) {
   await requireCapability(canManageUsers);
   const { id } = await props.params;
-  const [user, roles, teams, effective] = await Promise.all([
+  const [user, roles, teams, effective, feed] = await Promise.all([
     prisma.user.findUnique({ where: { id }, include: { roles: true, permissions: true } }),
     listRoles(),
     listTeams(),
     loadUser(id),
+    getCalendarFeed(id),
   ]);
+  const c = messages.calendar;
   if (!user) notFound();
 
   const individual: Partial<Record<Permission, Scope>> = Object.fromEntries(
@@ -105,6 +111,25 @@ export default async function EditUserPage(props: PageProps<"/admin/users/[id]">
               </tbody>
             </table>
           </div>
+        )}
+      </section>
+
+      {/* The personal roster calendar link (12. mérföldkő). */}
+      <section className="flex flex-col gap-2 rounded-xl border border-neutral-200 bg-white p-4">
+        <h2 className="text-lg font-semibold">{c.adminTitle}</h2>
+        <p className="text-sm text-neutral-600">{c.adminHint}</p>
+        {feed ? (
+          <div className="flex flex-wrap items-center gap-3">
+            <p className="text-sm">
+              {fmt(c.adminFeed, {
+                created: formatDateTime(feed.createdAt),
+                used: feed.lastUsedAt ? formatDateTime(feed.lastUsedAt) : c.neverUsed,
+              })}
+            </p>
+            <RowButton action={revokeUserCalendarFeed.bind(null, user.id)} label={c.adminRevoke} confirm={c.adminConfirmRevoke} />
+          </div>
+        ) : (
+          <p className="text-sm text-neutral-600">{c.adminNoFeed}</p>
         )}
       </section>
     </div>

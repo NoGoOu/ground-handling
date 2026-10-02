@@ -1,17 +1,24 @@
 import Link from "next/link";
+import { listCalendarFeeds } from "@/lib/data/calendar";
 import { prisma } from "@/lib/db";
 import { messages } from "@/lib/messages";
 import { canManageUsers } from "@/lib/permissions";
+import { fmt } from "@/lib/messages/format";
 import { requireCapability } from "@/lib/session";
+import { formatDateTime } from "@/lib/time";
 
 const t = messages.userForm;
 
 export default async function UsersPage() {
   await requireCapability(canManageUsers);
-  const users = await prisma.user.findMany({
-    include: { roles: { include: { role: { select: { name: true } } } }, team: { select: { name: true } } },
-    orderBy: [{ active: "desc" }, { name: "asc" }],
-  });
+  const [users, feeds] = await Promise.all([
+    prisma.user.findMany({
+      include: { roles: { include: { role: { select: { name: true } } } }, team: { select: { name: true } } },
+      orderBy: [{ active: "desc" }, { name: "asc" }],
+    }),
+    listCalendarFeeds(),
+  ]);
+  const c = messages.calendar;
 
   return (
     <div className="flex flex-col gap-4">
@@ -33,6 +40,7 @@ export default async function UsersPage() {
               <th className="px-3 py-2">{t.columns.roles}</th>
               <th className="px-3 py-2">{t.columns.team}</th>
               <th className="px-3 py-2">{t.columns.status}</th>
+              <th className="px-3 py-2">{c.adminColumn}</th>
               <th className="px-3 py-2">
                 <span className="sr-only">{messages.admin.edit}</span>
               </th>
@@ -48,6 +56,13 @@ export default async function UsersPage() {
                 </td>
                 <td className="px-3 py-2">{user.team?.name ?? <span className="text-neutral-400">–</span>}</td>
                 <td className="px-3 py-2">{user.active ? messages.admin.active : messages.admin.inactive}</td>
+                <td className="px-3 py-2">
+                  {(() => {
+                    const feed = feeds.get(user.id);
+                    if (!feed) return <span className="text-neutral-400">{c.adminNone}</span>;
+                    return fmt(c.adminActive, { used: feed.lastUsedAt ? formatDateTime(feed.lastUsedAt) : c.neverUsed });
+                  })()}
+                </td>
                 <td className="px-3 py-2 text-right">
                   <Link href={`/admin/users/${user.id}`} className="text-sky-700 hover:underline">
                     {messages.admin.edit}

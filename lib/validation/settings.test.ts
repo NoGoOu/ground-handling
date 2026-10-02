@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { deviationLevel } from "@/lib/turnaround";
 import { fieldErrors } from "@/lib/validation/form";
-import { equipmentExpirySettingsSchema, expirySettingsSchema, settingsSchema, type SettingsFormInput } from "@/lib/validation/settings";
+import {
+  calendarSettingsSchema,
+  equipmentExpirySettingsSchema,
+  expirySettingsSchema,
+  settingsSchema,
+  type SettingsFormInput,
+} from "@/lib/validation/settings";
 
 const valid: SettingsFormInput = { deviationGreenMaxMinutes: "0", deviationYellowMaxMinutes: "5" };
 
@@ -57,5 +63,15 @@ describe("equipment expiry warning form (11. mérföldkő)", () => {
     expect(equipmentExpirySettingsSchema.parse({ equipmentWarningDays: " 45 " })).toEqual({ equipmentWarningDays: 45 });
     expect(equipmentExpirySettingsSchema.safeParse({ equipmentWarningDays: "-1" }).success).toBe(false);
     expect(equipmentExpirySettingsSchema.safeParse({ equipmentWarningDays: "2.5" }).success).toBe(false);
+  });
+});
+
+describe("calendar refresh form (12. mérföldkő)", () => {
+  it("takes whole minutes from a quarter of an hour to a day", () => {
+    expect(calendarSettingsSchema.parse({ calendarRefreshMinutes: "60" })).toEqual({ calendarRefreshMinutes: 60 });
+    expect(calendarSettingsSchema.parse({ calendarRefreshMinutes: "1440" })).toEqual({ calendarRefreshMinutes: 1440 });
+    expect(calendarSettingsSchema.safeParse({ calendarRefreshMinutes: "14" }).success).toBe(false);
+    expect(calendarSettingsSchema.safeParse({ calendarRefreshMinutes: "1441" }).success).toBe(false);
+    expect(calendarSettingsSchema.safeParse({ calendarRefreshMinutes: "" }).success).toBe(false);
   });
 });

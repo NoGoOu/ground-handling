@@ -15,11 +15,14 @@ export interface Settings {
   slotToleranceMinutes: number;
   /** A deadline of ground equipment within this many days is "hamarosan lejár" (11. mérföldkő). */
   equipmentWarningDays: number;
+  /** The refresh suggested to subscribed roster calendars, in minutes (12. mérföldkő). */
+  calendarRefreshMinutes: number;
 }
 
 export const DEFAULT_EXPIRY_WARNING_DAYS = 30;
 export const DEFAULT_SLOT_TOLERANCE_MINUTES = 10;
 export const DEFAULT_EQUIPMENT_WARNING_DAYS = 30;
+export const DEFAULT_CALENDAR_REFRESH_MINUTES = 60;
 
 /** Read once per request; falls back to the defaults while the row is missing. */
 export const getSettings = cache(async (): Promise<Settings> => {
@@ -31,5 +34,6 @@ export const getSettings = cache(async (): Promise<Settings> => {
     expiryWarningDays: row?.expiryWarningDays ?? DEFAULT_EXPIRY_WARNING_DAYS,
     slotToleranceMinutes: row?.slotToleranceMinutes ?? DEFAULT_SLOT_TOLERANCE_MINUTES,
     equipmentWarningDays: row?.equipmentWarningDays ?? DEFAULT_EQUIPMENT_WARNING_DAYS,
+    calendarRefreshMinutes: row?.calendarRefreshMinutes ?? DEFAULT_CALENDAR_REFRESH_MINUTES,
   };
 });

@@ -8,12 +8,15 @@ import { getCurrentUser } from "@/lib/session";
 import { SETTINGS_ID } from "@/lib/settings";
 import { fieldErrors, formValues, type FormState } from "@/lib/validation/form";
 import {
+  CALENDAR_SETTINGS_FIELDS,
+  calendarSettingsSchema,
   EQUIPMENT_EXPIRY_SETTINGS_FIELDS,
   equipmentExpirySettingsSchema,
   EXPIRY_SETTINGS_FIELDS,
   expirySettingsSchema,
   SETTINGS_FIELDS,
   settingsSchema,
+  type CalendarSettingsFormInput,
   type EquipmentExpirySettingsFormInput,
   type ExpirySettingsFormInput,
   type SettingsFormInput,
@@ -76,6 +79,29 @@ export async function updateEquipmentExpirySettings(
 
   const values = formValues(formData, EQUIPMENT_EXPIRY_SETTINGS_FIELDS);
   const parsed = equipmentExpirySettingsSchema.safeParse(values);
+  if (!parsed.success) return { errors: fieldErrors(parsed.error), values };
+
+  await prisma.setting.upsert({
+    where: { id: SETTINGS_ID },
+    create: { id: SETTINGS_ID, ...parsed.data },
+    update: parsed.data,
+  });
+  refresh();
+  return { notice: messages.form.saved };
+}
+
+export type CalendarSettingsFormState = FormState<CalendarSettingsFormInput>;
+
+/** The refresh suggested to the calendars subscribed to a roster (12. mérföldkő). */
+export async function updateCalendarSettings(
+  _previous: CalendarSettingsFormState,
+  formData: FormData,
+): Promise<CalendarSettingsFormState> {
+  const actor = await getCurrentUser();
+  if (!actor || !canManageSettings(actor)) return { message: messages.errors.forbidden };
+
+  const values = formValues(formData, CALENDAR_SETTINGS_FIELDS);
+  const parsed = calendarSettingsSchema.safeParse(values);
   if (!parsed.success) return { errors: fieldErrors(parsed.error), values };
 
   await prisma.setting.upsert({

@@ -48,6 +48,8 @@ model Setting {
   slotToleranceMinutes      Int      @default(10)
   /// A deadline of ground equipment within this many days is "hamarosan lejár" (11. mérföldkő).
   equipmentWarningDays      Int      @default(30)
+  /// The refresh time suggested to the calendars subscribed to a roster, in minutes (12. mérföldkő).
+  calendarRefreshMinutes    Int      @default(60)
   updatedAt                 DateTime @updatedAt
 }
 
@@ -117,6 +119,7 @@ model User {
   faultPhotos        FaultPhoto[]        @relation("FaultPhotosUploaded")
   faultComments      FaultComment[]      @relation("FaultComments")
   faultEvents        FaultEvent[]        @relation("FaultEvents")
+  calendarFeed       CalendarFeed?
 }
 
 /// A role is a name plus the permissions ticked for it (CLAUDE.md, "Jogosultsági rendszer").
@@ -1477,4 +1480,16 @@ model FaultEvent {
   createdAt   DateTime     @default(now())
 
   @@index([faultId])
+}
+
+/// A personal calendar subscription to one's own roster (CLAUDE.md, 12.
+/// mérföldkő): one live link per user. Only the hash of its key is kept; a new
+/// link replaces the old one.
+model CalendarFeed {
+  id         String    @id @default(cuid())
+  userId     String    @unique
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  keyHash    String    @unique
+  createdAt  DateTime  @default(now())
+  lastUsedAt DateTime?
 }

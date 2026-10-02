@@ -39,3 +39,9 @@ export const EQUIPMENT_EXPIRY_SETTINGS_FIELDS = ["equipmentWarningDays"] as cons
 export type EquipmentExpirySettingsFormInput = Record<(typeof EQUIPMENT_EXPIRY_SETTINGS_FIELDS)[number], string>;
 
 export const equipmentExpirySettingsSchema = z.object({ equipmentWarningDays: intField(0, 365, e.days) });
+
+/** The refresh suggested to subscribed roster calendars (12. mérföldkő), a form of its own. */
+export const CALENDAR_SETTINGS_FIELDS = ["calendarRefreshMinutes"] as const;
+export type CalendarSettingsFormInput = Record<(typeof CALENDAR_SETTINGS_FIELDS)[number], string>;
+
+export const calendarSettingsSchema = z.object({ calendarRefreshMinutes: intField(15, 1440, e.refreshMinutes) });

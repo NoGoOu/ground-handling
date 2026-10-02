@@ -23,7 +23,8 @@ export default auth(async (request) => {
   }
 });
 
-// The receiving API (/api/messages) checks its own API key instead of a session.
+// The receiving API (/api/messages) checks its own API key instead of a session,
+// and a roster calendar link (/api/calendar) its own key (12. mérföldkő).
 export const config = {
-  matcher: ["/((?!api/auth|api/health|api/messages|_next/static|_next/image|favicon.ico).*)"],
+  matcher: ["/((?!api/auth|api/health|api/messages|api/calendar/|_next/static|_next/image|favicon.ico).*)"],
 };
