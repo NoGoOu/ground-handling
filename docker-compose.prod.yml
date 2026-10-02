@@ -49,6 +49,9 @@ services:
       APP_PUBLIC_URL: ${APP_PUBLIC_URL:-}
       AUTH_SECRET: ${AUTH_SECRET:-}
       AUTH_TRUST_HOST: "true"
+      # Auth.js builds its redirects from the public address, not from the
+      # internal one the app listens on behind Caddy.
+      AUTH_URL: ${APP_PUBLIC_URL:-}
       UPLOAD_DIR: /app/uploads
       # The app only reads the backups, to show the latest on the admin page.
       BACKUP_DIR: /backups

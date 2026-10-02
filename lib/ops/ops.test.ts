@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { isProduction, productionConfigProblems, seedAllowed } from "@/lib/ops/config";
-import { appVersion } from "@/lib/ops/version";
+import { appVersion, formatVersion } from "@/lib/ops/version";
 import { parseFirstAdmin } from "@/lib/ops/first-admin";
 
 // Production mode (CLAUDE.md, 13. mérföldkő, "Telepítés").
@@ -99,6 +99,9 @@ describe("the running version", () => {
     expect(appVersion({ APP_COMMIT: "8df7a26", APP_BUILD_DATE: "2026-10-02T10:00:00Z" })).toEqual({ commit: "8df7a26", date: "2026-10-02T10:00:00Z" });
     expect(appVersion({})).toEqual({ commit: "unknown", date: "unknown" });
     expect(appVersion({ APP_COMMIT: " " })).toEqual({ commit: "unknown", date: "unknown" });
+    expect(formatVersion({ commit: "a4ae87d", date: "2026-10-02T12:30:00+02:00" })).toBe("a4ae87d (2026. 10. 02. 12:30)");
+    expect(formatVersion({ commit: "a4ae87d", date: "unknown" })).toBe("a4ae87d");
+    expect(formatVersion({ commit: "unknown", date: "unknown" })).toBe("ismeretlen (nem az éles építés)");
   });
 });
 

@@ -2286,6 +2286,8 @@ export const hu = {
   ops: {
     adminPage: {
       title: "Üzemeltetés",
+      version: "Futó verzió: {version}",
+      unknownVersion: "ismeretlen (nem az éles építés)",
       backupOk: "Legutóbbi sikeres mentés: {time} ({name}, {size}).",
       backupOld: "Figyelem: a legutóbbi sikeres mentés régebbi 2 napnál: {time} ({name}). Nézd meg a mentés naplóját: docker compose -f docker-compose.prod.yml logs backup",
       backupNone: "Figyelem: még nincs sikeres mentés. Készíts egyet: ops/backup.sh",

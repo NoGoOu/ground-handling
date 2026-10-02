@@ -2,6 +2,7 @@ import Link from "next/link";
 import { messages } from "@/lib/messages";
 import { fmt } from "@/lib/messages/format";
 import { formatSize, latestBackupState } from "@/lib/ops/backups";
+import { appVersion, formatVersion } from "@/lib/ops/version";
 import { canManageMessaging, canManageSettings, canOpenAdmin } from "@/lib/permissions";
 import { requireCapability } from "@/lib/session";
 import { formatDateTime } from "@/lib/time";
@@ -19,7 +20,7 @@ export default async function AdminPage() {
     { href: "/admin/settings", title: t.settings, hint: t.settingsHint },
     ...(canManageMessaging(user) ? [{ href: "/admin/messaging", title: t.messaging, hint: t.messagingHint }] : []),
   ];
-  // Operating the server (13. mérföldkő): the latest backup.
+  // Operating the server (13. mérföldkő): the running version and the latest backup.
   const backup = canManageSettings(user) ? await latestBackupState() : null;
   const o = messages.ops.adminPage;
   return (
@@ -28,6 +29,7 @@ export default async function AdminPage() {
       {backup && (
         <section className="flex flex-col gap-1 rounded-xl border border-neutral-200 bg-white p-4 text-sm">
           <h2 className="text-base font-semibold">{o.title}</h2>
+          <p className="text-neutral-700">{fmt(o.version, { version: formatVersion(appVersion()) })}</p>
           {backup.kind === "unconfigured" && <p className="text-neutral-600">{o.backupUnconfigured}</p>}
           {backup.kind === "none" && <p className="font-medium text-red-700">{o.backupNone}</p>}
           {(backup.kind === "ok" || backup.kind === "old") && (
