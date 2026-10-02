@@ -1,6 +1,6 @@
 # Ground Handling App – projekt-összefoglaló
 
-*Verzió: 31 · 2026. október 1.*
+*Verzió: 32 · 2026. október 2.*
 
 ## A projekt
 
@@ -119,6 +119,8 @@ A projekt gazdája a földi kiszolgálásban dolgozik, a domain-szabályok az ő
 97. **Elfogadott pontosítások a 10. mérföldkőből** (CLAUDE.md 73–79.): elméleti rész csak dolgozatos képzésnél; a többválaszos pontozás vizsgalaponként állítható; a válaszok azonnal mentődnek, az időkorlát a Kezdés gombtól fut; kérdés és szempont csak inaktiválható; az OJT-értékelés a task lezárása után, egyszer; a gyakorlati vizsga az elmúlt 14 nap egy taskján, utólag nem módosítható.
 98. **Kizáró szempontok:** a gyakorlati vizsgán szempontonként jelölhető, hogy kizáró-e; ha egy kizáró szempont nem felelt meg, a vizsga automatikusan sikertelen, egyébként a vizsgáztató dönt.
 99. **Földi eszközök és hibajegy (11. mérföldkő):** minden földi eszköz, eszköztípusonként; a műszaki adatok (műszaki vizsga, szerviz, üzemóra vagy km, dokumentumok) szerkeszthetők és kézzel bővíthetők; hibát bárki jelenthet, a hibajegyet az új Műszaki szerepkör kezeli.
+100. **Elfogadott pontosítások a 11. mérföldkőből** (CLAUDE.md 80–87.): a mező csak inaktiválható; a határidő a lejárat napján még érvényes; legfeljebb 5 fotó jegyenként; nyitott jegy közvetlenül is lezárható, visszanyitás nincs; lezárt jegyhez is írhat megjegyzést a Műszaki; az eszközt a Műszaki külön lépésben állítja üzemképesre.
+101. **Ügynöki beosztásnézet (12. mérföldkő):** az ügynök a telefonján látja a saját publikált és valós beosztását, az eltéréseket kiemelve; ehhez az Ügynök szerepkör saját hatókörrel megkapja a beosztás megtekintését.
 
 ## Még ellenőrizendő feltételezések
 
@@ -168,7 +170,6 @@ A projekt gazdája a földi kiszolgálásban dolgozik, a domain-szabályok az ő
 - Valós tesztadat: az Ikarus AODB-oldal mentése elindult (félóránként, 30 napig, a projekt gazdájának gépén, a repón kívül; a nyilvános repóba nem kerülhet). Utána importer a pillanatképekből (összefésülés rekordazonosító szerint, a nap a menetrendi időből, éjfélre figyelve).
 - Email- és SITA-átjáró a bejövő üzenetekhez (a fogadó API-ra csatlakozik)
 - A BUD-on lévő ULD-készlet követése az UCM-ekből
-- Ügynöki beosztásnézet (az ügynök a saját publikált és valós beosztását látja)
 - A beosztás TRN részének összekötése egy konkrét képzéssel
 - A lezárt taskok utólagos javításának jogosultsága
 - Járatinfó: egyedi mezők taskonként (utaslétszám, különleges igények)
@@ -180,5 +181,5 @@ A projekt gazdája a földi kiszolgálásban dolgozik, a domain-szabályok az ő
 ## Következő lépés
 
 1. Az 1–9. mérföldkő kész (MVP; jogosultság, beosztás, sávos nézet; járatrend-import; tervezői nézet; feladattípusok; képzések és jogosítások; üzenetek; üzenetek bővítése; létszámigény a tervezettel együtt, 700 zöld teszttel), a késéskód-dokumentumokkal együtt.
-2. A 10. mérföldkő (oktatás: e-vizsga, OJT és kibocsátás) kész, 754 zöld teszttel. Most az utómunkája: kizáró szempontok a gyakorlati vizsgán; utána a 11. mérföldkő, földi eszközök és hibajegy (CLAUDE.md 35. verzió). A 11. mérföldkő a járművek és a hibajegy, egyeztetés után.
+2. A 10. mérföldkő (oktatás: e-vizsga, OJT és kibocsátás, kizáró szempontokkal) és a 11. mérföldkő (földi eszközök és hibajegy) kész, 787 zöld teszttel. Most: a 12. mérföldkő, ügynöki beosztásnézet (CLAUDE.md 36. verzió). A 11. mérföldkő a járművek és a hibajegy, egyeztetés után.
 3. A projekt gazdájánál: a nyitott üzenet- és késéskódok; a SITA-átjáró; a valós GOU- és HDS-sablonok; a csatolt fájlok megőrzési ideje; az Ikarus-mentés ellenőrzése.
