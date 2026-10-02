@@ -44,6 +44,9 @@ next-env.d.ts
 /.claude/launch.json
 /.claude/settings.local.json
 
+# backups of the production server, next to docker-compose.prod.yml
+/backups/
+
 # env examples are committed, never the filled-in files
 !.env.example
 !.env.production.example

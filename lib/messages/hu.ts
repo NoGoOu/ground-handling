@@ -2284,6 +2284,13 @@ export const hu = {
   },
   // Operating the production server (13. mérföldkő): texts of the console scripts.
   ops: {
+    adminPage: {
+      title: "Üzemeltetés",
+      backupOk: "Legutóbbi sikeres mentés: {time} ({name}, {size}).",
+      backupOld: "Figyelem: a legutóbbi sikeres mentés régebbi 2 napnál: {time} ({name}). Nézd meg a mentés naplóját: docker compose -f docker-compose.prod.yml logs backup",
+      backupNone: "Figyelem: még nincs sikeres mentés. Készíts egyet: ops/backup.sh",
+      backupUnconfigured: "A mentés ezen a szerveren nincs beállítva (csak az éles telepítésben fut).",
+    },
     config: {
       problem: "{name}: {text}",
       missing: "hiányzik",

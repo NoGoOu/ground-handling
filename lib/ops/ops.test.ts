@@ -101,3 +101,41 @@ describe("the running version", () => {
     expect(appVersion({ APP_COMMIT: " " })).toEqual({ commit: "unknown", date: "unknown" });
   });
 });
+
+describe("the latest backup on the admin page", () => {
+  it("is fresh within two days, and warned about after", async () => {
+    const { backupState } = await import("@/lib/ops/backups");
+    const now = new Date("2026-10-02T12:00:00Z");
+    const backup = (hoursAgo: number) => ({ name: "backup-20261002-033000.tar.gz", at: new Date(now.getTime() - hoursAgo * 3_600_000), bytes: 1000 });
+    expect(backupState(backup(8), now).kind).toBe("ok");
+    expect(backupState(backup(48), now).kind).toBe("ok");
+    expect(backupState(backup(49), now).kind).toBe("old");
+    expect(backupState(null, now)).toEqual({ kind: "none" });
+  });
+
+  it("writes the size short", async () => {
+    const { formatSize } = await import("@/lib/ops/backups");
+    expect(formatSize(32_768)).toBe("32 kB");
+    expect(formatSize(100)).toBe("1 kB");
+    expect(formatSize(1_468_006)).toBe("1.4 MB");
+  });
+
+  it("lists only finished packages, the newest first", async () => {
+    const { mkdtemp, writeFile, utimes } = await import("node:fs/promises");
+    const { tmpdir } = await import("node:os");
+    const path = await import("node:path");
+    const { listBackups } = await import("@/lib/ops/backups");
+    const dir = await mkdtemp(path.join(tmpdir(), "gh-backups-"));
+    await writeFile(path.join(dir, "backup-20261001-033000.tar.gz"), "a");
+    await writeFile(path.join(dir, "backup-20261002-033000.tar.gz"), "bb");
+    await writeFile(path.join(dir, ".work-abc123"), "half-made");
+    await writeFile(path.join(dir, "notes.txt"), "x");
+    await utimes(path.join(dir, "backup-20261001-033000.tar.gz"), new Date("2026-10-01T01:31:00Z"), new Date("2026-10-01T01:31:00Z"));
+    await utimes(path.join(dir, "backup-20261002-033000.tar.gz"), new Date("2026-10-02T01:31:00Z"), new Date("2026-10-02T01:31:00Z"));
+    expect((await listBackups(dir))!.map((b) => [b.name, b.bytes])).toEqual([
+      ["backup-20261002-033000.tar.gz", 2],
+      ["backup-20261001-033000.tar.gz", 1],
+    ]);
+    expect(await listBackups(path.join(dir, "missing"))).toBeNull();
+  });
+});
