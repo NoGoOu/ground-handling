@@ -244,7 +244,9 @@ describe("roster visibility", () => {
     expect(canViewRosterOf(lead, "bela")).toBe(true);
     expect(canViewRosterOf(teamLeader, "anna")).toBe(true);
     expect(canViewRosterOf(teamLeader, "bela")).toBe(false);
-    expect(canViewRosterOf(anna, "anna")).toBe(false);
+    // An agent sees their own roster only (12. mérföldkő).
+    expect(canViewRosterOf(anna, "anna")).toBe(true);
+    expect(canViewRosterOf(anna, "bela")).toBe(false);
   });
 });
 
@@ -253,7 +255,7 @@ describe("roster layers", () => {
     expect(visibleLayers(planner)).toEqual(["DRAFT", "PUBLISHED", "ACTUAL"]);
     expect(visibleLayers(admin)).toEqual(["DRAFT", "PUBLISHED", "ACTUAL"]);
     expect(visibleLayers(lead)).toEqual(["PUBLISHED", "ACTUAL"]);
-    expect(visibleLayers(anna)).toEqual([]);
+    expect(visibleLayers(anna)).toEqual(["PUBLISHED", "ACTUAL"]);
     expect(canViewLayer(lead, "DRAFT")).toBe(false);
   });
 
@@ -275,7 +277,11 @@ describe("roster layers", () => {
     expect(rosterVisibleUserIds(lead)).toBeNull();
     expect(rosterVisibleUserIds(planner)).toBeNull();
     expect(rosterVisibleUserIds(teamLeader)).toEqual(["cili", "anna"]);
-    expect(rosterVisibleUserIds(anna)).toEqual([]);
+    expect(rosterVisibleUserIds(anna)).toEqual(["anna"]);
+    expect(canViewLayerOf(anna, "ACTUAL", "anna")).toBe(true);
+    expect(canViewLayerOf(anna, "ACTUAL", "bela")).toBe(false);
+    expect(canViewLayerOf(anna, "DRAFT", "anna")).toBe(false);
+    expect(canEditLayer(anna, "ACTUAL")).toBe(false);
     expect(canViewLayerOf(teamLeader, "ACTUAL", "anna")).toBe(true);
     expect(canViewLayerOf(teamLeader, "ACTUAL", "bela")).toBe(false);
     expect(canViewLayerOf(teamLeader, "DRAFT", "anna")).toBe(false);
@@ -286,7 +292,9 @@ describe("routes", () => {
   it("guards each area with its permission", () => {
     expect(canAccessPath(anna, "/admin")).toBe(false);
     expect(canAccessPath(anna, "/flights")).toBe(false);
-    expect(canAccessPath(anna, "/shifts")).toBe(false);
+    expect(canAccessPath(anna, "/shifts")).toBe(true);
+    expect(canAccessPath(anna, "/agent/roster")).toBe(true);
+    expect(canAccessPath(planner, "/agent/roster")).toBe(true);
     expect(canAccessPath(anna, "/agent")).toBe(true);
     expect(canAccessPath(lead, "/flights")).toBe(true);
     expect(canAccessPath(lead, "/shifts")).toBe(true);
@@ -332,7 +340,9 @@ describe("routes", () => {
   it("sends each role to its own home page", () => {
     expect(homePathFor(lead)).toBe("/flights");
     expect(homePathFor(planner)).toBe("/shifts");
+    // Their own roster does not take an agent off their tasks (12. mérföldkő).
     expect(homePathFor(anna)).toBe("/agent");
+    expect(homePathFor(teamLeader)).toBe("/shifts");
     expect(homePathFor(admin)).toBe("/flights");
   });
 });

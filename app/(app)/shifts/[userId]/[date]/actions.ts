@@ -191,7 +191,11 @@ export async function removeSegment(segmentId: string): Promise<ActionResult> {
     assertLayerEditable(actor, shift.layer);
     if (shift.segments.length <= 1) throw new ActionError(e.lastSegment);
 
-    await prisma.shiftSegment.delete({ where: { id: segmentId } });
+    // The shift changes with its segment, so the agent sees when (12. mérföldkő).
+    await prisma.$transaction([
+      prisma.shiftSegment.delete({ where: { id: segmentId } }),
+      prisma.shift.update({ where: { id: shift.id }, data: { updatedAt: new Date() } }),
+    ]);
     refresh();
   });
 }

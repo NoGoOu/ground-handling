@@ -395,6 +395,8 @@ const ROUTE_PERMISSIONS: [prefix: string, permissions: Permission[]][] = [
   ["/staffing", ["STAFFING_VIEW"]],
   ["/equipment", ["EQUIPMENT_MANAGE", "FAULT_MANAGE", "FAULT_VIEW"]],
   ["/faults", ["FAULT_REPORT", "FAULT_VIEW", "FAULT_MANAGE"]],
+  // The agent's own roster (12. mérföldkő).
+  ["/agent/roster", ["ROSTER_VIEW"]],
   ["/agent", ["TASK_VIEW"]],
 ];
 
@@ -421,8 +423,11 @@ export function canAccessPath(actor: Actor, pathname: string): boolean {
 /** Where a user lands after signing in; "/" when they have no page at all. */
 export function homePathFor(actor: Actor): string {
   if (can(actor, "FLIGHT_MANAGE")) return "/flights";
-  if (can(actor, "ROSTER_VIEW") || can(actor, "ROSTER_DRAFT")) return "/shifts";
+  // Seeing only their own roster does not take an agent off their tasks (12. mérföldkő).
+  const rosterScope = scopeOf(actor, "ROSTER_VIEW");
+  if (can(actor, "ROSTER_DRAFT") || (rosterScope && rosterScope !== "SELF")) return "/shifts";
   if (can(actor, "TASK_VIEW")) return "/agent";
+  if (rosterScope) return "/shifts";
   if (canAccessPath(actor, "/admin")) return "/admin";
   return "/";
 }

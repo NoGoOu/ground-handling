@@ -1,6 +1,8 @@
 import type { Prisma, RosterLayer } from "@/generated/prisma/client";
 import { blockOf, type BoardBlock } from "@/lib/board";
+import { listPublicationsInRange } from "@/lib/data/publications";
 import { prisma } from "@/lib/db";
+import { ownRosterDays } from "@/lib/roster";
 import { addDays, localDayRange, toLocalDate } from "@/lib/time";
 
 // The roster lives in three layers (CLAUDE.md, "Beosztás rétegei"). A shift has
@@ -35,6 +37,8 @@ export interface RosterShift {
   /** Earliest segment start and latest segment end. */
   start: Date | null;
   end: Date | null;
+  /** The latest change of the shift or any of its segments (12. mérföldkő). */
+  updatedAt: Date;
 }
 
 export function toRosterShift(shift: ShiftWithRelations): RosterShift {
@@ -64,6 +68,7 @@ export function toRosterShift(shift: ShiftWithRelations): RosterShift {
     segments,
     start: segments[0]?.start ?? null,
     end: segments.reduce<Date | null>((latest, s) => (!latest || s.end > latest ? s.end : latest), null),
+    updatedAt: shift.segments.reduce((latest, s) => (s.updatedAt > latest ? s.updatedAt : latest), shift.updatedAt),
   };
 }
 
@@ -186,4 +191,22 @@ export async function listAgentBlocks(userId: string, localDate: string): Promis
       }),
     )
     .filter((block) => block.start < end && block.end > start);
+}
+
+/**
+ * The agent's own roster for some days (CLAUDE.md, 12. mérföldkő): the
+ * published and the actual layer of the published days, never the draft.
+ */
+export async function listOwnRoster(userId: string, startLocalDate: string, days: number) {
+  const dayList = Array.from({ length: days }, (_, index) => addDays(startLocalDate, index));
+  const [shifts, publications] = await Promise.all([
+    listShiftsInRange({ startLocalDate, days, layers: ["PUBLISHED", "ACTUAL"], userIds: [userId] }),
+    listPublicationsInRange(startLocalDate, dayList[dayList.length - 1]),
+  ]);
+  return ownRosterDays(
+    dayList,
+    publications,
+    shifts.filter((shift) => shift.layer === "PUBLISHED"),
+    shifts.filter((shift) => shift.layer === "ACTUAL"),
+  );
 }

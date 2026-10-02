@@ -184,6 +184,8 @@ export const DEFAULT_ROLES: { name: string; builtIn: boolean; permissions: Parti
       // Reporting faults and seeing their own (11. mérföldkő).
       FAULT_REPORT: "ALL",
       FAULT_VIEW: "SELF",
+      // Their own published and actual roster (12. mérföldkő).
+      ROSTER_VIEW: "SELF",
     },
   },
 ];

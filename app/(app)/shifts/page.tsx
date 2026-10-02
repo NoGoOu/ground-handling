@@ -11,6 +11,7 @@ import {
   rosterVisibleUserIds,
   visibleLayers,
 } from "@/lib/permissions";
+import { sameSegments } from "@/lib/roster";
 import { dateParam } from "@/lib/search-params";
 import { requireCapability } from "@/lib/session";
 import { addDays, formatDayShort, formatTimeOnDay, startOfWeek, toLocalDate, weekdayIndex } from "@/lib/time";
@@ -43,12 +44,8 @@ function groupByCell(shifts: RosterShift[]): Map<string, RosterShift[]> {
 
 /** Two layers match when they hold the same segments (type and times). */
 function sameShifts(a: RosterShift[], b: RosterShift[]): boolean {
-  const key = (shifts: RosterShift[]) =>
-    shifts
-      .flatMap((shift) => shift.segments.map((s) => `${s.type.id} ${s.start.toISOString()} ${s.end.toISOString()}`))
-      .sort()
-      .join(" | ");
-  return key(a) === key(b);
+  const segments = (shifts: RosterShift[]) => shifts.flatMap((shift) => shift.segments.map((s) => ({ typeId: s.type.id, start: s.start, end: s.end })));
+  return sameSegments(segments(a), segments(b));
 }
 
 function LayerLine({ layer, shifts, day }: { layer: RosterLayer; shifts: RosterShift[]; day: string }) {
