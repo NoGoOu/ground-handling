@@ -1,6 +1,6 @@
 # Ground Handling App – projekt-összefoglaló
 
-*Verzió: 32 · 2026. október 2.*
+*Verzió: 33 · 2026. október 2.*
 
 ## A projekt
 
@@ -121,6 +121,7 @@ A projekt gazdája a földi kiszolgálásban dolgozik, a domain-szabályok az ő
 99. **Földi eszközök és hibajegy (11. mérföldkő):** minden földi eszköz, eszköztípusonként; a műszaki adatok (műszaki vizsga, szerviz, üzemóra vagy km, dokumentumok) szerkeszthetők és kézzel bővíthetők; hibát bárki jelenthet, a hibajegyet az új Műszaki szerepkör kezeli.
 100. **Elfogadott pontosítások a 11. mérföldkőből** (CLAUDE.md 80–87.): a mező csak inaktiválható; a határidő a lejárat napján még érvényes; legfeljebb 5 fotó jegyenként; nyitott jegy közvetlenül is lezárható, visszanyitás nincs; lezárt jegyhez is írhat megjegyzést a Műszaki; az eszközt a Műszaki külön lépésben állítja üzemképesre.
 101. **Ügynöki beosztásnézet (12. mérföldkő):** az ügynök a telefonján látja a saját publikált és valós beosztását, az eltéréseket kiemelve; ehhez az Ügynök szerepkör saját hatókörrel megkapja a beosztás megtekintését.
+102. **Beosztás a naptárban:** az ügynök .ics fájlként letöltheti a beosztását, vagy személyes linkkel feliratkozhat rá, így a változások maguktól megjelennek a naptárában. A link titkos kulcsot tartalmaz, újragenerálható és visszavonható.
 
 ## Még ellenőrizendő feltételezések
 
@@ -149,6 +150,7 @@ A projekt gazdája a földi kiszolgálásban dolgozik, a domain-szabályok az ő
 - Lufthansa-minta: a Q (sürgős) tétel az LDM nettó bontásában az O (other) alatt szerepel; az LDM összsúlya a konténerek önsúlyával együtt értendő.
 - Létszámigény: az igény a kiosztástól független; a beosztás sávértéke a sávon belüli legkisebb létszám; a beosztás nincs feladattípusra bontva.
 - Késéskód-dokumentum: csak PDF, legfeljebb 10 MB (helyőrző); légitársaságonként egy, az új feltöltés cseréli a régit.
+- Naptár-feliratkozás: a mai naptól 7 napra visszamenőleg és minden jövőbeli publikált nap; műszakonként egy esemény, a részek a leírásban; a frissítés gyakoriságát a naptárprogram dönti el (a Google akár naponta egyszer); a szervernek interneten elérhetőnek kell lennie.
 - Földi eszközök: a hibajegy állapotai (nyitott, folyamatban, lezárva); az üzemképtelennek jelentett eszköz azonnal üzemképtelen, a Műszaki állítja vissza; a műszakvezető minden jegyet lát; jelzés a menüben, email később; az eszközök „hamarosan lejár” napjai külön beállítás (30).
 - Oktatás: az e-vizsgát a vizsgáztató vagy a koordinátor nyitja meg a vizsgázónak; a vizsgázó a helyes válaszokat nem látja; több helyes válasznál csak a teljesen helyes ér pontot; az OJT-követelmény helyőrzői (10 megfelelő gyakorlás, a kötelező mérföldkövek 100%-ban, eltérés-küszöb nélkül); a gyakorlati vizsga OJT nélkül is indítható, figyelmeztetéssel; új Mentor és Vizsgáztató szerepkör; a gyakornok a sávos nézetben és az ütközésvizsgálatban látszik, a létszámigényben nem.
 
@@ -181,5 +183,5 @@ A projekt gazdája a földi kiszolgálásban dolgozik, a domain-szabályok az ő
 ## Következő lépés
 
 1. Az 1–9. mérföldkő kész (MVP; jogosultság, beosztás, sávos nézet; járatrend-import; tervezői nézet; feladattípusok; képzések és jogosítások; üzenetek; üzenetek bővítése; létszámigény a tervezettel együtt, 700 zöld teszttel), a késéskód-dokumentumokkal együtt.
-2. A 10. mérföldkő (oktatás: e-vizsga, OJT és kibocsátás, kizáró szempontokkal) és a 11. mérföldkő (földi eszközök és hibajegy) kész, 787 zöld teszttel. Most: a 12. mérföldkő, ügynöki beosztásnézet (CLAUDE.md 36. verzió). A 11. mérföldkő a járművek és a hibajegy, egyeztetés után.
+2. A 10. mérföldkő (oktatás: e-vizsga, OJT és kibocsátás, kizáró szempontokkal) és a 11. mérföldkő (földi eszközök és hibajegy) kész, 787 zöld teszttel. Most: a 12. mérföldkő, ügynöki beosztásnézet, naptármentéssel és feliratkozással (CLAUDE.md 37. verzió). A 11. mérföldkő a járművek és a hibajegy, egyeztetés után.
 3. A projekt gazdájánál: a nyitott üzenet- és késéskódok; a SITA-átjáró; a valós GOU- és HDS-sablonok; a csatolt fájlok megőrzési ideje; az Ikarus-mentés ellenőrzése.

@@ -1,6 +1,6 @@
 # Ground Handling App – projektleírás
 
-*Verzió: 36 · 2026. október 2.*
+*Verzió: 37 · 2026. október 2.*
 
 Nyílt forráskódú webalkalmazás repülőtéri földi kiszolgálás (ground handling) szervezésére. Minden járatfordulóhoz feladattípusonként egy task tartozik, benne mérföldkövekkel, amelyeknek van tervezett és tényleges időpontja. A mérföldkövek légitársaságonként testreszabható sablonokból jönnek. A hozzáférés szerepkör alapú.
 
@@ -798,7 +798,7 @@ Külön oldal, asztali gépre; telefonon ne törjön el, de nem arra optimalizá
 
 ## 12. mérföldkő – ügynöki beosztásnézet
 
-**Ezt építjük most,** a szokásos terv-jóváhagyással. Az ügynök a telefonján látja a saját beosztását, a publikáltat és a valósat, és azonnal észreveszi, ha a valós eltér a publikálttól.
+**Ezt építjük most,** a szokásos terv-jóváhagyással. Az ügynök a telefonján látja a saját beosztását, a publikáltat és a valósat, és azonnal észreveszi, ha a valós eltér a publikálttól. A beosztását a naptárába is mentheti, vagy feliratkozhat rá, így a változások maguktól megjelennek.
 
 ### Szabályok
 
@@ -810,13 +810,21 @@ Külön oldal, asztali gépre; telefonon ne törjön el, de nem arra optimalizá
   - a még nem publikált napon „Még nincs publikálva”; a nap, amelyen nincs műszakja, „Szabad”.
 - **Napi összefoglaló:** az ügynök napi taskjai fölött a napi műszak (kezdet, vég, a blokkok), az eltérés jelölésével.
 - Az éjfélen átnyúló műszak a kezdése napjánál jelenik meg (2. mérföldkő).
+- **Naptár:**
+  - **Mentés a naptárba:** a „Beosztásom” nézetből .ics fájl tölthető le a megjelenített hétre vagy egy választott időszakra (legfeljebb 31 nap), amelyet a telefon vagy a gép naptára importál. Ez egyszeri másolat, a későbbi változásokat nem követi.
+  - **Feliratkozás:** az ügynök személyes feliratkozási linket kér, és a naptárában (Google, Apple, Outlook) URL-ből feliratkozik rá; a naptár ezután magától frissíti a beosztását.
+  - A link a felhasználóhoz kötött titkos kulcsot tartalmaz, mert a naptárprogram nem tud belépni. Csak olvasásra jó, és csak a saját beosztását adja. A kulcsot hash-elve tároljuk; a link csak létrehozáskor látszik (mint az API-kulcsnál); újragenerálással a régi érvénytelenné válik. Inaktív felhasználó linkje nem működik. Látszik az utolsó lekérés ideje; az admin a felhasználó oldalán visszavonhatja.
+  - **Tartalom** (a letöltésben és a feliratkozásban ugyanaz): a publikált napok valós műszakjai; a feliratkozásban a mai naptól 7 napra visszamenőleg és minden jövőbeli publikált nap (helyőrző). Nem publikált nap és tervezet nincs benne. Műszakonként egy esemény: a cím a műszak ideje (pl. „Műszak 06:00–14:00”), a leírásban a részek (típus, idő, helyszín, leírás, a blokk az utazási idővel), és ha a valós eltér a publikálttól, „Módosult, publikált: …”. Az esemény azonosítója a műszakhoz kötött, így módosításkor frissül, nem duplikálódik; a törölt műszak eltűnik.
+  - Az idők Europe/Budapest szerint, óraátállítással helyesek.
+  - A frissítés gyakoriságát a naptárprogram dönti el (a Google akár naponta csak egyszer frissít), ezért azonnali értesítésre nem alkalmas. A feliratkozáshoz a szervernek elérhetőnek kell lennie onnan, ahonnan a naptár lekéri (a Google a saját szervereiről kéri le, tehát interneten át, HTTPS-sel); ezt a README írja le.
 
 ### Lépésterv
 
 1. Jogosultság (az Ügynök szerepkör saját hatókörrel, migrációval) és adatréteg: az ügynök saját publikált és valós műszakjai egy hétre, az eltérés a meglévő összevetéssel; tesztek
 2. „Beosztásom” nézet telefonra: heti lista, napi részletek, eltérés kiemelése, „Még nincs publikálva”, „Szabad”
 3. Napi összefoglaló az ügynök nézetében
-4. Seed (ha kell: legalább egy eltérő és egy nem publikált nap a demo ügynököknél), README, STATUS.md
+4. Naptár: az .ics előállítása tiszta függvényként (tesztek: stabil eseményazonosító, óraátállítás, éjfélen átnyúló műszak, eltérés a leírásban, a szöveg szabványos escape-elése és sortördelése); letöltés; feliratkozási link (kulcs hash-elve, újragenerálás, visszavonás, utolsó lekérés), tesztekkel
+5. Seed (ha kell: legalább egy eltérő és egy nem publikált nap a demo ügynököknél), README (a feliratkozás beállítása Google, Apple és Outlook naptárban, és az elérhetőség feltétele), STATUS.md
 
 ## További eldöntött szabályok
 
@@ -916,6 +924,7 @@ Ezeket a kérdéseket a megrendelő 2026. szeptember 22-én jóváhagyta; a kód
 - A lezárt taskok utólagos javításának jogosultsága
 - A beosztás TRN részének összekötése egy konkrét képzéssel
 - Földi eszközök: az eszköz hozzárendelése a taskhoz; emailes értesítés a hibajegyekről
+- Naptár: a kiosztott taskok is a naptárban; értesítés a beosztás változásáról (email vagy push)
 - E-vizsga: véletlen kérdéshúzás a kérdésbankból, képek a kérdésekben
 - További slotüzenetek (pl. slottörlés), minta után
 - Az SI elemeinek feldolgozása (DAA, célállomásonkénti nettó bontás, poggyászdarabszámok, LOAD IN CPTS, B-sorok), ha a minták alapján egységesíthető
