@@ -1,6 +1,6 @@
 # Ground Handling App – projektleírás
 
-*Verzió: 38 · 2026. október 2.*
+*Verzió: 39 · 2026. október 2.*
 
 Nyílt forráskódú webalkalmazás repülőtéri földi kiszolgálás (ground handling) szervezésére. Minden járatfordulóhoz feladattípusonként egy task tartozik, benne mérföldkövekkel, amelyeknek van tervezett és tényleges időpontja. A mérföldkövek légitársaságonként testreszabható sablonokból jönnek. A hozzáférés szerepkör alapú.
 
@@ -810,12 +810,13 @@ Külön oldal, asztali gépre; telefonon ne törjön el, de nem arra optimalizá
   - a még nem publikált napon „Még nincs publikálva”; a nap, amelyen nincs műszakja, „Szabad”.
 - **Napi összefoglaló:** az ügynök napi taskjai fölött a napi műszak (kezdet, vég, a blokkok), az eltérés jelölésével.
 - Az éjfélen átnyúló műszak a kezdése napjánál jelenik meg (2. mérföldkő).
-- **Naptár:** elsőként a Microsoft-környezetre készül, mert a cégek jellemzően azt használják: Outlook (Microsoft 365, Outlook a weben, az új és a klasszikus Outlook, Outlook mobil). A tesztelés és a README elsősorban erre szól; a Google és az Apple naptár is működjön.
+- **Naptár:** szabványos iCalendar (.ics), így bármelyik naptárral működik (Outlook és Microsoft 365, Google, Apple, Thunderbird stb.). Külső szolgáltatás, regisztráció és céges IT-engedély nem kell hozzá: a saját szerverünk adja, és az alkalmazás üzemeltetője kezeli. Az Outlook-kompatibilitásra külön figyelünk, mert céges környezetben gyakori.
   - **Mentés a naptárba:** a „Beosztásom” nézetből .ics fájl tölthető le a megjelenített hétre vagy egy választott időszakra (legfeljebb 31 nap), amelyet a telefon vagy a gép naptára importál. Ez egyszeri másolat, a későbbi változásokat nem követi.
   - **Feliratkozás:** az ügynök személyes feliratkozási linket kér, és a naptárában URL-ből feliratkozik rá (Outlookban: „Naptár hozzáadása → Feliratkozás a webről”); a naptár ezután magától frissíti a beosztását.
   - A link a felhasználóhoz kötött titkos kulcsot tartalmaz, mert a naptárprogram nem tud belépni. Csak olvasásra jó, és csak a saját beosztását adja. A kulcsot hash-elve tároljuk; a link csak létrehozáskor látszik (mint az API-kulcsnál); újragenerálással a régi érvénytelenné válik. Inaktív felhasználó linkje nem működik. Látszik az utolsó lekérés ideje; az admin a felhasználó oldalán visszavonhatja.
   - **Tartalom** (a letöltésben és a feliratkozásban ugyanaz): a publikált napok valós műszakjai; a feliratkozásban a mai naptól 7 napra visszamenőleg és minden jövőbeli publikált nap (helyőrző). Nem publikált nap és tervezet nincs benne. Műszakonként egy esemény: a cím a műszak ideje (pl. „Műszak 06:00–14:00”), a leírásban a részek (típus, idő, helyszín, leírás, a blokk az utazási idővel), és ha a valós eltér a publikálttól, a megjegyzésben: „Módosult: <a módosulás ideje>. Publikált: <a publikált műszak ideje és részei>”. Az esemény azonosítója a műszakhoz kötött, így módosításkor frissül, nem duplikálódik; a törölt műszak eltűnik.
-  - Az idők Europe/Budapest szerint, óraátállítással helyesek. Az Outlook-kompatibilitás miatt: az időpontok UTC-ben (az Outlook a saját időzónájára váltja), a naptár neve „Beosztás – <név>”, a javasolt frissítési idő 1 óra (`REFRESH-INTERVAL`, `X-PUBLISHED-TTL`; helyőrző, a naptárprogram figyelmen kívül hagyhatja), a link `https`, és `.ics`-re végződik.
+  - Az idők Europe/Budapest szerint, óraátállítással helyesek. A széles kompatibilitás (köztük az Outlook) miatt: az időpontok UTC-ben (a naptárprogram a saját időzónájára váltja), a naptár neve „Beosztás – <név>”, a javasolt frissítési idő admin beállítás (helyőrző: 1 óra; `REFRESH-INTERVAL`, `X-PUBLISHED-TTL`; a naptárprogram figyelmen kívül hagyhatja), a link `https`, és `.ics`-re végződik.
+  - **Üzemeltetés:** a feliratkozási link a szerver nyilvános címéből készül, amelyet az üzemeltető környezeti változóban ad meg (pl. `APP_PUBLIC_URL`). Ha nincs beállítva, feliratkozás nem kérhető, csak a letöltés működik, és a felület ezt jelzi. Az admin látja, kinek van élő linkje és mikor kérték le utoljára, és bármelyiket visszavonhatja.
   - A frissítés gyakoriságát a naptárprogram dönti el (az Outlook a weben nagyjából 3 óránként, de akár 24 óránál is lassabban; a Google akár naponta egyszer), ezért azonnali értesítésre nem alkalmas. A feliratkozáshoz a szervernek elérhetőnek kell lennie onnan, ahonnan a naptár lekéri (az Outlook a weben és a Google a saját szervereiről, tehát interneten át, HTTPS-sel); a céges Microsoft 365-ben az IT a külső naptárra való feliratkozást korlátozhatja. Ezt a README írja le.
 
 ### Lépésterv
@@ -824,7 +825,7 @@ Külön oldal, asztali gépre; telefonon ne törjön el, de nem arra optimalizá
 2. „Beosztásom” nézet telefonra: heti lista, napi részletek, eltérés kiemelése, „Még nincs publikálva”, „Szabad”
 3. Napi összefoglaló az ügynök nézetében
 4. Naptár: az .ics előállítása tiszta függvényként (tesztek: stabil eseményazonosító, óraátállítás, éjfélen átnyúló műszak, a módosulás és a publikált műszak a leírásban, a szöveg szabványos escape-elése és sortördelése, az Outlook-kompatibilis fejléc); letöltés; feliratkozási link (kulcs hash-elve, újragenerálás, visszavonás, utolsó lekérés), tesztekkel
-5. Seed (ha kell: legalább egy eltérő és egy nem publikált nap a demo ügynököknél), README (a feliratkozás beállítása elsőként Outlookban, majd Google és Apple naptárban, és az elérhetőség feltétele), STATUS.md
+5. Seed (ha kell: legalább egy eltérő és egy nem publikált nap a demo ügynököknél), README (a feliratkozás beállítása a gyakori naptárakban: Outlook, Google, Apple; az üzemeltetés feltételei: nyilvános HTTPS-cím, például fordított proxyval és automatikus tanúsítvánnyal, és az `APP_PUBLIC_URL`), STATUS.md
 
 ## További eldöntött szabályok
 
@@ -924,7 +925,8 @@ Ezeket a kérdéseket a megrendelő 2026. szeptember 22-én jóváhagyta; a kód
 - A lezárt taskok utólagos javításának jogosultsága
 - A beosztás TRN részének összekötése egy konkrét képzéssel
 - Földi eszközök: az eszköz hozzárendelése a taskhoz; emailes értesítés a hibajegyekről
-- Naptár: a kiosztott taskok is a naptárban; értesítés a beosztás változásáról (email vagy push); közvetlen írás az Outlook-naptárba a Microsoft Graphon keresztül (szinte azonnali, és a szervernek nem kell kívülről elérhetőnek lennie, de a cég IT-jának kell engedélyeznie egy alkalmazás-regisztrációt)
+- Naptár: a kiosztott taskok is a naptárban; értesítés a beosztás változásáról (email vagy push)
+- Üzemeltetés: éles telepítés saját szerverre (domain, HTTPS fordított proxyval, az adatbázis és a feltöltött fájlok mentése és visszaállítása, a frissítés menete, állapotfigyelés)
 - E-vizsga: véletlen kérdéshúzás a kérdésbankból, képek a kérdésekben
 - További slotüzenetek (pl. slottörlés), minta után
 - Az SI elemeinek feldolgozása (DAA, célállomásonkénti nettó bontás, poggyászdarabszámok, LOAD IN CPTS, B-sorok), ha a minták alapján egységesíthető

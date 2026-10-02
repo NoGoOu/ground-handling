@@ -1,6 +1,6 @@
 # Ground Handling App – projekt-összefoglaló
 
-*Verzió: 34 · 2026. október 2.*
+*Verzió: 35 · 2026. október 2.*
 
 ## A projekt
 
@@ -122,7 +122,7 @@ A projekt gazdája a földi kiszolgálásban dolgozik, a domain-szabályok az ő
 100. **Elfogadott pontosítások a 11. mérföldkőből** (CLAUDE.md 80–87.): a mező csak inaktiválható; a határidő a lejárat napján még érvényes; legfeljebb 5 fotó jegyenként; nyitott jegy közvetlenül is lezárható, visszanyitás nincs; lezárt jegyhez is írhat megjegyzést a Műszaki; az eszközt a Műszaki külön lépésben állítja üzemképesre.
 101. **Ügynöki beosztásnézet (12. mérföldkő):** az ügynök a telefonján látja a saját publikált és valós beosztását, az eltéréseket kiemelve; ehhez az Ügynök szerepkör saját hatókörrel megkapja a beosztás megtekintését.
 102. **Beosztás a naptárban:** az ügynök .ics fájlként letöltheti a beosztását, vagy személyes linkkel feliratkozhat rá, így a változások maguktól megjelennek a naptárában. A link titkos kulcsot tartalmaz, újragenerálható és visszavonható.
-103. **Naptár: először Microsoft.** A naptárfunkció elsősorban az Outlookra (Microsoft 365) készül és tesztelődik. Ha a valós műszak eltér a publikálttól, a megjegyzésben a publikált műszak és a módosulás ideje is szerepel; a „Beosztásom” nézetben is.
+103. **Naptár: szabványos, saját üzemeltetésű.** A naptár szabványos .ics, bármelyik naptárprogrammal működik, és a saját szerverünk adja, külső szolgáltatás és céges IT-engedély nélkül; a projekt gazdája üzemelteti. Az Outlook-kompatibilitásra külön figyelünk. Ha a valós műszak eltér a publikálttól, a megjegyzésben a publikált műszak és a módosulás ideje is szerepel; a „Beosztásom” nézetben is.
 
 ## Még ellenőrizendő feltételezések
 
@@ -178,6 +178,7 @@ A projekt gazdája a földi kiszolgálásban dolgozik, a domain-szabályok az ő
 - Járatinfó: egyedi mezők taskonként (utaslétszám, különleges igények)
 - Szolgáltatások rögzítése időpontokkal
 - Kimutatások légitársaságonként (a valós adatok után)
+- Üzemeltetés: éles telepítés saját szerverre (domain, HTTPS, mentés és visszaállítás, frissítés, állapotfigyelés)
 - Licenc kiválasztása
 - Többnyelvűség
 
