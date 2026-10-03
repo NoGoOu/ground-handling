@@ -1,6 +1,6 @@
 # Ground Handling App – projektleírás
 
-*Verzió: 42 · 2026. október 3.*
+*Verzió: 43 · 2026. október 3.*
 
 Nyílt forráskódú webalkalmazás repülőtéri földi kiszolgálás (ground handling) szervezésére. Minden járatfordulóhoz feladattípusonként egy task tartozik, benne mérföldkövekkel, amelyeknek van tervezett és tényleges időpontja. A mérföldkövek légitársaságonként testreszabható sablonokból jönnek. A hozzáférés szerepkör alapú.
 
@@ -829,7 +829,7 @@ Külön oldal, asztali gépre; telefonon ne törjön el, de nem arra optimalizá
 
 ## 13. mérföldkő – üzemeltetés: éles telepítés bérelt szerverre
 
-**Kész** (2026. október 2.). A leírás a megépült működés referenciája; a megvalósítás pontosításai a „További eldöntött szabályok” 91–93. pontjában. Helyben kipróbálva, valódi VPS-en még nem. A projekt gazdája egy bérelt Linux szerveren (VPS) üzemelteti az alkalmazást, saját domainnel és HTTPS-sel. A cél: egy ember néhány paranccsal telepíteni, frissíteni, menteni és visszaállítani tudja, és lássa, ha baj van. A domainen és a szerveren kívül külső szolgáltatás nem kell.
+**Kész** (2026. október 2.), az utómunka kivételével: **most az utómunkát építjük** (lásd a szakasz végén). A leírás a megépült működés referenciája; a megvalósítás pontosításai a „További eldöntött szabályok” 91–93. pontjában. Helyben kipróbálva, valódi VPS-en még nem. A projekt gazdája egy bérelt Linux szerveren (VPS) üzemelteti az alkalmazást, saját domainnel és HTTPS-sel. A cél: egy ember néhány paranccsal telepíteni, frissíteni, menteni és visszaállítani tudja, és lássa, ha baj van. A domainen és a szerveren kívül külső szolgáltatás nem kell.
 
 ### Telepítés
 
@@ -874,6 +874,14 @@ Külön oldal, asztali gépre; telefonon ne törjön el, de nem arra optimalizá
 4. Mentés (napi és kézi) és visszaállítás szkriptekkel, megőrzési idővel; a legutóbbi mentés az admin oldalon; próba-visszaállítás
 5. Frissítési szkript állapotellenőrzéssel; a verzió az admin oldalon
 6. README „Éles üzemeltetés”, STATUS.md
+
+### Utómunka (a 14. mérföldkő előtt)
+
+1. **Képek kicsinyítése feltöltéskor:** a feltöltött képek (JPG, PNG: hibajegy-fotók, eszköz- és képzési dokumentumok) a szerveren legfeljebb 1600 pixeles hosszabb oldalra, JPEG-be kerülnek (minőség: 80%, helyőrző), a tájolásuk szerint elforgatva; az eredeti nem marad meg. A képből a metaadatok (pl. GPS-hely) törlődnek. A PDF változatlan. A feltöltési korlát (10 MB) a kicsinyítés előtti fájlra vonatkozik.
+2. **Növekményes fájlmentés:** a feltöltött fájlok nem változnak, ezért a mentésbe mindegyik egyszer kerül, nem naponta újra; az adatbázis továbbra is naponta teljes mentést kap, 14 napig. Visszaállításkor a kiválasztott nap adatbázisa és az akkor meglévő fájlok állnak vissza. A megőrzési időn túl törölt fájl a mentésből is kikerül. A saját gépre másolás (`rsync`) így szintén csak az újat viszi.
+3. **Lemezfigyelés:** az admin oldalon a lemez foglaltsága és a mentések mérete; 80% fölött (helyőrző) figyelmeztetés, az állapotvégpont is jelzi (az alkalmazás ettől nem számít betegnek).
+4. **README:** a szerverigény induláshoz 2 vCPU, 4 GB memória és 40 GB lemez; a swap továbbra is javasolt.
+5. **Terhelési próba:** szkript, amely sok egyidejű felhasználót szimulál valós használati mintával (belépés, napi lista, task nézet, rögzítés, ügynök nézet, „Beosztásom”), és megmondja, hány egyidejű felhasználónál romlik el a válaszidő (cél: a kérések 95%-a 1 másodperc alatt, helyőrző). Az éles összeállításon fut, a valódi VPS-en élesítés előtt is. Az eredmény (melyik gépen hány felhasználó) a README-be kerül. Később ezzel igazoljuk a 3000 egyidejű felhasználós célt.
 
 ## További eldöntött szabályok
 
@@ -975,6 +983,7 @@ Ezeket a kérdéseket a megrendelő 2026. szeptember 22-én jóváhagyta; a kód
 
 ## Később (most ne építsd)
 
+- Több állomás egy cégen belül (BUD mellett más repülőterek), és a skálázás 3000 egyidejű felhasználóra: a rendszer legyen felkészítve, kicsiben indul, a szervert akkor bővítjük, amikor kell. A részletek egyeztetés alatt.
 - Személyre szabható elrendezés: az ügynök drag and droppal állítja be, mit lát és hogyan, felhasználónként mentve. Csak azután, hogy a fix elrendezés bevált.
 - A lezárt taskok utólagos javításának jogosultsága
 - A beosztás TRN részének összekötése egy konkrét képzéssel

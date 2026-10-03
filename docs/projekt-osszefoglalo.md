@@ -1,6 +1,6 @@
 # Ground Handling App – projekt-összefoglaló
 
-*Verzió: 38 · 2026. október 3.*
+*Verzió: 39 · 2026. október 3.*
 
 ## A projekt
 
@@ -126,6 +126,8 @@ A projekt gazdája a földi kiszolgálásban dolgozik, a domain-szabályok az ő
 104. **Elfogadott pontosítások a 12. mérföldkőből** (CLAUDE.md 88–90.): a hét hétfőtől; az ügynök belépés után a taskjaira érkezik; a feliratkozási link csak `https`-sel (fejlesztéskor `localhost`), és 404 zárja ki a rossz kulcsot, az inaktív felhasználót és a jogát vesztettet.
 105. **Üzemeltetés (13. mérföldkő):** a projekt gazdája bérelt szerveren (VPS) üzemelteti, saját domainnel; Caddy automatikus HTTPS-sel, éles módban demo adat nélkül, napi mentés és egyparancsos visszaállítás, frissítési szkript, állapotvégpont, a belépési kísérletek korlátozása.
 106. **Elfogadott pontosítások a 13. mérföldkőből** (CLAUDE.md 91–93.): a beteg alkalmazást az állapotellenőrző szkript állítja le, a Docker indítja újra; visszaállítás előtt a mostani állapotról is mentés készül; az `APP_PUBLIC_URL` az Auth.js címe is.
+107. **Szerver és tárhely:** induláshoz 2 vCPU, 4 GB memória, 40 GB lemez (pl. Hetzner CX23). A képek feltöltéskor kicsinyítve, a feltöltött fájlok mentése növekményes, a lemez foglaltsága az admin oldalon látszik; terhelési próba méri a kapacitást.
+108. **Cél: több állomás és 3000 egyidejű felhasználó.** Egy cég több állomása (BUD mellett más repülőterek) ugyanazon a rendszeren; a rendszer legyen erre felkészítve, de kicsiben indul, és a szervert akkor bővítjük, amikor kell. A folyamatos működés (több szerver, adatbázis-replika) egyelőre nem cél: kiesésnél visszaállítás mentésből.
 
 ## Még ellenőrizendő feltételezések
 
@@ -188,5 +190,5 @@ A projekt gazdája a földi kiszolgálásban dolgozik, a domain-szabályok az ő
 ## Következő lépés
 
 1. Az 1–9. mérföldkő kész (MVP; jogosultság, beosztás, sávos nézet; járatrend-import; tervezői nézet; feladattípusok; képzések és jogosítások; üzenetek; üzenetek bővítése; létszámigény a tervezettel együtt, 700 zöld teszttel), a késéskód-dokumentumokkal együtt.
-2. A 10. mérföldkő (oktatás: e-vizsga, OJT és kibocsátás, kizáró szempontokkal) és a 11. mérföldkő (földi eszközök és hibajegy) kész, 787 zöld teszttel. A 12. mérföldkő (ügynöki beosztásnézet, naptármentéssel és feliratkozással) is kész, 814 zöld teszttel. A 13. mérföldkő (üzemeltetés, éles telepítés bérelt szerverre) is kész, 836 zöld teszttel; helyben kipróbálva, valódi VPS-en még nem. Most: a szerver kiválasztása és az első éles telepítés (CLAUDE.md 42. verzió). A 11. mérföldkő a járművek és a hibajegy, egyeztetés után.
+2. A 10. mérföldkő (oktatás: e-vizsga, OJT és kibocsátás, kizáró szempontokkal) és a 11. mérföldkő (földi eszközök és hibajegy) kész, 787 zöld teszttel. A 12. mérföldkő (ügynöki beosztásnézet, naptármentéssel és feliratkozással) is kész, 814 zöld teszttel. A 13. mérföldkő (üzemeltetés, éles telepítés bérelt szerverre) is kész, 836 zöld teszttel; helyben kipróbálva, valódi VPS-en még nem. Most: a 13. mérföldkő utómunkája (képkicsinyítés, növekményes fájlmentés, lemezfigyelés, README, terhelési próba); utána a több állomás és a skálázás terve (CLAUDE.md 43. verzió). A 11. mérföldkő a járművek és a hibajegy, egyeztetés után.
 3. A projekt gazdájánál: a nyitott üzenet- és késéskódok; a SITA-átjáró; a valós GOU- és HDS-sablonok; a csatolt fájlok megőrzési ideje; az Ikarus-mentés ellenőrzése.
