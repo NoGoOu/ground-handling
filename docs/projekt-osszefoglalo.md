@@ -1,6 +1,6 @@
 # Ground Handling App – projekt-összefoglaló
 
-*Verzió: 39 · 2026. október 3.*
+*Verzió: 40 · 2026. október 3.*
 
 ## A projekt
 
@@ -128,6 +128,10 @@ A projekt gazdája a földi kiszolgálásban dolgozik, a domain-szabályok az ő
 106. **Elfogadott pontosítások a 13. mérföldkőből** (CLAUDE.md 91–93.): a beteg alkalmazást az állapotellenőrző szkript állítja le, a Docker indítja újra; visszaállítás előtt a mostani állapotról is mentés készül; az `APP_PUBLIC_URL` az Auth.js címe is.
 107. **Szerver és tárhely:** induláshoz 2 vCPU, 4 GB memória, 40 GB lemez (pl. Hetzner CX23). A képek feltöltéskor kicsinyítve, a feltöltött fájlok mentése növekményes, a lemez foglaltsága az admin oldalon látszik; terhelési próba méri a kapacitást.
 108. **Cél: több állomás és 3000 egyidejű felhasználó.** Egy cég több állomása (BUD mellett más repülőterek) ugyanazon a rendszeren; a rendszer legyen erre felkészítve, de kicsiben indul, és a szervert akkor bővítjük, amikor kell. A folyamatos működés (több szerver, adatbázis-replika) egyelőre nem cél: kiesésnél visszaállítás mentésből.
+109. **Több állomás (14. mérföldkő):** egy cég több állomása, akár más időzónában. Minden napfüggő számítás és a felület az állomás időzónájában. Állomásonként: a működés (járatok, beosztás, tervek, létszámigény), a légitársaság-beállítások (feladattípusok, sablonok, követelmények, címjegyzék), a képzések és vizsgák, a földi eszközök és a beállítások. Cégszintűek a katalógusok; **a jogosítás az emberé**, minden állomáson érvényes.
+110. **Felhasználók több állomáson:** a szerepkör egy állomásra vagy minden állomásra szól (központi felhasználók); a hatókör a kiválasztott állomáson belül; állomásváltó. Új **Állomásadmin** szerepkör: a saját állomás felhasználói, beállításai és légitársaság-beállításai. Senki nem adhat több jogot, mint amennyi neki van.
+111. **Üzenetek több állomáson:** továbbra is egy fogadó API, a rendszer az üzenet állomáskódjaiból válogat; egy üzenet több állomás járatára is hathat (pl. BUD–IST MVT).
+112. **Skálázás (15. mérföldkő):** előbb mérés, aztán javítás; több alkalmazáspéldány terheléselosztással, kapcsolatkészlet, indexek és lapozás; a cél a 3000 egyidejű felhasználó méréssel igazolva. Folyamatos működés nem cél, kiesésnél visszaállítás mentésből; az adatbázis-mentés gyakorisága beállítható.
 
 ## Még ellenőrizendő feltételezések
 
@@ -160,6 +164,8 @@ A projekt gazdája a földi kiszolgálásban dolgozik, a domain-szabályok az ő
 - Naptár-feliratkozás: a mai naptól 7 napra visszamenőleg és minden jövőbeli publikált nap; műszakonként egy esemény, a részek a leírásban; a frissítés gyakoriságát a naptárprogram dönti el (az Outlook a weben kb. 3 óránként, de akár 24 óránál lassabban; a Google akár naponta egyszer); a szervernek interneten elérhetőnek kell lennie; a céges IT a külső naptárra való feliratkozást korlátozhatja.
 - Földi eszközök: a hibajegy állapotai (nyitott, folyamatban, lezárva); az üzemképtelennek jelentett eszköz azonnal üzemképtelen, a Műszaki állítja vissza; a műszakvezető minden jegyet lát; jelzés a menüben, email később; az eszközök „hamarosan lejár” napjai külön beállítás (30).
 - Oktatás: az e-vizsgát a vizsgáztató vagy a koordinátor nyitja meg a vizsgázónak; a vizsgázó a helyes válaszokat nem látja; több helyes válasznál csak a teljesen helyes ér pontot; az OJT-követelmény helyőrzői (10 megfelelő gyakorlás, a kötelező mérföldkövek 100%-ban, eltérés-küszöb nélkül); a gyakorlati vizsga OJT nélkül is indítható, figyelmeztetéssel; új Mentor és Vizsgáztató szerepkör; a gyakornok a sávos nézetben és az ütközésvizsgálatban látszik, a létszámigényben nem.
+- Több állomás: cégszintű a műszakrész-típus, az eszköztípus, a késéskód-tábla és a légitársaság késéskód-dokumentuma, az importprofil; a szerepkör állomásonként eltérhet; ugyanannak az embernek állomások között sem lehet átfedő műszakja; a képzési rekordot a képzés állomása rögzíti, de az ember minden rekordja látszik.
+- Skálázás: a terhelési profil felhasználónként 30 másodpercenként egy kérés (kb. 100 kérés/s, csúcsban kétszerese), a kérések 95%-a 1 másodperc alatt; nagy üzemben óránkénti adatbázis-mentés javasolt.
 
 ## Nyitott kérdések
 
@@ -190,5 +196,5 @@ A projekt gazdája a földi kiszolgálásban dolgozik, a domain-szabályok az ő
 ## Következő lépés
 
 1. Az 1–9. mérföldkő kész (MVP; jogosultság, beosztás, sávos nézet; járatrend-import; tervezői nézet; feladattípusok; képzések és jogosítások; üzenetek; üzenetek bővítése; létszámigény a tervezettel együtt, 700 zöld teszttel), a késéskód-dokumentumokkal együtt.
-2. A 10. mérföldkő (oktatás: e-vizsga, OJT és kibocsátás, kizáró szempontokkal) és a 11. mérföldkő (földi eszközök és hibajegy) kész, 787 zöld teszttel. A 12. mérföldkő (ügynöki beosztásnézet, naptármentéssel és feliratkozással) is kész, 814 zöld teszttel. A 13. mérföldkő (üzemeltetés, éles telepítés bérelt szerverre) is kész, 836 zöld teszttel; helyben kipróbálva, valódi VPS-en még nem. Most: a 13. mérföldkő utómunkája (képkicsinyítés, növekményes fájlmentés, lemezfigyelés, README, terhelési próba); utána a több állomás és a skálázás terve (CLAUDE.md 43. verzió). A 11. mérföldkő a járművek és a hibajegy, egyeztetés után.
+2. A 10. mérföldkő (oktatás: e-vizsga, OJT és kibocsátás, kizáró szempontokkal) és a 11. mérföldkő (földi eszközök és hibajegy) kész, 787 zöld teszttel. A 12. mérföldkő (ügynöki beosztásnézet, naptármentéssel és feliratkozással) is kész, 814 zöld teszttel. A 13. mérföldkő (üzemeltetés, éles telepítés bérelt szerverre) is kész, 836 zöld teszttel; helyben kipróbálva, valódi VPS-en még nem. Most: a 13. mérföldkő utómunkája (képkicsinyítés, növekményes fájlmentés, lemezfigyelés, README, terhelési próba); utána a 14. mérföldkő (több állomás) és a 15. (skálázás 3000 egyidejű felhasználóra), CLAUDE.md 44. verzió. A 11. mérföldkő a járművek és a hibajegy, egyeztetés után.
 3. A projekt gazdájánál: a nyitott üzenet- és késéskódok; a SITA-átjáró; a valós GOU- és HDS-sablonok; a csatolt fájlok megőrzési ideje; az Ikarus-mentés ellenőrzése.

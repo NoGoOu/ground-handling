@@ -1,6 +1,6 @@
 # Ground Handling App – projektleírás
 
-*Verzió: 43 · 2026. október 3.*
+*Verzió: 44 · 2026. október 3.*
 
 Nyílt forráskódú webalkalmazás repülőtéri földi kiszolgálás (ground handling) szervezésére. Minden járatfordulóhoz feladattípusonként egy task tartozik, benne mérföldkövekkel, amelyeknek van tervezett és tényleges időpontja. A mérföldkövek légitársaságonként testreszabható sablonokból jönnek. A hozzáférés szerepkör alapú.
 
@@ -49,6 +49,7 @@ Az alábbi táblázat az alapértelmezett szerepköröket írja le. A 2. mérfö
   - A felhasználó admin oldalán látszik a tényleges jogosultsága és hatóköre, mindegyiknél a forrásával (melyik szerepkörből vagy egyéni kiegészítésből jön).
   - Aki taskot oszthat ki, a kiosztatlan taskokat a hatókörétől függetlenül látja, különben nem tudná kiosztani őket.
   - Az Admin beépített szerepkör: nem szerkeszthető és nem törölhető, és az utolsó aktív admin nem veszítheti el.
+  - A 14. mérföldkőtől a szerepkör és az egyéni jogosultság egy állomásra vagy minden állomásra szól, és a hatókör a kiválasztott állomáson belül értendő (lásd ott).
 - A jogosultságot szerveroldalon is ellenőrizni kell, nem elég a felületen elrejteni.
 
 ## Adatmodell
@@ -80,7 +81,7 @@ Az alábbi táblázat az alapértelmezett szerepköröket írja le. A 2. mérfö
 - **ShiftSegment** (2. mérföldkő): shift, start, end, segmentType, location (opcionális), description (opcionális), createBlock (igen/nem), travelBeforeMinutes, travelAfterMinutes (alapérték 0, nem negatív). Egy műszak részei nem fedhetik át egymást.
 - **Lezárt task pillanatképe:** amikor a task COMPLETED lesz, elmenti a sablon akkori paramétereit és mérföldkő-definícióit. A lezárt task ezután ebből számol, a sablon későbbi módosítása nem változtatja meg.
 
-Minden időpontot UTC-ben tárolunk, a felületen helyi időben (Europe/Budapest) jelenítjük meg.
+Minden időpontot UTC-ben tárolunk, a felületen helyi időben (Europe/Budapest; a 14. mérföldkőtől az állomás időzónájában) jelenítjük meg.
 
 ## Task státusz
 
@@ -883,6 +884,109 @@ Külön oldal, asztali gépre; telefonon ne törjön el, de nem arra optimalizá
 4. **README:** a szerverigény induláshoz 2 vCPU, 4 GB memória és 40 GB lemez; a swap továbbra is javasolt.
 5. **Terhelési próba:** szkript, amely sok egyidejű felhasználót szimulál valós használati mintával (belépés, napi lista, task nézet, rögzítés, ügynök nézet, „Beosztásom”), és megmondja, hány egyidejű felhasználónál romlik el a válaszidő (cél: a kérések 95%-a 1 másodperc alatt, helyőrző). Az éles összeállításon fut, a valódi VPS-en élesítés előtt is. Az eredmény (melyik gépen hány felhasználó) a README-be kerül. Később ezzel igazoljuk a 3000 egyidejű felhasználós célt.
 
+## 14. mérföldkő – több állomás egy cégen belül
+
+**A 13. mérföldkő utómunkája után**, a szokásos terv-jóváhagyással. Egy cég több állomása (BUD mellett más repülőterek, akár más időzónában) ugyanazon a rendszeren, egy adatbázisban. Minden állomás a saját járataival, beosztásával és beállításaival dolgozik; a központi felhasználók több vagy minden állomást látnak. A meglévő működés nem változik: a migráció után minden adat a BUD állomásé, és a meglévő tesztek zöldek maradnak.
+
+**Általános szabály:** ahol ez a leírás Europe/Budapest-et, budapesti napot vagy BUD-ot említ (napi lista, üzemnap, beosztás, publikálás, tervező, létszámigény, jogosítás- és eszközhatáridő, import, üzenetek), a 14. mérföldkőtől az adott állomás időzónája, illetve az adott állomás értendő.
+
+### Állomás
+
+- **Állomás:** a repülőtér-táblára épül (IATA, ICAO, név), és hozzá tartozik az IANA-időzónája (pl. Europe/Budapest, Europe/Istanbul) és az aktív jelölés. Nem törölhető; az inaktív állomás nem választható, az adatai megmaradnak. Az állomásokat az Admin kezeli.
+- **Időzóna:** minden időpont továbbra is UTC-ben tárolódik. Minden napfüggő számítás (napi lista, nap határai, üzemnap, beosztás és publikálás, tervező, létszámigény sávjai az óraátállítással, jogosítás és eszközhatáridő napja, „Beosztásom”, naptár) az állomás időzónájában fut, és a felület az állomás helyi idejét mutatja. Akinek több állomása van, annak a felület az időzónát is kiírja (pl. „IST, UTC+3”).
+
+### Mi állomásonkénti és mi cégszintű
+
+- **Elv:** a katalógusok (mi létezik) cégszintűek; a működés (mi történik egy állomáson) és az állomás saját beállításai állomásonkéntiek.
+- **Állomásonként:**
+  - járatok, taskok, rögzítések, késések, járatnapló; az import (az importprofil cégszintű, a futtatás egy állomásra szól, a hiányzó-jelölés profilonként és állomásonként);
+  - csapatok, beosztás (rétegek, publikálás), tervek, létszámigény;
+  - légitársaság-beállítások: a légitársaság feladattípusai, a sablonok, az elsődleges feladattípus, a jogosítás-követelmények, a címjegyzék;
+  - képzések, vizsgalapok, kérdésbank, gyakorlati szempontok, képzési folyamatok, OJT;
+  - földi eszközök, dokumentumaik, hibajegyek;
+  - beállítások: eltérés-küszöbök, „hamarosan lejár” napjai (jogosítás és eszköz), feladó email-címe és Type B címe, slot-tűrés, tervezési beállítások.
+- **Cégszintű:**
+  - a felhasználók (egy ember egy fiók, akárhány állomással), a szerepkörök meghatározása;
+  - a légitársaságok listája, a feladattípus-katalógus, a műszakrész-típusok, az eszköztípusok és mezőlistáik;
+  - a jogosítás-katalógus és a jogosítások: **a jogosítás az emberé**, akármelyik állomáson szerezte, és minden állomáson érvényes;
+  - a késéskód-tábla és a légitársaságok késéskód-dokumentuma, a repülőtér-tábla;
+  - a fogadó API és az API-kulcsok; a mentés, a lemezfigyelés, a verzió; a naptárfrissítés javasolt ideje.
+- **Képzési adatok:** a rekordot az a koordinátor rögzíti és javítja, akinek állomásán a képzés van. Aki egy embernek a képzési adatait láthatja (hatókör szerint, a saját állomásán), az az ember minden rekordját látja, akármelyik állomáson készült.
+
+### Felhasználók és jogosultság
+
+- **Szerepkör állomásra:** a szerepkör-hozzárendelés és az egyéni jogosultság egy állomásra vagy minden állomásra szól. Egy ember egyik állomáson lehet műszakvezető, a másikon ügynök. A „minden állomás” a központi felhasználóké, és a később felvett állomásokra is érvényes.
+- **A felhasználó állomásai** azok, amelyekre bármilyen szerepköre vagy egyéni jogosultsága van. Alapértelmezett állomása van; a menüben állomásváltó, ha több állomása van. A kiválasztott állomás minden oldalon látszik.
+- **Hatókör:** a saját, csapat és összes hatókör mindig a kiválasztott állomáson belül értendő. A csapat állomáshoz tartozik; egy ügynök állomásonként egy csapat tagja.
+- **Szerveroldali elkülönítés:** a szerver minden olvasásnál és műveletnél ellenőrzi, hogy a felhasználónak van-e joga az adat állomásához. Egy másik állomás adata azonosítóval sem érhető el. Ezt tesztek biztosítják.
+- **Cégszintű adat szerkesztése** (katalógusok, légitársaság-lista, késéskód-tábla, repülőtér-tábla, API-kulcsok): a megfelelő meglévő jogosultsággal, ha az minden állomásra szól; egy állomásra szóló jogosultsággal a katalógus csak olvasható. A szerepkörök meghatározása és az állomások kezelése csak az Admin szerepkörrel.
+- **Állomásadmin** (új alapértelmezett szerepkör): a saját állomásán kezeli a felhasználókat (új felhasználó, szerepkör és egyéni jogosultság erre az állomásra), a csapatokat, az állomás beállításait, a légitársaság-beállításokat és a címjegyzéket. Más állomásra szóló hozzárendelést nem lát és nem módosít. Jelszót és aktív jelölést csak annál állít, aki csak az ő állomásain van; a többieknél az Admin.
+- **Nincs jogosultság-kiterjesztés:** senki nem adhat olyan szerepkört, jogosultságot vagy hatókört, amellyel maga nem rendelkezik az adott állomáson; „minden állomás” hozzárendelést és Admin szerepkört csak az Admin ad.
+- A felhasználó admin oldalán a tényleges jogosultság állomásonként látszik, a forrásával.
+- **Kiosztás és beosztás:** egy állomás taskjára és beosztásába csak az kerülhet, akinek arra az állomásra szerepköre van; a tervező jelöltjei is az állomás aktív ügynökei. Ugyanannak az embernek egy rétegen belül állomások között sem lehet két átfedő műszakja.
+- **„Beosztásom” és a naptár** az ember minden állomásának műszakjait mutatja, állomáskóddal, az állomás helyi idejében (a naptárban UTC-ben, mint eddig).
+
+### Üzenetek
+
+- Továbbra is egy fogadó API. Az üzenetet a rendszer válogatja szét: az állomást az üzenet állomáskódjaiból dönti el (az MVT és az LDM állomása, az `EA` célállomása, a slotüzenet `ADEP`/`ADES` ICAO-kódja a repülőtér-táblán át), az eddigi BUD-szabályok szerint, a BUD helyén bármelyik aktív állomással. A beégetett `BUD` és `LHBP` megszűnik.
+- **Egy üzenet több állomásra is hathat:** például a BUD-ról IST-be induló járat MVT-je a BUD-i indulási rész ATD-je és az IST-i érkezési rész ETA-ja. Ilyenkor mindkét állomás járatrészéhez párosul, és mindkét állomás „Üzenetek” fülén látszik.
+- **Párosítatlan üzenet:** ha az állomás eldönthető, az állomás listájára kerül. Ha egyik állomásunk sem dönthető el, egy közös listára, amelyet bárki lát, akinek valamelyik állomáson „Üzenetek rögzítése” joga van; hozzárendelni csak a saját állomása járatához tud.
+- **Kimenő MVT:** a fejlécben az állomás kódja, a feladó az állomás beállításából, a címzettek az állomás címjegyzékéből.
+
+### Adatmodell (kiegészítés)
+
+- **Station:** airport (a repülőtér-táblából), timeZone (IANA), active.
+- Állomás kerül a járatra, a csapatra, a műszakra, a publikációra, a tervre, az importfuttatásra, a légitársaság feladattípusaira és sablonjaira, a címjegyzékre, a képzésre és a vizsgaelemekre, az eszközre; a beállítások és a tervezési beállítások állomásonként egy sor (a cégszintű beállítások külön).
+- **A felhasználó szerepkörei és egyéni jogosultságai:** állomással, vagy „minden állomás” jelöléssel. A felhasználónak alapértelmezett állomása van.
+- **Message:** több járatrészhez is párosulhat (a megvalósítás módja a tervben dől el).
+- **Migráció:** létrejön a BUD állomás (Europe/Budapest), minden meglévő adat hozzá kerül; a meglévő szerepkör-hozzárendelések BUD-ra szólnak, az Admin szerepkörűeké minden állomásra.
+
+### Lépésterv
+
+1. Adatmodell és migráció: állomás, az állomásonkénti adatok, a beállítások állomásonként, a szerepkörök és egyéni jogosultságok állomásra, alapértelmezett állomás; minden meglévő adat a BUD-é. A viselkedés változatlan, a meglévő tesztek zöldek
+2. Időzóna: a `lib/time.ts` és minden napfüggő tiszta függvény időzónát kap paraméterként, a beégetett Europe/Budapest helyett; tesztek UTC+3-ra (Europe/Istanbul, óraátállítás nélkül) és óraátállításos zónára (a nap határai, a létszámigény sávjai, az üzemnap, a jogosítás lejárati napja)
+3. Jogosultság állomásonként: a tényleges jogosultság a kiválasztott állomásra, „minden állomás” hozzárendelés, állomásváltó, szerveroldali elkülönítés, cégszintű adat szerkesztése, a kiterjesztés tilalma; tesztek (köztük: egy másik állomás járata, műszakja, eszköze és képzése azonosítóval sem érhető el)
+4. Az oldalak és a műveletek állomásra szűrve: napi lista, task és ügynök nézet, sávos nézet, beosztás, tervező, létszámigény, képzések, eszközök, hibajegyek; „Beosztásom” és a naptár minden állomás műszakjával; az átfedő műszak tilalma állomások között
+5. Admin: állomások; az Állomásadmin szerepkör és felülete; a felhasználó oldalán a tényleges jogosultság állomásonként
+6. Üzenetek: az állomás az üzenetből, egy üzenet több állomáson, a párosítatlanok állomásonként és közösen, a kimenő MVT az állomás adataival; tesztek (köztük: egy BUD–IST MVT mindkét állomás járatára hat; ismeretlen állomás párosítatlan)
+7. Import: állomás választása, a szűrés, a fordulók képzése és a hiányzó-jelölés az állomásra; tesztek
+8. Seed (egy második demo állomás: IST, Europe/Istanbul; egy BUD–IST járat mindkét állomáson, hozzá demo üzenet; IST-i állomásadmin és ügynökök; egy központi felhasználó minden állomással), README, STATUS.md
+
+## 15. mérföldkő – skálázás 3000 egyidejű felhasználóra
+
+**A 14. mérföldkő után**, a szokásos terv-jóváhagyással. A cél: a rendszer 3000 egyidejű aktív felhasználót kiszolgáljon, és ez méréssel igazolt legyen. Kicsiben indul (egy gép, egy alkalmazáspéldány), és a gép, illetve a példányszám akkor nő, amikor a mérés szerint kell. Folyamatos működés (több szerver, adatbázis-replika, automatikus átállás) nem cél: kiesésnél visszaállítás mentésből.
+
+### Cél és mérés
+
+- **Terhelési profil** (helyőrző): 3000 egyidejű aktív felhasználó, felhasználónként átlagosan 30 másodpercenként egy kérés (kb. 100 kérés másodpercenként), a csúcs ennek kétszerese; a valós használati minta szerint (a 13. mérföldkő utómunkájának terhelési próbája), több állomással.
+- **Elvárás:** a kérések 95%-a 1 másodperc alatt (helyőrző), hiba nélkül.
+- Először mérünk, és a mérés mutatja meg, hol kell javítani; a javítás után újra mérünk.
+
+### Az alkalmazás
+
+- **Állapot nélküli, több példányban futtatható:** ami a memóriában van, az csak gyorsítótár lehet. A korlátozások (a belépési kísérletek, a fogadó API, a naptárvégpont) állapota közös tárban, az adatbázisban van; új szolgáltatás (pl. Redis) csak akkor, ha a mérés szerint kell.
+- **Példányszám** a `.env`-ben (alapból 1). A Caddy a példányok között osztja el a kéréseket, és a beteg példányt kihagyja. A példányok ugyanabból az image-ből futnak, a feltöltött fájlok közös kötetről.
+- **Egyszer futó feladatok:** a migráció az indulás előtt egy külön, egyszeri lépés, nem példányonként; ha később időzített feladat lesz, az is egyszer fut.
+- **Lekérdezések:** indexek a gyakori szűrésekre (állomás, nap, ügynök, járatrész); az ismétlődő lekérdezések (N+1) kiszűrése; lapozás a hosszú listákon (üzenetek, naplók, hibajegyek, importnapló, képzési rekordok, eszközök). A nehéz nézetek (sávos nézet, tervező, létszámigény) csak a kért állomás és napok adatát töltik be.
+
+### Adatbázis
+
+- Kapcsolatkészlet (pl. PgBouncer), hogy a példányok ne merítsék ki a Postgres kapcsolatait; a Postgres beállításai a gép méretéhez igazítva.
+- Az adatbázis külön gépre is tehető (a `DATABASE_URL`-lel); a README leírja.
+- **Mentés gyakorisága:** az adatbázis-mentés gyakorisága beállítható (alapból naponta; nagy üzemben óránként javasolt, helyőrző), mert kiesésnél a legutolsó mentés utáni adat elvész. A megőrzés (14 nap) és a növekményes fájlmentés változatlan.
+
+### Méretezés
+
+- A README-ben méretezési táblázat a mérésekből: melyik gépen (vCPU, memória), hány példánnyal, hány egyidejű felhasználó, milyen válaszidővel. Benne: mikor érdemes nagyobb gépre váltani, és mikor az adatbázist külön gépre tenni.
+
+### Lépésterv
+
+1. Mérés: a terhelési próba több állomással és a 3000 fős profillal; kiinduló mérés az éles összeállításon; a szűk keresztmetszetek a STATUS.md-be
+2. Lekérdezések: indexek, az N+1 kiszűrése, lapozás, a nehéz nézetek adatbetöltése; tesztek
+3. Több példány: a korlátozás állapota az adatbázisban, a migráció külön lépésben, példányszám a `.env`-ben, Caddy terheléselosztással és állapotfigyeléssel; frissítés és visszaállítás több példánnyal; tesztek
+4. Adatbázis: kapcsolatkészlet, a Postgres beállításai, a mentés gyakorisága beállítható
+5. Mérés újra, méretezési táblázat; README, STATUS.md
+
 ## További eldöntött szabályok
 
 Ezeket a kérdéseket a megrendelő 2026. szeptember 22-én jóváhagyta; a kód is ezekre a számokra hivatkozik.
@@ -983,7 +1087,7 @@ Ezeket a kérdéseket a megrendelő 2026. szeptember 22-én jóváhagyta; a kód
 
 ## Később (most ne építsd)
 
-- Több állomás egy cégen belül (BUD mellett más repülőterek), és a skálázás 3000 egyidejű felhasználóra: a rendszer legyen felkészítve, kicsiben indul, a szervert akkor bővítjük, amikor kell. A részletek egyeztetés alatt.
+- Több gép: az alkalmazás több szerveren, közös fájltárral (pl. S3-kompatibilis), és folyamatos működés (adatbázis-replika, automatikus átállás), ha a mentésből való visszaállítás már nem elég
 - Személyre szabható elrendezés: az ügynök drag and droppal állítja be, mit lát és hogyan, felhasználónként mentve. Csak azután, hogy a fix elrendezés bevált.
 - A lezárt taskok utólagos javításának jogosultsága
 - A beosztás TRN részének összekötése egy konkrét képzéssel
