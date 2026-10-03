@@ -1,6 +1,6 @@
 # Ground Handling App – projektleírás
 
-*Verzió: 41 · 2026. október 2.*
+*Verzió: 42 · 2026. október 3.*
 
 Nyílt forráskódú webalkalmazás repülőtéri földi kiszolgálás (ground handling) szervezésére. Minden járatfordulóhoz feladattípusonként egy task tartozik, benne mérföldkövekkel, amelyeknek van tervezett és tényleges időpontja. A mérföldkövek légitársaságonként testreszabható sablonokból jönnek. A hozzáférés szerepkör alapú.
 
@@ -829,7 +829,7 @@ Külön oldal, asztali gépre; telefonon ne törjön el, de nem arra optimalizá
 
 ## 13. mérföldkő – üzemeltetés: éles telepítés bérelt szerverre
 
-**Ezt építjük most,** a szokásos terv-jóváhagyással. A projekt gazdája egy bérelt Linux szerveren (VPS) üzemelteti az alkalmazást, saját domainnel és HTTPS-sel. A cél: egy ember néhány paranccsal telepíteni, frissíteni, menteni és visszaállítani tudja, és lássa, ha baj van. A domainen és a szerveren kívül külső szolgáltatás nem kell.
+**Kész** (2026. október 2.). A leírás a megépült működés referenciája; a megvalósítás pontosításai a „További eldöntött szabályok” 91–93. pontjában. Helyben kipróbálva, valódi VPS-en még nem. A projekt gazdája egy bérelt Linux szerveren (VPS) üzemelteti az alkalmazást, saját domainnel és HTTPS-sel. A cél: egy ember néhány paranccsal telepíteni, frissíteni, menteni és visszaállítani tudja, és lássa, ha baj van. A domainen és a szerveren kívül külső szolgáltatás nem kell.
 
 ### Telepítés
 
@@ -969,6 +969,9 @@ Ezeket a kérdéseket a megrendelő 2026. szeptember 22-én jóváhagyta; a kód
 88. **„Beosztásom”:** a hét hétfőtől indul; az éjfélen átnyúló műszak „22:00–06:00 (+1)” alakban látszik; eltérésnél a publikált részek is; a valós rétegből törölt műszaknál a módosulás ideje nem jelenik meg.
 89. **Az ügynök kezdőoldala:** belépés után továbbra is a saját taskjai, a beosztás megtekintése ellenére.
 90. **Feliratkozási link:** HTTP-n csak `localhost`-on fogadható el (fejlesztéshez), egyébként `https` kell. A rossz vagy visszavont kulcsot, az inaktív felhasználót és azt, aki elvesztette a saját beosztásához való jogát, 404 zárja ki. A linket a felhasználó és az admin is visszavonhatja.
+91. **Beteg alkalmazás újraindítása:** az állapotellenőrző szkript három egymást követő hiba után leállítja az alkalmazást, és az újraindítási szabály indítja újra (a sima Compose magától nem teszi).
+92. **Visszaállítás előtt** a mostani állapotról is mentés készül.
+93. **Nyilvános cím:** az éles Compose az `APP_PUBLIC_URL`-t az Auth.js-nek is átadja (`AUTH_URL`).
 
 ## Később (most ne építsd)
 
