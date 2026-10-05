@@ -1,5 +1,6 @@
 import { cache } from "react";
 import { prisma } from "@/lib/db";
+import { BUD_STATION_ID } from "@/lib/stations";
 import { DEVIATION_THRESHOLDS, type DeviationThresholds } from "@/lib/turnaround";
 
 // Global settings live in a single row (decision 7). The calculations stay pure:
@@ -24,16 +25,23 @@ export const DEFAULT_SLOT_TOLERANCE_MINUTES = 10;
 export const DEFAULT_EQUIPMENT_WARNING_DAYS = 30;
 export const DEFAULT_CALENDAR_REFRESH_MINUTES = 60;
 
-/** Read once per request; falls back to the defaults while the row is missing. */
+/**
+ * Read once per request; falls back to the defaults while a row is missing.
+ * The station's own settings and the company's (14. mérföldkő); the station is
+ * BUD until the station context comes (14. mérföldkő, 3. lépés).
+ */
 export const getSettings = cache(async (): Promise<Settings> => {
-  const row = await prisma.setting.findUnique({ where: { id: SETTINGS_ID } });
+  const [station, company] = await Promise.all([
+    prisma.stationSetting.findUnique({ where: { stationId: BUD_STATION_ID } }),
+    prisma.setting.findUnique({ where: { id: SETTINGS_ID } }),
+  ]);
   return {
-    deviationThresholds: row
-      ? { greenMax: row.deviationGreenMaxMinutes, yellowMax: row.deviationYellowMaxMinutes }
+    deviationThresholds: station
+      ? { greenMax: station.deviationGreenMaxMinutes, yellowMax: station.deviationYellowMaxMinutes }
       : DEVIATION_THRESHOLDS,
-    expiryWarningDays: row?.expiryWarningDays ?? DEFAULT_EXPIRY_WARNING_DAYS,
-    slotToleranceMinutes: row?.slotToleranceMinutes ?? DEFAULT_SLOT_TOLERANCE_MINUTES,
-    equipmentWarningDays: row?.equipmentWarningDays ?? DEFAULT_EQUIPMENT_WARNING_DAYS,
-    calendarRefreshMinutes: row?.calendarRefreshMinutes ?? DEFAULT_CALENDAR_REFRESH_MINUTES,
+    expiryWarningDays: station?.expiryWarningDays ?? DEFAULT_EXPIRY_WARNING_DAYS,
+    slotToleranceMinutes: station?.slotToleranceMinutes ?? DEFAULT_SLOT_TOLERANCE_MINUTES,
+    equipmentWarningDays: station?.equipmentWarningDays ?? DEFAULT_EQUIPMENT_WARNING_DAYS,
+    calendarRefreshMinutes: company?.calendarRefreshMinutes ?? DEFAULT_CALENDAR_REFRESH_MINUTES,
   };
 });

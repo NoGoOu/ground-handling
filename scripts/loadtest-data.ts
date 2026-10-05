@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { DEMO_MILESTONES, DEMO_TEMPLATE_PARAMS } from "@/lib/demo-template";
 import { LOADTEST_AIRLINE, LOADTEST_TEAM, LOADTEST_USER_PREFIX } from "@/lib/ops/loadtest";
 import { isPublished } from "@/lib/roster";
+import { BUD_STATION_ID } from "@/lib/stations";
 import { localDayRange, localToUtc, parseLocalDate, toLocalDate } from "@/lib/time";
 
 // The test data of the load test (CLAUDE.md, 13. mérföldkő, utómunka,
@@ -54,12 +55,12 @@ async function create() {
   const leadNames = Array.from({ length: leads }, (_, i) => `${LOADTEST_USER_PREFIX}lead-${String(i + 1).padStart(2, "0")}`);
   const agentNames = Array.from({ length: agents }, (_, i) => `${LOADTEST_USER_PREFIX}agent-${String(i + 1).padStart(4, "0")}`);
   const leadUsers = await prisma.user.createManyAndReturn({
-    data: leadNames.map((username, i) => ({ username, name: `Próba Vezető ${i + 1}`, passwordHash })),
+    data: leadNames.map((username, i) => ({ username, name: `Próba Vezető ${i + 1}`, passwordHash, defaultStationId: BUD_STATION_ID })),
     select: { id: true },
   });
   const team = await prisma.team.create({ data: { name: LOADTEST_TEAM, leaderId: leadUsers[0].id } });
   const agentUsers = await prisma.user.createManyAndReturn({
-    data: agentNames.map((username, i) => ({ username, name: `Próba Ügynök ${i + 1}`, passwordHash, teamId: team.id })),
+    data: agentNames.map((username, i) => ({ username, name: `Próba Ügynök ${i + 1}`, passwordHash, teamId: team.id, defaultStationId: BUD_STATION_ID })),
     select: { id: true },
   });
   await prisma.userRole.createMany({

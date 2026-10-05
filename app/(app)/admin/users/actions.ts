@@ -18,6 +18,7 @@ import {
   type Scope,
 } from "@/lib/permissions";
 import { getCurrentUser } from "@/lib/session";
+import { BUD_STATION_ID } from "@/lib/stations";
 import { fieldErrors, formValues, type FormState } from "@/lib/validation/form";
 import { editUserSchema, newUserSchema, USER_FIELDS, type UserFormInput } from "@/lib/validation/user";
 
@@ -59,6 +60,16 @@ async function wouldRemoveLastAdmin(userId: string, roleIds: string[], active: b
   return !keepsAdmin && (await countActiveAdmins(userId)) === 0;
 }
 
+/**
+ * The station of a role assignment (14. mérföldkő): the Admin role is for every
+ * station (no station), any other for BUD until the admin pages give the
+ * station (14. mérföldkő, 5. lépés).
+ */
+async function assignmentStation(roleId: string): Promise<string | null> {
+  const role = await prisma.role.findUnique({ where: { id: roleId }, select: { name: true, builtIn: true } });
+  return role?.builtIn && role.name === BUILT_IN_ADMIN_ROLE ? null : BUD_STATION_ID;
+}
+
 export async function createUser(_previous: UserFormState, formData: FormData): Promise<UserFormState> {
   const actor = await getCurrentUser();
   if (!actor || !canManageUsers(actor)) return { message: messages.errors.forbidden };
@@ -75,7 +86,8 @@ export async function createUser(_previous: UserFormState, formData: FormData): 
         ...data,
         teamId: await validTeamId(data.teamId),
         passwordHash: await bcrypt.hash(password, 10),
-        roles: { create: roleIds.map((roleId) => ({ roleId })) },
+        defaultStationId: BUD_STATION_ID,
+        roles: { create: await Promise.all(roleIds.map(async (roleId) => ({ roleId, stationId: await assignmentStation(roleId) }))) },
       },
     });
   } catch (error) {
@@ -106,11 +118,9 @@ export async function saveUserPermissions(
     await prisma.$transaction(async (tx) => {
       await tx.userPermission.deleteMany({ where: { userId, permission: { notIn: [...grants.keys()] } } });
       for (const [permission, scope] of grants) {
-        await tx.userPermission.upsert({
-          where: { userId_permission: { userId, permission } },
-          create: { userId, permission, scope },
-          update: { scope },
-        });
+        // A grant kept is kept on its station (14. mérföldkő); a new one is BUD's for now.
+        const kept = await tx.userPermission.updateMany({ where: { userId, permission }, data: { scope } });
+        if (kept.count === 0) await tx.userPermission.create({ data: { userId, permission, scope, stationId: BUD_STATION_ID } });
       }
     });
     refresh();
@@ -143,11 +153,10 @@ export async function updateUser(userId: string, _previous: UserFormState, formD
       });
       await tx.userRole.deleteMany({ where: { userId, roleId: { notIn: roleIds.length > 0 ? roleIds : ["-"] } } });
       for (const roleId of roleIds) {
-        await tx.userRole.upsert({
-          where: { userId_roleId: { userId, roleId } },
-          create: { userId, roleId },
-          update: {},
-        });
+        // A role kept is kept on its station (14. mérföldkő); a new one gets the default.
+        if (!(await tx.userRole.findFirst({ where: { userId, roleId }, select: { id: true } }))) {
+          await tx.userRole.create({ data: { userId, roleId, stationId: await assignmentStation(roleId) } });
+        }
       }
     });
   } catch (error) {

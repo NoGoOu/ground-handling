@@ -1,5 +1,6 @@
 "use server";
 
+import { BUD_STATION_ID } from "@/lib/stations";
 import { refresh } from "next/cache";
 import { Prisma } from "@/generated/prisma/client";
 import { ActionError, actionUser, runAction, type ActionResult } from "@/lib/action";
@@ -10,7 +11,6 @@ import { MAX_DELAY_DOCUMENT_BYTES } from "@/lib/delay-document";
 import { messages } from "@/lib/messages";
 import { canManageMessaging } from "@/lib/permissions";
 import { getCurrentUser } from "@/lib/session";
-import { SETTINGS_ID } from "@/lib/settings";
 import { DELAY_CODE_FIELDS, delayCodeSchema, type DelayCodeFormInput } from "@/lib/validation/delay-code";
 import { fieldErrors, formValues, type FormState } from "@/lib/validation/form";
 import {
@@ -145,7 +145,7 @@ export async function saveSender(_previous: SenderFormState, formData: FormData)
   const values = formValues(formData, SENDER_FIELDS);
   const parsed = senderSchema.safeParse(values);
   if (!parsed.success) return { errors: fieldErrors(parsed.error), values };
-  await prisma.setting.upsert({ where: { id: SETTINGS_ID }, create: { id: SETTINGS_ID, ...parsed.data }, update: parsed.data });
+  await prisma.stationSetting.upsert({ where: { stationId: BUD_STATION_ID }, create: { stationId: BUD_STATION_ID, ...parsed.data }, update: parsed.data });
   refresh();
   return { notice: messages.addressBook.senderSaved };
 }
@@ -188,7 +188,7 @@ export async function saveSlotTolerance(_previous: SlotToleranceFormState, formD
   const values = formValues(formData, ["slotToleranceMinutes"] as const);
   const parsed = slotToleranceSchema.safeParse(values);
   if (!parsed.success) return { errors: fieldErrors(parsed.error), values };
-  await prisma.setting.upsert({ where: { id: SETTINGS_ID }, create: { id: SETTINGS_ID, ...parsed.data }, update: parsed.data });
+  await prisma.stationSetting.upsert({ where: { stationId: BUD_STATION_ID }, create: { stationId: BUD_STATION_ID, ...parsed.data }, update: parsed.data });
   refresh();
   return { notice: messages.slotTolerance.saved };
 }

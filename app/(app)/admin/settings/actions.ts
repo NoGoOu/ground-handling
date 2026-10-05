@@ -6,6 +6,7 @@ import { messages } from "@/lib/messages";
 import { canManageSettings } from "@/lib/permissions";
 import { getCurrentUser } from "@/lib/session";
 import { SETTINGS_ID } from "@/lib/settings";
+import { BUD_STATION_ID } from "@/lib/stations";
 import { fieldErrors, formValues, type FormState } from "@/lib/validation/form";
 import {
   CALENDAR_SETTINGS_FIELDS,
@@ -35,9 +36,9 @@ export async function updateSettings(
   const parsed = settingsSchema.safeParse(values);
   if (!parsed.success) return { errors: fieldErrors(parsed.error), values };
 
-  await prisma.setting.upsert({
-    where: { id: SETTINGS_ID },
-    create: { id: SETTINGS_ID, ...parsed.data },
+  await prisma.stationSetting.upsert({
+    where: { stationId: BUD_STATION_ID },
+    create: { stationId: BUD_STATION_ID, ...parsed.data },
     update: parsed.data,
   });
   refresh();
@@ -58,9 +59,9 @@ export async function updateExpirySettings(
   const parsed = expirySettingsSchema.safeParse(values);
   if (!parsed.success) return { errors: fieldErrors(parsed.error), values };
 
-  await prisma.setting.upsert({
-    where: { id: SETTINGS_ID },
-    create: { id: SETTINGS_ID, ...parsed.data },
+  await prisma.stationSetting.upsert({
+    where: { stationId: BUD_STATION_ID },
+    create: { stationId: BUD_STATION_ID, ...parsed.data },
     update: parsed.data,
   });
   refresh();
@@ -81,9 +82,9 @@ export async function updateEquipmentExpirySettings(
   const parsed = equipmentExpirySettingsSchema.safeParse(values);
   if (!parsed.success) return { errors: fieldErrors(parsed.error), values };
 
-  await prisma.setting.upsert({
-    where: { id: SETTINGS_ID },
-    create: { id: SETTINGS_ID, ...parsed.data },
+  await prisma.stationSetting.upsert({
+    where: { stationId: BUD_STATION_ID },
+    create: { stationId: BUD_STATION_ID, ...parsed.data },
     update: parsed.data,
   });
   refresh();

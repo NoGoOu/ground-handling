@@ -4,6 +4,7 @@ import { countActiveAdmins } from "@/lib/data/users";
 import { prisma } from "@/lib/db";
 import { messages } from "@/lib/messages";
 import { BUILT_IN_ADMIN_ROLE } from "@/lib/permissions";
+import { BUD_STATION_ID } from "@/lib/stations";
 import { newUserSchema } from "@/lib/validation/user";
 
 // The first admin of a production server (CLAUDE.md, 13. mérföldkő): there is
@@ -32,7 +33,14 @@ export async function createFirstAdmin(input: FirstAdminInput): Promise<{ ok: tr
   if (await prisma.user.findUnique({ where: { username }, select: { id: true } })) return { ok: false, error: messages.ops.admin.taken };
   const role = await prisma.role.findFirstOrThrow({ where: { name: BUILT_IN_ADMIN_ROLE, builtIn: true }, select: { id: true } });
   await prisma.user.create({
-    data: { name, username, passwordHash: await bcrypt.hash(password, 10), roles: { create: [{ roleId: role.id }] } },
+    // The first admin is for every station (no station on the role, 14. mérföldkő).
+    data: {
+      name,
+      username,
+      passwordHash: await bcrypt.hash(password, 10),
+      defaultStationId: BUD_STATION_ID,
+      roles: { create: [{ roleId: role.id, stationId: null }] },
+    },
   });
   return { ok: true, username };
 }

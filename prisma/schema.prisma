@@ -33,24 +33,64 @@ enum TaskStatus {
 }
 
 /// Global settings, a single row with id "global" (decision 7).
+/// The company's own settings, one row (14. mérföldkő: the station's are in StationSetting).
 model Setting {
-  id                        String   @id @default("global")
+  id                     String   @id @default("global")
+  /// The refresh time suggested to the calendars subscribed to a roster, in minutes (12. mérföldkő).
+  calendarRefreshMinutes Int      @default(60)
+  updatedAt              DateTime @updatedAt
+}
+
+/// A station's own settings (CLAUDE.md, 14. mérföldkő), one row per station.
+model StationSetting {
+  stationId                 String   @id
+  station                   Station  @relation(fields: [stationId], references: [id])
   /// Deviation up to this many minutes is green.
   deviationGreenMaxMinutes  Int      @default(0)
   /// Deviation up to this many minutes is yellow, above it red.
   deviationYellowMaxMinutes Int      @default(5)
   /// A qualification expiring within this many days is "hamarosan lejár" (6. mérföldkő).
   expiryWarningDays         Int      @default(30)
+  /// A deadline of ground equipment within this many days is "hamarosan lejár" (11. mérföldkő).
+  equipmentWarningDays      Int      @default(30)
   /// The sender of the messages we send (7. mérföldkő).
   senderEmail               String?
   senderTypeB               String?
   /// A slot warning when the planned off-block is later than the target off-block by more (8. mérföldkő).
   slotToleranceMinutes      Int      @default(10)
-  /// A deadline of ground equipment within this many days is "hamarosan lejár" (11. mérföldkő).
-  equipmentWarningDays      Int      @default(30)
-  /// The refresh time suggested to the calendars subscribed to a roster, in minutes (12. mérföldkő).
-  calendarRefreshMinutes    Int      @default(60)
   updatedAt                 DateTime @updatedAt
+}
+
+/// A station of the company (CLAUDE.md, 14. mérföldkő): an airport of the
+/// airport table with its time zone. Not deleted; an inactive one cannot be
+/// chosen, its data stay.
+model Station {
+  id        String   @id @default(cuid())
+  airportId String   @unique
+  airport   Airport  @relation(fields: [airportId], references: [id])
+  /// IANA time zone, e.g. Europe/Budapest or Europe/Istanbul.
+  timeZone  String
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  setting          StationSetting?
+  planningSetting  PlanningSetting?
+  flights          Flight[]
+  teams            Team[]
+  shifts           Shift[]
+  publications     Publication[]
+  plans            Plan[]
+  importRuns       ImportRun[]
+  airlineTaskTypes AirlineTaskType[]
+  templates        TurnaroundTemplate[]
+  addressBook      AddressBookEntry[]
+  trainings        Training[]
+  examQuestions    ExamQuestion[]
+  equipment        Equipment[]
+  userRoles        UserRole[]
+  userPermissions  UserPermission[]
+  defaultForUsers  User[]               @relation("DefaultStation")
 }
 
 model User {
@@ -66,47 +106,47 @@ model User {
 
   roles              UserRole[]
   permissions        UserPermission[]
-  ledTeams           Team[]            @relation("TeamLeader")
-  publications       Publication[]     @relation("PublishedBy")
-  arrivalTasks       Task[]            @relation("ArrivalAgent")
-  departureTasks     Task[]            @relation("DepartureAgent")
-  recordedMilestones MilestoneRecord[] @relation("RecordedBy")
-  updatedMilestones  MilestoneRecord[] @relation("UpdatedBy")
+  ledTeams           Team[]              @relation("TeamLeader")
+  publications       Publication[]       @relation("PublishedBy")
+  arrivalTasks       Task[]              @relation("ArrivalAgent")
+  departureTasks     Task[]              @relation("DepartureAgent")
+  recordedMilestones MilestoneRecord[]   @relation("RecordedBy")
+  updatedMilestones  MilestoneRecord[]   @relation("UpdatedBy")
   shifts             Shift[]
-  etaRecords         Flight[]          @relation("EtaRecordedBy")
-  etdRecords         Flight[]          @relation("EtdRecordedBy")
-  arrivalCancels     Flight[]          @relation("ArrivalCancelledBy")
-  departureCancels   Flight[]          @relation("DepartureCancelledBy")
+  etaRecords         Flight[]            @relation("EtaRecordedBy")
+  etdRecords         Flight[]            @relation("EtdRecordedBy")
+  arrivalCancels     Flight[]            @relation("ArrivalCancelledBy")
+  departureCancels   Flight[]            @relation("DepartureCancelledBy")
   flightEvents       FlightEvent[]
   importProfiles     ImportProfile[]
   importRuns         ImportRun[]
   importUploads      ImportUpload[]
-  plansCreated       Plan[]            @relation("PlansCreated")
+  plansCreated       Plan[]              @relation("PlansCreated")
   planPositions      PlanPosition[]
-  trainingRecords    TrainingRecord[]  @relation("TrainingRecords")
-  recordsCreated     TrainingRecord[]  @relation("TrainingRecordsCreated")
-  recordsUpdated     TrainingRecord[]  @relation("TrainingRecordsUpdated")
-  filesUploaded      TrainingFile[]    @relation("TrainingFilesUploaded")
-  filesRemoved       TrainingFile[]    @relation("TrainingFilesRemoved")
-  messagesCreated    Message[]         @relation("MessagesCreated")
-  messagesDiscarded  Message[]         @relation("MessagesDiscarded")
-  delayRecords       DelayRecord[]     @relation("DelayRecordsCreated")
-  delayUpdates       DelayRecord[]     @relation("DelayRecordsUpdated")
+  trainingRecords    TrainingRecord[]    @relation("TrainingRecords")
+  recordsCreated     TrainingRecord[]    @relation("TrainingRecordsCreated")
+  recordsUpdated     TrainingRecord[]    @relation("TrainingRecordsUpdated")
+  filesUploaded      TrainingFile[]      @relation("TrainingFilesUploaded")
+  filesRemoved       TrainingFile[]      @relation("TrainingFilesRemoved")
+  messagesCreated    Message[]           @relation("MessagesCreated")
+  messagesDiscarded  Message[]           @relation("MessagesDiscarded")
+  delayRecords       DelayRecord[]       @relation("DelayRecordsCreated")
+  delayUpdates       DelayRecord[]       @relation("DelayRecordsUpdated")
   apiKeys            ApiKey[]
   delayDocsUploaded  DelayCodeDocument[] @relation("DelayCodeDocumentsUploaded")
   delayDocsRemoved   DelayCodeDocument[] @relation("DelayCodeDocumentsRemoved")
   // Training with e-exams, OJT and release (10. mérföldkő).
-  trainingProcesses  TrainingProcess[] @relation("TrainingProcesses")
-  processesStarted   TrainingProcess[] @relation("TrainingProcessesStarted")
-  processesAborted   TrainingProcess[] @relation("TrainingProcessesAborted")
-  processesReleased  TrainingProcess[] @relation("TrainingProcessesReleased")
-  attemptsOpened     ExamAttempt[]     @relation("ExamAttemptsOpened")
-  attemptsGraded     ExamAttempt[]     @relation("ExamAttemptsGraded")
-  answersGraded      ExamAnswer[]      @relation("ExamAnswersGraded")
-  ojtAsTrainee       OjtSession[]      @relation("OjtTrainee")
-  ojtAdded           OjtSession[]      @relation("OjtAdded")
-  ojtAsMentor        OjtSession[]      @relation("OjtMentor")
-  practicalExams     PracticalExam[]   @relation("PracticalExaminer")
+  trainingProcesses  TrainingProcess[]   @relation("TrainingProcesses")
+  processesStarted   TrainingProcess[]   @relation("TrainingProcessesStarted")
+  processesAborted   TrainingProcess[]   @relation("TrainingProcessesAborted")
+  processesReleased  TrainingProcess[]   @relation("TrainingProcessesReleased")
+  attemptsOpened     ExamAttempt[]       @relation("ExamAttemptsOpened")
+  attemptsGraded     ExamAttempt[]       @relation("ExamAttemptsGraded")
+  answersGraded      ExamAnswer[]        @relation("ExamAnswersGraded")
+  ojtAsTrainee       OjtSession[]        @relation("OjtTrainee")
+  ojtAdded           OjtSession[]        @relation("OjtAdded")
+  ojtAsMentor        OjtSession[]        @relation("OjtMentor")
+  practicalExams     PracticalExam[]     @relation("PracticalExaminer")
   // Ground equipment and faults (11. mérföldkő).
   equipmentValues    EquipmentValue[]    @relation("EquipmentValuesUpdated")
   equipmentChanges   EquipmentValueLog[] @relation("EquipmentValueChanges")
@@ -120,6 +160,9 @@ model User {
   faultComments      FaultComment[]      @relation("FaultComments")
   faultEvents        FaultEvent[]        @relation("FaultEvents")
   calendarFeed       CalendarFeed?
+  /// The station a user starts on (14. mérföldkő).
+  defaultStationId   String?
+  defaultStation     Station?            @relation("DefaultStation", fields: [defaultStationId], references: [id])
 }
 
 /// A role is a name plus the permissions ticked for it (CLAUDE.md, "Jogosultsági rendszer").
@@ -146,24 +189,35 @@ model RolePermission {
   @@unique([roleId, permission])
 }
 
+/// A role of a user on one station, or on every station when the station is
+/// empty (14. mérföldkő); "every station" covers the later ones too.
 model UserRole {
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  roleId String
-  role   Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  roleId    String
+  role      Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  stationId String?  @default("station-bud")
+  station   Station? @relation(fields: [stationId], references: [id], onDelete: Restrict)
 
-  @@id([userId, roleId])
+  /// Unique with NULLS NOT DISTINCT (in the migration): "every station" once.
+  @@unique([userId, roleId, stationId])
 }
 
 /// Extra permission given to one user on top of their roles. There is no individual revoke.
+/// An individual permission of a user on one station, or on every station when
+/// the station is empty (14. mérföldkő).
 model UserPermission {
   id         String          @id @default(cuid())
   userId     String
   user       User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   permission String
   scope      PermissionScope @default(ALL)
+  stationId  String?         @default("station-bud")
+  station    Station?        @relation(fields: [stationId], references: [id], onDelete: Restrict)
 
-  @@unique([userId, permission])
+  /// Unique with NULLS NOT DISTINCT (in the migration): "every station" once.
+  @@unique([userId, permission, stationId])
 }
 
 /// A team has one leader; the "team" scope covers the members of the teams a user leads.
@@ -176,6 +230,13 @@ model Team {
   updatedAt DateTime @updatedAt
 
   members User[] @relation("TeamMembers")
+
+  /// The station it belongs to (14. mérföldkő). BUD by default only until every
+  /// page and action gives the station (14. mérföldkő, 4. lépés).
+  stationId String  @default("station-bud")
+  station   Station @relation(fields: [stationId], references: [id])
+
+  @@index([stationId])
 }
 
 /// The three layers of the roster (CLAUDE.md, "Beosztás rétegei").
@@ -211,7 +272,13 @@ model Publication {
 
   shifts Shift[]
 
+  /// The station it belongs to (14. mérföldkő). BUD by default only until every
+  /// page and action gives the station (14. mérföldkő, 4. lépés).
+  stationId String  @default("station-bud")
+  station   Station @relation(fields: [stationId], references: [id])
+
   @@index([startDate])
+  @@index([stationId])
 }
 
 /// One agent's shift in one layer; its start and end come from its segments.
@@ -232,7 +299,13 @@ model Shift {
   planDayId String?
   planDay   PlanDay?       @relation(fields: [planDayId], references: [id], onDelete: SetNull)
 
+  /// The station it belongs to (14. mérföldkő). BUD by default only until every
+  /// page and action gives the station (14. mérföldkő, 4. lépés).
+  stationId String  @default("station-bud")
+  station   Station @relation(fields: [stationId], references: [id])
+
   @@index([userId, layer])
+  @@index([stationId])
 }
 
 /// A part of a shift: time, type, and optionally a block with travel time.
@@ -259,15 +332,15 @@ model ShiftSegment {
 }
 
 model Airline {
-  id        String               @id @default(cuid())
-  name      String
-  iataCode  String               @unique
-  templates TurnaroundTemplate[] @relation("AirlineTemplates")
-  flights   Flight[]
+  id                 String               @id @default(cuid())
+  name               String
+  iataCode           String               @unique
+  templates          TurnaroundTemplate[] @relation("AirlineTemplates")
+  flights            Flight[]
   /// The task types its flights get (5. mérföldkő); replaces the default template.
-  taskTypes AirlineTaskType[]
+  taskTypes          AirlineTaskType[]
   /// Who gets its messages (7. mérföldkő).
-  addresses AddressBookEntry[]
+  addresses          AddressBookEntry[]
   /// Its own delay code document and the log of the earlier ones (8. mérföldkő, utómunka).
   delayCodeDocuments DelayCodeDocument[]
 }
@@ -305,7 +378,13 @@ model AirlineTaskType {
   /// The qualifications its parts need (6. mérföldkő).
   requirements TaskRequirement[]
 
+  /// The station it belongs to (14. mérföldkő). BUD by default only until every
+  /// page and action gives the station (14. mérföldkő, 4. lépés).
+  stationId String  @default("station-bud")
+  station   Station @relation(fields: [stationId], references: [id])
+
   @@unique([airlineId, taskTypeId])
+  @@index([stationId])
 }
 
 model TurnaroundTemplate {
@@ -329,7 +408,13 @@ model TurnaroundTemplate {
   tasks      Task[]
   usedBy     AirlineTaskType[]
 
+  /// The station it belongs to (14. mérföldkő). BUD by default only until every
+  /// page and action gives the station (14. mérföldkő, 4. lépés).
+  stationId String  @default("station-bud")
+  station   Station @relation(fields: [stationId], references: [id])
+
   @@unique([airlineId, name])
+  @@index([stationId])
 }
 
 model MilestoneDefinition {
@@ -366,26 +451,26 @@ model Flight {
   stand                String?
 
   // 3. mérföldkő: where the flight comes from, and what identifies its legs.
-  source              FlightSource   @default(MANUAL)
+  source                FlightSource   @default(MANUAL)
   /// Origin of the arrival part and destination of the departure part.
-  origin              String?
-  destination         String?
+  origin                String?
+  destination           String?
   /// Operating dates of the two legs (the departure day at the leg's origin).
-  arrivalFlightDate   DateTime?      @db.Date
-  departureFlightDate DateTime?      @db.Date
-  aircraftType        String?
-  aircraftConfig      String?
-  importProfileId     String?
-  importProfile       ImportProfile? @relation(fields: [importProfileId], references: [id])
+  arrivalFlightDate     DateTime?      @db.Date
+  departureFlightDate   DateTime?      @db.Date
+  aircraftType          String?
+  aircraftConfig        String?
+  importProfileId       String?
+  importProfile         ImportProfile? @relation(fields: [importProfileId], references: [id])
   /// "Az utolsó importból hiányzik", per part, until the planner clears it.
-  arrivalMissing      Boolean        @default(false)
-  departureMissing    Boolean        @default(false)
-  missingImportRunId  String?
-  missingImportRun    ImportRun?     @relation("MissingFromImport", fields: [missingImportRunId], references: [id])
+  arrivalMissing        Boolean        @default(false)
+  departureMissing      Boolean        @default(false)
+  missingImportRunId    String?
+  missingImportRun      ImportRun?     @relation("MissingFromImport", fields: [missingImportRunId], references: [id])
   /// From the external system.
-  ata                 DateTime?
+  ata                   DateTime?
   /// From the external system.
-  atd                 DateTime?
+  atd                   DateTime?
   /// Per part (7. mérföldkő): a message fills it when empty.
   arrivalRegistration   String?
   departureRegistration String?
@@ -423,11 +508,17 @@ model Flight {
   messages     Message[]
   delayRecords DelayRecord[]
 
+  /// The station it belongs to (14. mérföldkő). BUD by default only until every
+  /// page and action gives the station (14. mérföldkő, 4. lépés).
+  stationId String  @default("station-bud")
+  station   Station @relation(fields: [stationId], references: [id])
+
   @@unique([airlineId, inboundFlightNumber, arrivalFlightDate, origin])
   @@unique([airlineId, outboundFlightNumber, departureFlightDate, destination])
   @@index([departureIfplid])
   @@index([sta])
   @@index([std])
+  @@index([stationId])
 }
 
 model Task {
@@ -453,8 +544,8 @@ model Task {
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt
 
-  records   MilestoneRecord[]
-  planItems PlanItem[]
+  records        MilestoneRecord[]
+  planItems      PlanItem[]
   /// Trainees next to its agents and practical exams on it (10. mérföldkő).
   ojtSessions    OjtSession[]
   practicalExams PracticalExam[]
@@ -504,28 +595,28 @@ enum FlightEventKind {
 
 /// Log of delays, cancellations and restorations on a flight: who, when, what.
 model FlightEvent {
-  id          String          @id @default(cuid())
-  flightId    String
-  flight      Flight          @relation(fields: [flightId], references: [id], onDelete: Cascade)
-  kind        FlightEventKind
+  id           String          @id @default(cuid())
+  flightId     String
+  flight       Flight          @relation(fields: [flightId], references: [id], onDelete: Cascade)
+  kind         FlightEventKind
   /// The cancelled or restored part; null for a delay.
-  part        MilestonePart?
+  part         MilestonePart?
   /// The new estimates of a delay.
-  eta         DateTime?
-  etd         DateTime?
-  source      EstimateSource?
-  note        String?
+  eta          DateTime?
+  etd          DateTime?
+  source       EstimateSource?
+  note         String?
   /// ACTUAL: the new ATA or ATD; REGISTRATION: the registration.
   ata          DateTime?
   atd          DateTime?
   registration String?
   /// The message the change comes from (7. mérföldkő).
-  messageId   String?
-  message     Message?        @relation(fields: [messageId], references: [id], onDelete: SetNull)
+  messageId    String?
+  message      Message?        @relation(fields: [messageId], references: [id], onDelete: SetNull)
   /// Null when a message received through the API made the change.
-  createdById String?
-  createdBy   User?           @relation(fields: [createdById], references: [id])
-  createdAt   DateTime        @default(now())
+  createdById  String?
+  createdBy    User?           @relation(fields: [createdById], references: [id])
+  createdAt    DateTime        @default(now())
 
   @@index([flightId, createdAt])
 }
@@ -570,7 +661,13 @@ model ImportRun {
 
   missingFlights Flight[] @relation("MissingFromImport")
 
+  /// The station it belongs to (14. mérföldkő). BUD by default only until every
+  /// page and action gives the station (14. mérföldkő, 4. lépés).
+  stationId String  @default("station-bud")
+  station   Station @relation(fields: [stationId], references: [id])
+
   @@index([createdAt])
+  @@index([stationId])
 }
 
 /// An uploaded file kept between the steps of the import; removed after a day.
@@ -591,7 +688,10 @@ model ImportUpload {
 /// The rules of the automatic plan (CLAUDE.md, "Tervezési beállítások").
 /// One row; a plan day keeps its own copy from its calculation.
 model PlanningSetting {
-  id                String       @id @default("global")
+  id                String       @id @default(cuid())
+  /// One row per station (14. mérföldkő).
+  stationId         String       @unique @default("station-bud")
+  station           Station      @relation(fields: [stationId], references: [id])
   minShiftMinutes   Int          @default(240)
   maxShiftMinutes   Int          @default(720)
   breakMinutes      Int          @default(20)
@@ -627,6 +727,13 @@ model Plan {
   updatedAt   DateTime @updatedAt
 
   days PlanDay[]
+
+  /// The station it belongs to (14. mérföldkő). BUD by default only until every
+  /// page and action gives the station (14. mérföldkő, 4. lépés).
+  stationId String  @default("station-bud")
+  station   Station @relation(fields: [stationId], references: [id])
+
+  @@index([stationId])
 }
 
 /// One day of a plan. Its items are the day's windows as calculated: when
@@ -724,6 +831,13 @@ model Training {
   examSheets ExamSheet[]
   processes  TrainingProcess[]
   criteria   PracticalCriterion[]
+
+  /// The station it belongs to (14. mérföldkő). BUD by default only until every
+  /// page and action gives the station (14. mérföldkő, 4. lépés).
+  stationId String  @default("station-bud")
+  station   Station @relation(fields: [stationId], references: [id])
+
+  @@index([stationId])
 }
 
 /// One completion of a training by an agent. Corrected, never deleted.
@@ -749,7 +863,7 @@ model TrainingRecord {
   updatedBy        User?     @relation("TrainingRecordsUpdated", fields: [updatedById], references: [id])
   updatedAt        DateTime  @updatedAt
 
-  files TrainingFile[]
+  files   TrainingFile[]
   /// The process whose release made it (10. mérföldkő); none for a record kept by hand.
   process TrainingProcess?
 
@@ -1000,7 +1114,13 @@ model AddressBookEntry {
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
 
+  /// The station it belongs to (14. mérföldkő). BUD by default only until every
+  /// page and action gives the station (14. mérföldkő, 4. lépés).
+  stationId String  @default("station-bud")
+  station   Station @relation(fields: [stationId], references: [id])
+
   @@unique([airlineId, messageType, address])
+  @@index([stationId])
 }
 
 /// Airports by IATA and ICAO code (8. mérföldkő): slot messages name them by ICAO.
@@ -1011,6 +1131,9 @@ model Airport {
   name      String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  /// When it is one of the company's stations (14. mérföldkő).
+  station Station?
 }
 
 // ---------------------------------------------------------------------------
@@ -1061,6 +1184,13 @@ model ExamQuestion {
 
   options ExamOption[]
   sheets  ExamSheetQuestion[]
+
+  /// The station it belongs to (14. mérföldkő). BUD by default only until every
+  /// page and action gives the station (14. mérföldkő, 4. lépés).
+  stationId String  @default("station-bud")
+  station   Station @relation(fields: [stationId], references: [id])
+
+  @@index([stationId])
 }
 
 /// An answer to choose for a single or multiple choice question.
@@ -1333,7 +1463,13 @@ model Equipment {
   documents EquipmentDocument[]
   faults    Fault[]
 
+  /// The station it belongs to (14. mérföldkő). BUD by default only until every
+  /// page and action gives the station (14. mérföldkő, 4. lépés).
+  stationId String  @default("station-bud")
+  station   Station @relation(fields: [stationId], references: [id])
+
   @@index([typeId])
+  @@index([stationId])
 }
 
 /// The value of one field of one piece of equipment.

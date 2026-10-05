@@ -1,9 +1,9 @@
+import { BUD_STATION_ID } from "@/lib/stations";
 import nodemailer from "nodemailer";
 import type { DeliveryStatus, Prisma } from "@/generated/prisma/client";
 import { effectFlight, FLIGHT_SELECT } from "@/lib/data/messages";
 import { prisma } from "@/lib/db";
 import { messages } from "@/lib/messages";
-import { SETTINGS_ID } from "@/lib/settings";
 import { deliveryDecision, smtpFromEnv, type ChannelSetup, type Recipient, type SmtpSettings } from "@/lib/telex/delivery";
 import { resolveTimes, versionKey, versionKind } from "@/lib/telex/effects";
 import { bodyLines } from "@/lib/telex/header";
@@ -21,7 +21,8 @@ import type { TelexWarning } from "@/lib/telex/warnings";
 const json = (value: unknown) => value as Prisma.InputJsonValue;
 
 export async function channelSetup(): Promise<{ setup: ChannelSetup; smtp: SmtpSettings | null }> {
-  const setting = await prisma.setting.findUnique({ where: { id: SETTINGS_ID }, select: { senderEmail: true, senderTypeB: true } });
+  // The sender is the station's setting (14. mérföldkő); BUD until the station context comes.
+  const setting = await prisma.stationSetting.findUnique({ where: { stationId: BUD_STATION_ID }, select: { senderEmail: true, senderTypeB: true } });
   const smtp = smtpFromEnv(process.env);
   return {
     smtp,

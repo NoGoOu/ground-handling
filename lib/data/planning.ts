@@ -1,3 +1,4 @@
+import { BUD_STATION_ID } from "@/lib/stations";
 import type { Prisma } from "@/generated/prisma/client";
 import { listPublicationsInRange } from "@/lib/data/publications";
 import { listRosterAgents } from "@/lib/data/shifts";
@@ -19,7 +20,6 @@ import type { TakeoverItem, TakeoverResult, TakeoverTask } from "@/lib/planning/
 import { itemWindow, planDayView, type PlanDayView } from "@/lib/planning/view";
 import { dayStaffing } from "@/lib/planning/staffing";
 import { usableOn, windowRequirement } from "@/lib/qualifications";
-import { SETTINGS_ID } from "@/lib/settings";
 import { addDays, localDayRange } from "@/lib/time";
 import { hasPart } from "@/lib/turnaround";
 
@@ -67,9 +67,9 @@ export function windowsByDay(
   return new Map(days.map((day) => [day, windowsOfDay(planning, day)]));
 }
 
-/** The global planning settings, and the segment type the draft shifts get. */
+/** The station's planning settings (14. mérföldkő; BUD for now), and the segment type the draft shifts get. */
 export async function getPlanningSettings(): Promise<{ settings: PlanningSettings; segmentTypeId: string | null }> {
-  const row = await prisma.planningSetting.findUnique({ where: { id: SETTINGS_ID } });
+  const row = await prisma.planningSetting.findUnique({ where: { stationId: BUD_STATION_ID } });
   return row
     ? { settings: pickSettings(row), segmentTypeId: row.segmentTypeId }
     : { settings: DEFAULT_PLANNING_SETTINGS, segmentTypeId: null };

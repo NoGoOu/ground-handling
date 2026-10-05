@@ -12,6 +12,7 @@ import { messages } from "@/lib/messages";
 import { seedAllowed } from "@/lib/ops/config";
 import { DEFAULT_ROLES } from "@/lib/permissions";
 import { SETTINGS_ID } from "@/lib/settings";
+import { BUD_STATION_ID } from "@/lib/stations";
 import { templateSnapshotJson } from "@/lib/snapshot";
 import { localDayRange, addDays, toLocalDate } from "@/lib/time";
 import {
@@ -78,8 +79,9 @@ async function main() {
   let coordinatorId: string | null = null;
 
   await prisma.$transaction(async (tx) => {
-    // Global settings: the defaults from the schema (decision 7).
+    // Global settings: the defaults from the schema (decision 7); the company's and BUD's (14. mérföldkő).
     await tx.setting.upsert({ where: { id: SETTINGS_ID }, create: { id: SETTINGS_ID }, update: {} });
+    await tx.stationSetting.upsert({ where: { stationId: BUD_STATION_ID }, create: { stationId: BUD_STATION_ID }, update: {} });
 
     // Messages (7. mérföldkő) point at users and flights.
     await tx.message.deleteMany();
@@ -89,7 +91,8 @@ async function main() {
     await tx.addressBookEntry.deleteMany();
     await tx.delayCode.deleteMany();
     await tx.delayCodeDocument.deleteMany();
-    await tx.airport.deleteMany();
+    // The airports of the stations stay (14. mérföldkő); the others are the seed's.
+    await tx.airport.deleteMany({ where: { station: null } });
     await tx.plan.deleteMany();
     // The sign-in log (13. mérföldkő) goes with the users.
     await tx.loginAttempt.deleteMany();
@@ -158,7 +161,14 @@ async function main() {
           username: user.username,
           name: user.name,
           passwordHash,
-          roles: { create: user.roles.map((name) => ({ roleId: roleIds.get(name)! })) },
+          defaultStationId: BUD_STATION_ID,
+          // An admin's roles are for every station, anyone else's for BUD (14. mérföldkő).
+          roles: {
+            create: user.roles.map((name) => ({
+              roleId: roleIds.get(name)!,
+              stationId: (user.roles as readonly string[]).includes("Admin") ? null : BUD_STATION_ID,
+            })),
+          },
         },
       });
       users.set(user.username, created.id);
@@ -269,8 +279,8 @@ async function main() {
     await tx.addressBookEntry.createMany({
       data: SEED_ADDRESSES.map(({ airline: code, ...entry }) => ({ ...entry, airlineId: airlineIds.get(code)! })),
     });
-    await tx.setting.update({ where: { id: SETTINGS_ID }, data: SEED_SENDER });
-    await tx.airport.createMany({ data: [...SEED_AIRPORTS] });
+    await tx.stationSetting.update({ where: { stationId: BUD_STATION_ID }, data: SEED_SENDER });
+    await tx.airport.createMany({ data: [...SEED_AIRPORTS], skipDuplicates: true });
 
     await tx.importProfile.create({
       data: {
@@ -290,7 +300,7 @@ async function main() {
 
     // Planning settings (4. mérföldkő): the defaults, saving into the Műszak type.
     const planning = { ...DEFAULT_PLANNING_SETTINGS, segmentTypeId: segmentTypeIds.get("SHIFT") ?? null };
-    await tx.planningSetting.upsert({ where: { id: SETTINGS_ID }, create: { id: SETTINGS_ID, ...planning }, update: planning });
+    await tx.planningSetting.upsert({ where: { stationId: BUD_STATION_ID }, create: { stationId: BUD_STATION_ID, ...planning }, update: planning });
 
     const publication = await tx.publication.create({
       data: {

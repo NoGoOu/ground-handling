@@ -1,34 +1,23 @@
-# Állapot – Ground Handling App
+# STATUS
 
-*Frissítve: 2026. október 5. · CLAUDE.md verzió: 45*
+*Frissítve: 2026. október 5. · CLAUDE.md 45. verzió*
 
 ## Mi készült el
 
-- **A 13. mérföldkő utómunkájának 6. pontja: az ügynök nézet gyorsítása.**
-  - **Mit tölt be:** csak azokat a járatokat, amelyeken a felhasználó ügynök vagy gyakornok, a járat többi taskjával együtt; a járat napját és sorrendjét továbbra is az elsődleges task dönti el.
-  - **Hol van a szabály:** két tiszta függvényben: `flightsWorkedOn` (melyik járat kell) és `worksOnTask` (kié egy task); a lekérdezés feltétele ennek a tükre. A napi lista, a sávos nézet és a tervező nem változott.
-  - **Ugyanaz-e a lista:**
-    - tiszta tesztek: öt személyre (ügynök, gyakornok, más feladattípuson dolgozó, olyan járat, amelynek elsődleges taskja másik napon van, és akinek nincs taskja) ugyanaz a lista jön ki, mint a nap összes járatából;
-    - a demo adatbázison minden ügynökre és napra azonos;
-    - az 1000 járatos próbaadaton 60 ügynökre azonos.
-  - **Gyorsulás:** az 1000 járatos próbaadaton az ügynök nézet adatbetöltése átlagosan 118 ms helyett 19 ms.
-  - **Újramérés** (README-táblázat):
-    - 300 járatos nap: 100 egyidejű felhasználó (az ügynök nézet mediánja 129 helyett 70 ms);
-    - 1000 járatos nap, csak ügynökökkel: 200;
-    - 1000 járatos nap, műszakvezetőkkel együtt: kb. 10, mert egyetlen napi lista (kb. 5 mp) is feltartja a többi kérést. Ez a 15. mérföldkő célja.
-- **Javítás a mentésben:** a fájltár takarítása külön szkript lett (`docker/backup/prune.sh`).
-  - Előbb minden megmaradt csomagot végigolvas. A régi formátumú, fájllista nélküli csomag rendben van.
-  - Ha egy csomag vagy a listája nem olvasható, a tárból semmit sem töröl, és figyelmeztet.
-  - Kipróbálva konténerben: a normál takarítás törli a sehol nem szereplő fájlt; egy csonkolt csomag mellett semmi sem törlődik; egy régi formátumú csomag mellett a takarítás lefut.
+- 14. mérföldkő, 1. lépés: adatmodell és migráció. Új `Station` (repülőtér, időzóna, aktív); a migráció létrehozza a BUD állomást (Europe/Budapest). Az állomáshoz tartozó adatok (járat, csapat, műszak, publikáció, terv, importnapló, a légitársaság feladattípusai, sablon, címjegyzék, képzés, kérdés, eszköz) `stationId`-t kaptak; minden meglévő sor a BUD-é.
+- Beállítások szétválasztva: állomási (`StationSetting`: eltérés-küszöbök, a két „hamarosan lejár”, feladó, slot-tűrés; a tervezési beállítás állomásonként) és vállalati (`Setting`: naptárfrissítés). Az értékek a migrációban átmásolódnak.
+- A szerepkör-hozzárendelés és az egyéni jogosultság állomáshoz kötött (üres = minden állomás); az Admin szerepkörűek minden állomásra szólnak, a többiek a BUD-ra. Minden felhasználó alapértelmezett állomása a BUD.
+- 13. mérföldkő utómunka 6. pont (előző commit): az ügynök nézet csak a saját járatait tölti be.
 
 ## Állapot
 
-- Utolsó commit: `perf: load only the agent's own flights for the agent view` (ez a commit; előtte `bb24af0`)
-- Tesztek: `npm test` → 857 teszt, mind zöld; `npm run lint` hibátlan, `npx tsc --noEmit` tiszta, `npm run build` sikeres
+- Utolsó commit: lásd `git log -1` (feat: add stations and give every existing row to BUD)
+- Tesztek: 857 zöld; tsc és lint tiszta; a migráció után a séma-eltérés üres; seed lefut; a fő oldalak minden demo szerepkörrel hiba nélkül betöltenek.
 
 ## Eltérések a CLAUDE.md-től
 
-- nincs
+- Átmeneti: az állomáshoz tartozó táblák `stationId`-je alapértelmezésként a BUD (`lib/stations.ts`, `BUD_STATION_ID`), amíg minden oldal és művelet meg nem adja az állomást (4. lépés); akkor az alapérték és a konstans megszűnik.
+- Sorrend a mérföldkövön belül: a csapattagság-tábla a 4. lépésben, az üzenet–járatrész párosítás (`MessageLink`) a 6. lépésben kerül be, hogy egy adat ne legyen két helyen tárolva, amíg a régi kód még az eredetit használja.
 
 ## Kérdések a tervezéshez
 
@@ -36,4 +25,4 @@
 
 ## Következő lépés
 
-- A 14. mérföldkő (több állomás) terve, jóváhagyásra.
+- 14. mérföldkő, 2. lépés: az időzóna kötelező paraméter a `lib/time.ts`-ben és minden napfüggő függvényben, Europe/Istanbul és óraátállítási tesztekkel.

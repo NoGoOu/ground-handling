@@ -1,12 +1,12 @@
 "use server";
 
+import { BUD_STATION_ID } from "@/lib/stations";
 import { refresh } from "next/cache";
 import { listShiftSegmentTypes } from "@/lib/data/planning";
 import { prisma } from "@/lib/db";
 import { messages } from "@/lib/messages";
 import { canPlan } from "@/lib/permissions";
 import { getCurrentUser } from "@/lib/session";
-import { SETTINGS_ID } from "@/lib/settings";
 import { fieldErrors, formValues, type FormState } from "@/lib/validation/form";
 import {
   PLANNING_SETTINGS_FIELDS,
@@ -34,8 +34,8 @@ export async function updatePlanningSettings(
   }
 
   await prisma.planningSetting.upsert({
-    where: { id: SETTINGS_ID },
-    create: { id: SETTINGS_ID, ...parsed.data },
+    where: { stationId: BUD_STATION_ID },
+    create: { stationId: BUD_STATION_ID, ...parsed.data },
     update: parsed.data,
   });
   refresh();
