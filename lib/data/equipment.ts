@@ -1,10 +1,10 @@
-import path from "node:path";
 import type { Prisma } from "@/generated/prisma/client";
 import * as storage from "@/lib/data/storage";
 import { prisma } from "@/lib/db";
 import { canMoveEquipment, type EquipmentStatus } from "@/lib/equipment/faults";
 import { equipmentAlerts, expiringGroups, nearestDeadline, type FieldValue } from "@/lib/equipment/status";
-import { checkUpload, type UploadProblem } from "@/lib/training";
+import { prepareUpload } from "@/lib/data/uploads";
+import type { UploadProblem } from "@/lib/training";
 import type { FieldValueData } from "@/lib/validation/equipment";
 
 // Ground equipment (CLAUDE.md, 11. mérföldkő, "Eszközök"): the register, the
@@ -151,16 +151,16 @@ export async function changeEquipmentStatus(
 }
 
 export async function saveEquipmentDocument(equipmentId: string, file: File, userId: string): Promise<{ ok: true } | { ok: false; problem: UploadProblem }> {
-  const bytes = new Uint8Array(await file.arrayBuffer());
-  const checked = checkUpload(bytes);
-  if ("problem" in checked) return { ok: false, problem: checked.problem };
-  const storageKey = await storage.storeFile(FOLDER, bytes, checked.type);
+  // Checked, and an image shrunk without its metadata (13. mérföldkő, utómunka).
+  const prepared = await prepareUpload(file, "dokumentum");
+  if ("problem" in prepared) return { ok: false, problem: prepared.problem };
+  const storageKey = await storage.storeFile(FOLDER, prepared.bytes, prepared.type);
   await prisma.equipmentDocument.create({
     data: {
       equipmentId,
-      fileName: path.basename(file.name || "dokumentum").slice(0, 200),
-      mimeType: checked.type,
-      size: bytes.byteLength,
+      fileName: prepared.name,
+      mimeType: prepared.type,
+      size: prepared.bytes.byteLength,
       storageKey,
       uploadedById: userId,
     },

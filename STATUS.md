@@ -1,31 +1,34 @@
 # Állapot – Ground Handling App
 
-*Frissítve: 2026. október 2. · CLAUDE.md verzió: 41*
+*Frissítve: 2026. október 5. · CLAUDE.md verzió: 44*
 
 ## Mi készült el
 
-- **13. mérföldkő kész** (üzemeltetés, éles telepítés bérelt szerverre), a 6. lépéssel:
-  - README „Éles üzemeltetés” fejezet:
-    - szerverigény (helyőrző értékek);
-    - a VPS előkészítése: Docker, tűzfal a 22-es, 80-as és 443-as portra, swap;
-    - DNS, telepítés, a `.env` kitöltése generált titkokkal, első indítás (`ops/update.sh`);
-    - az első admin, és mit kell az üres éles adatbázisba felvenni;
-    - biztonság, mentés (és másolat a saját gépre `rsync`-kel), visszaállítás (új szerverre is), próba-visszaállítás, frissítés;
-    - állapotfigyelés (külső uptime-figyelővel is);
-    - hibaelhárítási táblázat, benne a zárolt belépés feloldása és az egyetlen admin elfelejtett jelszava. Ez utóbbit helyben ki is próbáltam.
-  - A „Mit tud” részben a 13. mérföldkő; a „Felépítés” táblában a `lib/ops/`, az `ops/` és a `docker/`. A demo „Éles használat előtt” és a „Naptár-feliratkozás” rész az éles összeállításra mutat.
-  - Tiszta demo indítás (`docker compose down -v`, `up --build`): 23 migráció, a demo seed lefut (nem éles módban), `/api/health` rendben, a verzió „unknown”.
-- Korábbi lépések: 5. (`66f55d5`) frissítés; 4. (`a4ae87d`) mentés és visszaállítás; 3. (`0defd69`) korlátozások; 2. (`483828a`) éles Compose Caddyvel; 1. (`8df7a26`) éles mód.
+- **13. mérföldkő utómunkája, 1. pont:** képek kicsinyítése feltöltéskor.
+  - Minden feltöltés egy közös úton megy át (`lib/data/uploads.ts`): a képzési csatolmány, az eszközdokumentum és a hibajegy-fotó is.
+  - Először a mostani ellenőrzés fut (típus a fájl első bájtjai szerint, 10 MB, a kicsinyítés előtti fájlra).
+  - A JPG és a PNG feldolgozása a `sharp` könyvtárral:
+    - elforgatás a tájolás szerint;
+    - legfeljebb 1600 px a hosszabb oldal, nagyítás nincs;
+    - JPEG, 80%-os minőség;
+    - a metaadatok (EXIF, GPS) törlődnek, az eredeti nem marad meg.
+  - A PNG átlátszó része fehér lesz, a megőrzött fájlnév kiterjesztése `.jpg`, a tárolt méret az új méret. A PDF változatlan. A nem olvasható képet „rossz típus” hibával utasítja el.
+  - A már tárolt képeket nem dolgozza fel utólag (jóváhagyott 2. döntés).
+  - A `sharp` közvetlen függőség lett (eddig a Next.js hozta, nem kötelező függőségként); a lockfile-ban csak ő és a saját platformcsomagjai változtak.
+  - Tesztek generált képekkel: 4000 × 3000-es, „jobbra fordítandó”, GPS-es fotóból 1200 × 1600-as JPEG metaadatok nélkül; átlátszó PNG-ből fehér hátterű JPEG nagyítás nélkül; PDF változatlanul; sérült kép, túl nagy fájl, rossz típus; a fájlnév.
+  - Ellenőrizve:
+    - adatbázison egy hibajelentés 4032 × 3024-es, GPS-es fotóval: 71 kB helyett 11 kB-os, 1200 × 1600-as JPEG tárolódott EXIF nélkül;
+    - a Docker-image-ben (Linux) a `sharp` fut.
+- A 13. mérföldkő: kész (`56b2d96`).
 
 ## Állapot
 
-- Utolsó commit: `docs: describe running the app in production on a rented server` (ez a commit; előtte `66f55d5`)
-- Tesztek: `npm test` → 836 teszt, mind zöld; `npm run lint` hibátlan, `npx tsc --noEmit` tiszta, `npm run build` sikeres
-- A teljes éles összeállítást helyben próbáltam ki, `DOMAIN=localhost`-tal és a Caddy helyi tanúsítványával: indítás, első admin, korlátok, mentés, visszaállítás, frissítés. Valódi VPS-en és valódi Let's Encrypt-tanúsítvánnyal nem.
+- Utolsó commit: `feat: shrink uploaded images and strip their metadata` (ez a commit; előtte `cd2d828`)
+- Tesztek: `npm test` → 841 teszt, mind zöld; `npm run lint` hibátlan, `npx tsc --noEmit` tiszta, `npm run build` sikeres
 
 ## Eltérések a CLAUDE.md-től
 
-- nincs. Megvalósításban: a beteg alkalmazást a healthcheck-szkript állítja le, és a restart-szabály indítja újra (a sima Compose magától nem teszi; jóváhagyott 2. döntés); visszaállítás előtt a mostani állapotról is mentés készül; az éles Compose `AUTH_URL`-ként átadja a nyilvános címet.
+- nincs
 
 ## Kérdések a tervezéshez
 
@@ -33,4 +36,4 @@
 
 ## Következő lépés
 
-- A 13. mérföldkő lezárása a CLAUDE.md-ben (a jóváhagyott döntések szabályként), és a következő mérföldkő terve.
+- Utómunka, 2. pont: növekményes fájlmentés.

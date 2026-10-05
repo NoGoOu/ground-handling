@@ -1,7 +1,7 @@
-import path from "node:path";
 import * as storage from "@/lib/data/storage";
 import { prisma } from "@/lib/db";
-import { checkUpload, type UploadProblem, type UploadType } from "@/lib/training";
+import { prepareUpload } from "@/lib/data/uploads";
+import type { UploadProblem, UploadType } from "@/lib/training";
 
 // Files of the training records (CLAUDE.md, 6. mérföldkő, "Fájlok"): kept in
 // our own storage, a Docker volume in production. A removed file is deleted
@@ -24,18 +24,18 @@ export async function saveTrainingFile(
   file: File,
   userId: string,
 ): Promise<{ ok: true } | { ok: false; problem: UploadProblem }> {
-  const bytes = new Uint8Array(await file.arrayBuffer());
-  const checked = checkUpload(bytes);
-  if ("problem" in checked) return { ok: false, problem: checked.problem };
+  // Checked, and an image shrunk without its metadata (13. mérföldkő, utómunka).
+  const prepared = await prepareUpload(file, "fajl");
+  if ("problem" in prepared) return { ok: false, problem: prepared.problem };
 
-  const storageKey = await storeFile(bytes, checked.type);
+  const storageKey = await storeFile(prepared.bytes, prepared.type);
   await prisma.trainingFile.create({
     data: {
       recordId,
       // The name the user gave, for the download; the stored name is ours.
-      fileName: path.basename(file.name || "fajl").slice(0, 200),
-      mimeType: checked.type,
-      size: bytes.byteLength,
+      fileName: prepared.name,
+      mimeType: prepared.type,
+      size: prepared.bytes.byteLength,
       storageKey,
       uploadedById: userId,
     },

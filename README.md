@@ -127,6 +127,7 @@ A formátumok, a párosítás és a minták: [`docs/messages.md`](docs/messages.
 - Belépési korlát (felhasználónévenként és IP-nként), naplózással; a fogadó API és a naptárlink kéréskorlátja.
 - Napi és kézi mentés, visszaállítás, próba-visszaállítás; a legutóbbi mentés és a futó verzió az admin oldalon.
 - Frissítés egy paranccsal, állapotellenőrzéssel; állapotvégpont, Docker-állapotfigyelés, naplóforgatás.
+- Utómunka: a feltöltött képek (hibajegy-fotó, eszköz- és képzési dokumentum) a szerveren legfeljebb 1600 pixeles hosszabb oldalra kicsinyítve, a tájolásuk szerint elforgatva, JPEG-be kerülnek, metaadatok (pl. GPS-hely) nélkül; az eredeti nem marad meg, a PDF változatlan. A 10 MB-os korlát a kicsinyítés előtti fájlra vonatkozik.
 
 **12. mérföldkő – ügynöki beosztásnézet, naptárral**
 

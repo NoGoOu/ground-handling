@@ -1,9 +1,9 @@
-import path from "node:path";
 import { changeEquipmentStatus } from "@/lib/data/equipment";
 import * as storage from "@/lib/data/storage";
 import { prisma } from "@/lib/db";
 import { canMoveFault, isReportable, statusOnReport } from "@/lib/equipment/faults";
-import { checkUpload, type UploadProblem, type UploadType } from "@/lib/training";
+import { prepareUpload } from "@/lib/data/uploads";
+import type { UploadProblem, UploadType } from "@/lib/training";
 
 // Faults on ground equipment (CLAUDE.md, 11. mérföldkő, "Hibajegy"): anyone
 // reports one, from a phone too, with photos; one marked out of service sets
@@ -32,10 +32,10 @@ async function checkPhotos(files: readonly File[]): Promise<{ bytes: Uint8Array;
   if (files.reduce((sum, file) => sum + file.size, 0) > MAX_FAULT_PHOTOS_BYTES) return "tooLarge";
   const checked: { bytes: Uint8Array; type: UploadType; name: string }[] = [];
   for (const file of files) {
-    const bytes = new Uint8Array(await file.arrayBuffer());
-    const result = checkUpload(bytes);
-    if ("problem" in result) return { photo: result.problem };
-    checked.push({ bytes, type: result.type, name: path.basename(file.name || "foto").slice(0, 200) });
+    // Checked, and a photo shrunk without its metadata, e.g. the GPS place (13. mérföldkő, utómunka).
+    const prepared = await prepareUpload(file, "foto");
+    if ("problem" in prepared) return { photo: prepared.problem };
+    checked.push(prepared);
   }
   return checked;
 }
