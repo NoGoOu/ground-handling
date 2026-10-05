@@ -6,7 +6,7 @@ import { RosterDaySummary } from "@/components/roster-day";
 import { TimeStack } from "@/components/time-stack";
 import type { BoardBlock } from "@/lib/board";
 import { listAgentBlocks, listOwnRoster } from "@/lib/data/shifts";
-import { listTaskViewsForDay, taskAssignment, type TaskView } from "@/lib/data/tasks";
+import { listTaskViewsForDay, taskAssignment, worksOnTask, type TaskView } from "@/lib/data/tasks";
 import { flightLabel } from "@/lib/flight";
 import { dayAnchors } from "@/lib/flight-day";
 import { messages } from "@/lib/messages";
@@ -111,14 +111,9 @@ export default async function AgentPage(props: PageProps<"/agent">) {
   // The day's own shift above the tasks (12. mérföldkő).
   const showRoster = canViewRosterOf(user, user.id);
   const [taskViews, blocks, rosterDays] = await Promise.all([
-    listTaskViewsForDay(
-      date,
-      (view) =>
-        view.arrivalAgent?.id === user.id ||
-        view.departureAgent?.id === user.id ||
-        // The tasks the agent practises on as a trainee (10. mérföldkő).
-        view.ojt.some((session) => session.trainee.id === user.id),
-    ),
+    // Only the flights the agent works on, as an agent or a trainee (10. mérföldkő),
+    // are loaded and worked out (13. mérföldkő, utómunka, 6. pont).
+    listTaskViewsForDay(date, (view) => worksOnTask(view, user.id), { personId: user.id }),
     listAgentBlocks(user.id, date),
     showRoster ? listOwnRoster(user.id, date, 1) : Promise.resolve([]),
   ]);

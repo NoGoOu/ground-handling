@@ -54,16 +54,6 @@ echo "Mentés kész: $(basename "$TARGET") ($(du -h "$TARGET" | cut -f1)), $(wc 
 find /backups -maxdepth 1 -name 'backup-*.tar.gz' -mmin +"$((KEEP_DAYS * 1440))" ! -name "$(basename "$TARGET")" \
   -exec sh -c 'echo "Régi mentés törölve: $(basename "$1")"; rm -f "$1"' sh {} \;
 
-# The store keeps only the files a remaining package lists; a file deleted from
-# the app leaves the store once the last backup that had it is gone.
-for PACKAGE in /backups/backup-*.tar.gz; do
-  tar -xzOf "$PACKAGE" files.txt 2>/dev/null || true
-done | sort -u > "$WORK/keep.txt"
-(cd "$STORE" && find . -type f | sed 's|^\./||' | sort) > "$WORK/stored.txt"
-GONE=0
-for FILE in $(comm -23 "$WORK/stored.txt" "$WORK/keep.txt"); do
-  rm -f "$STORE/$FILE"
-  GONE=$((GONE + 1))
-done
-find "$STORE" -mindepth 1 -type d -empty -delete
-[ "$GONE" -eq 0 ] || echo "A tárból törölve $GONE fájl, amely már egyik megőrzött mentésben sincs."
+# The store keeps only the files a remaining package lists (prune.sh), and
+# deletes nothing while a package cannot be read.
+sh /backup/prune.sh /backups

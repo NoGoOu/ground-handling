@@ -341,6 +341,7 @@ export async function getTaskView(id: string): Promise<TaskView | null> {
 export async function listTaskViewsForDay(
   localDate: string,
   keep: (view: TaskView) => boolean = () => true,
+  options: { personId?: string } = {},
 ): Promise<TaskView[]> {
   const day = localDayRange(localDate);
   const window = candidateWindow(day);
@@ -372,6 +373,25 @@ export async function listTaskViewsForDay(
             ],
           },
         },
+        // Only the flights the person works on, with all their tasks (13. mérföldkő,
+        // utómunka, 6. pont): the same as flightsWorkedOn, in the database.
+        ...(options.personId
+          ? [
+              {
+                flight: {
+                  tasks: {
+                    some: {
+                      OR: [
+                        { arrivalAgentId: options.personId },
+                        { departureAgentId: options.personId },
+                        { ojtSessions: { some: { traineeId: options.personId } } },
+                      ],
+                    },
+                  },
+                },
+              },
+            ]
+          : []),
       ],
     },
     include: taskInclude,
@@ -433,4 +453,9 @@ export async function flightPartAgents(flightId: string): Promise<{ arrival: str
 export async function primaryTaskView(flightId: string): Promise<TaskView | null> {
   const primary = await prisma.task.findFirst({ where: { flightId, isPrimary: true }, select: { id: true } });
   return primary ? getTaskView(primary.id) : null;
+}
+
+/** Whether the person works on a task: as its arrival or departure agent, or as a trainee on it. */
+export function worksOnTask(view: Pick<TaskView, "arrivalAgent" | "departureAgent" | "ojt">, personId: string): boolean {
+  return view.arrivalAgent?.id === personId || view.departureAgent?.id === personId || view.ojt.some((session) => session.trainee.id === personId);
 }

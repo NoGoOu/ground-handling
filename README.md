@@ -462,6 +462,7 @@ A próbaadatok (ügynökök és műszakvezetők közös, generált jelszóval, e
 ```bash
 ops/loadtest.sh 1000                                  # 1000 próbaügynökkel
 ops/loadtest.sh 1000 --stages 50,100,200,400,800      # saját lépcsőkkel
+ops/loadtest.sh 1000 --leads 0                        # csak ügynökökkel, napi lista nélkül
 ```
 
 Ez a terhelőt is a szerveren futtatja, ami elveszi a szerver erejének egy részét; tájékozódásnak jó.
@@ -481,8 +482,9 @@ docker compose -f docker-compose.prod.yml exec app npx tsx scripts/loadtest-data
 
 | Gép | Egyidejű felhasználó | Megjegyzés |
 |---|---|---|
-| Fejlesztői laptop: Intel i7-7700HQ (4 mag, 8 szál), 24 GB RAM; Docker Desktop (8 CPU, 12 GB); a terhelő ugyanezen a gépen | **100** | 300 járatos nap (egy nagy állomás napja), 300 ügynök, 15 műszakvezető. 200 felhasználónál a p95 már 1,7 mp. A leglassabb a napi járatlista (p50 0,7 mp) és a task, illetve az ügynök nézet csúcsa. |
-| Ugyanez a gép, 1000 járatos nap | 10 | 1000 ügynök, 50 műszakvezető. A napi járatlista 1000 járattal kb. 6 mp, és amíg számol, a többi kérés mögötte vár. A nap minden taskját kiszámolja, ahogy az ügynök nézet is a sajátjaira szűrés előtt: ez a 15. mérföldkő (skálázás) első javítandója. |
+| Fejlesztői laptop: Intel i7-7700HQ (4 mag, 8 szál), 24 GB RAM; Docker Desktop (8 CPU, 12 GB); a terhelő ugyanezen a gépen. 300 járatos nap (egy nagy állomás napja), 300 ügynök, 15 műszakvezető | **100** | 200 felhasználónál a p95 1,4 mp. Az ügynök nézet mediánja 70 ms (a gyorsítás előtt 129 ms). A leglassabb a napi járatlista: medián 0,7 mp. |
+| Ugyanez a gép, 1000 járatos nap, 1000 ügynök, 50 műszakvezető | kb. 10 | A napi járatlista 1000 járattal kb. 5 mp, és amíg számol, a többi kérés mögötte vár. Az első, 10 fős lépcső ezért hol átmegy, hol nem, akkor is, ha az ügynök nézet medián 69 ms. A napi lista gyorsítása a 15. mérföldkő része (cél: 1000 járattal is 1 mp alatt). |
+| Ugyanez a gép, 1000 járatos nap, csak ügynökök (napi lista nélkül) | **200** | Az ügynök nézet medián 75 ms; 200 felhasználónál a p95 0,43 mp. 400-nál a belépések és a processzor miatt összeomlik (p95 20 mp). |
 | Bérelt szerver (VPS), 2 vCPU, 4 GB | élesítés előtt mérendő | `ops/loadtest.sh` vagy egy másik gépről, a fenti módon. |
 
 ### Hibaelhárítás

@@ -92,3 +92,14 @@ export function tasksForDay<T>(
   );
   return forDay(ordered, (list) => anchorsOf(list[0]), day).flat();
 }
+
+/**
+ * Only the flights someone works on, with all their tasks (13. mérföldkő,
+ * utómunka, 6. pont): a flight's day and order come from its primary task,
+ * so a flight is kept or dropped as a whole. What the person's own view then
+ * picks from the day stays the same as from every flight of the day.
+ */
+export function flightsWorkedOn<T>(tasks: readonly T[], flightIdOf: (task: T) => string, worksOn: (task: T) => boolean): T[] {
+  const flights = new Set(tasks.filter(worksOn).map(flightIdOf));
+  return tasks.filter((task) => flights.has(flightIdOf(task)));
+}

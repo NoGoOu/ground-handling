@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DEMO_MILESTONES, DEMO_TEMPLATE_PARAMS } from "@/lib/demo-template";
-import { candidateWindow, dayAnchors, forDay, showsOnDay, tasksForDay, type DayAnchors } from "@/lib/flight-day";
+import { candidateWindow, dayAnchors, flightsWorkedOn, forDay, showsOnDay, tasksForDay, type DayAnchors } from "@/lib/flight-day";
 import { localDayRange, parseLocalDateTime } from "@/lib/time";
 import { computeTimeline, MAX_TEMPLATE_MINUTES, type FlightTimes, type MilestoneDef } from "@/lib/turnaround";
 
@@ -173,5 +173,44 @@ describe("the day of a flight with several tasks (5. mérföldkő)", () => {
       task("c", "HDS", false, "2026-09-24T18:00:00Z", "2026-09-24T22:30:00Z"),
     ];
     expect(tasksForDay(tasks, (t) => t.key, (t) => t.anchors, day)).toEqual([]);
+  });
+});
+
+describe("only the flights someone works on (13. mérföldkő, utómunka, 6. pont)", () => {
+  const day = { start: new Date("2026-09-24T22:00:00Z"), end: new Date("2026-09-25T22:00:00Z") };
+  type Item = { id: string; key: { flightId: string; isPrimary: boolean; sortKey: string }; anchors: DayAnchors; people: string[] };
+  const item = (flightId: string, code: string, isPrimary: boolean, arrival: string, departure: string | null, people: string[]): Item => ({
+    id: `${flightId}-${code}`,
+    key: { flightId, isPrimary, sortKey: code },
+    anchors: { arrival: new Date(arrival), departure: departure ? new Date(departure) : null, order: new Date(arrival) },
+    people,
+  });
+  // A day with flights of several people: one over midnight, one where Anna works only on the
+  // second task type, one where she is a trainee, and flights she has nothing to do with.
+  const tasks = [
+    item("a", "ALAP", true, "2026-09-25T06:00:00Z", "2026-09-25T07:00:00Z", ["anna"]),
+    item("a", "HLY", false, "2026-09-25T06:00:00Z", "2026-09-25T07:10:00Z", ["bela"]),
+    item("b", "ALAP", true, "2026-09-25T21:30:00Z", "2026-09-25T22:30:00Z", ["bela"]),
+    item("b", "HLY", false, "2026-09-25T21:30:00Z", "2026-09-25T22:40:00Z", ["anna"]),
+    // Its primary task is on the day before: none of its tasks shows, whoever works on it.
+    item("c", "ALAP", true, "2026-09-24T18:00:00Z", "2026-09-24T19:00:00Z", ["cili"]),
+    item("c", "HLY", false, "2026-09-24T18:00:00Z", "2026-09-24T22:30:00Z", ["anna"]),
+    item("d", "ALAP", true, "2026-09-25T10:00:00Z", "2026-09-25T10:40:00Z", ["bela", "anna-trainee"]),
+    item("e", "ALAP", true, "2026-09-25T12:00:00Z", "2026-09-25T12:45:00Z", ["cili"]),
+    item("f", "ALAP", true, "2026-09-25T15:00:00Z", null, []),
+  ];
+
+  for (const person of ["anna", "bela", "cili", "anna-trainee", "nobody"]) {
+    it(`gives ${person} the same list as the whole day`, () => {
+      const worksOn = (task: Item) => task.people.includes(person);
+      const all = tasksForDay(tasks, (t) => t.key, (t) => t.anchors, day).filter(worksOn);
+      const own = tasksForDay(flightsWorkedOn(tasks, (t) => t.key.flightId, worksOn), (t) => t.key, (t) => t.anchors, day).filter(worksOn);
+      expect(own).toEqual(all);
+    });
+  }
+
+  it("keeps every task of a flight someone works on, and only those flights", () => {
+    const kept = flightsWorkedOn(tasks, (t) => t.key.flightId, (t) => t.people.includes("anna"));
+    expect(kept.map((t) => t.id)).toEqual(["a-ALAP", "a-HLY", "b-ALAP", "b-HLY", "c-ALAP", "c-HLY"]);
   });
 });
