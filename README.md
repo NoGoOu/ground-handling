@@ -446,6 +446,45 @@ Ha már az új verzió fut, nincs teendő (újraépítés: `ops/update.sh --forc
 - **Naplók:** `docker compose -f docker-compose.prod.yml logs <app|db|backup|caddy>`. Szolgáltatásonként legfeljebb 5 × 10 MB, a régebbi magától törlődik, így a lemez nem telik meg.
 - **Külső figyelő (nem kötelező):** egy ingyenes uptime-figyelő (pl. UptimeRobot, vagy a saját gépeden futó Uptime Kuma) 5 percenként kérje le a `https://<domain>/api/health` címet. Riasszon, ha a válasz nem 200, vagy nincs benne `"status":"ok"`.
 
+### Terhelési próba
+
+Hány egyidejű felhasználót bír a szerver? Élesítés előtt érdemes kipróbálni, és az eredmény alapján választani a szerver méretét. A próba virtuális felhasználókat léptet be, és úgy használja velük az alkalmazást, ahogy az emberek:
+
+- az ügynökök (90%) a saját taskjaikat nézik, néha megnyitnak egy taskot, rögzítenek egy mérföldkövet („Most”), és belenéznek a „Beosztásom”-ba;
+- a műszakvezetők (10%) a napi listát és egy-egy taskot.
+
+Kattintások között 10–30 másodperc „gondolkodási idővel” dolgoznak, és a létszám lépcsőnként nő (10, 25, 50, 100, 200, 400, 800 …, lépcsőnként 60 másodperc). A cél a kérések 95%-ának 1 másodperc alatti válaszideje és 1% alatti hibaarány (helyőrzők). A próba lépcsőnként kiírja a kérések számát, a kérés/mp-t, a válaszidőt (p50, p95, p99) és a hibákat, a végén pedig azt, hogy legfeljebb hány egyidejű felhasználónál teljesült a cél.
+
+A próbaadatok (ügynökök és műszakvezetők közös, generált jelszóval, egy próba-légitársaság a mai napra járatokkal, kiosztott taskokkal és publikált beosztással) a próba végén eltávolíthatók, és a próba valódi járatok mellett nem fut: **élesítés előtt** való.
+
+**A szerveren, egy paranccsal:**
+
+```bash
+ops/loadtest.sh 1000                                  # 1000 próbaügynökkel
+ops/loadtest.sh 1000 --stages 50,100,200,400,800      # saját lépcsőkkel
+```
+
+Ez a terhelőt is a szerveren futtatja, ami elveszi a szerver erejének egy részét; tájékozódásnak jó.
+
+**Pontosabban, egy másik gépről** (Node.js 24 és a repó kell hozzá, `npm install` után):
+
+```bash
+# a szerveren: próbaadatok (kiírja a közös jelszót)
+docker compose -f docker-compose.prod.yml exec app npx tsx scripts/loadtest-data.ts create --agents 1000
+# a saját gépen: a terhelés
+LOADTEST_PASSWORD=<a kiírt jelszó> npx tsx scripts/loadtest.ts --url https://<domain> --agents 1000
+# a szerveren: a próbaadatok eltávolítása
+docker compose -f docker-compose.prod.yml exec app npx tsx scripts/loadtest-data.ts remove
+```
+
+**Eredmények** (egyidejű felhasználó, amelyiknél a kérések 95%-a még 1 mp alatt volt, és a hibák aránya 1% alatt):
+
+| Gép | Egyidejű felhasználó | Megjegyzés |
+|---|---|---|
+| Fejlesztői laptop: Intel i7-7700HQ (4 mag, 8 szál), 24 GB RAM; Docker Desktop (8 CPU, 12 GB); a terhelő ugyanezen a gépen | **100** | 300 járatos nap (egy nagy állomás napja), 300 ügynök, 15 műszakvezető. 200 felhasználónál a p95 már 1,7 mp. A leglassabb a napi járatlista (p50 0,7 mp) és a task, illetve az ügynök nézet csúcsa. |
+| Ugyanez a gép, 1000 járatos nap | 10 | 1000 ügynök, 50 műszakvezető. A napi járatlista 1000 járattal kb. 6 mp, és amíg számol, a többi kérés mögötte vár. A nap minden taskját kiszámolja, ahogy az ügynök nézet is a sajátjaira szűrés előtt: ez a 15. mérföldkő (skálázás) első javítandója. |
+| Bérelt szerver (VPS), 2 vCPU, 4 GB | élesítés előtt mérendő | `ops/loadtest.sh` vagy egy másik gépről, a fenti módon. |
+
 ### Hibaelhárítás
 
 | Jelenség | Mit nézz meg |
@@ -490,8 +529,8 @@ Ha a Docker nem elérhető, a Prisma saját helyi Postgrese is megfelel fejleszt
 | `lib/turnaround.ts` | Időszámítási és foglaltsági szabályok, tiszta függvények tesztekkel |
 | `lib/board.ts` | A sávos nézet modellje: dobozok, sávok, blokkok, a háromféle ütközés |
 | `lib/roster.ts` | Beosztás-segédfüggvények: publikált napok, a publikált és a valós réteg eltérései, az ügynök napjai a módosulás idejével |
-| `lib/ops/` | Üzemeltetés: az éles beállítások ellenőrzése, az első admin, a belépési korlát és a kéréskorlátok, a mentések állapota, a futó verzió; tesztekkel |
-| `ops/`, `docker/` | Az éles szerver szkriptjei (frissítés, mentés, visszaállítás, próba-visszaállítás); a konténerek indító, mentő és állapotellenőrző szkriptjei, a Caddyfile |
+| `lib/ops/` | Üzemeltetés: az éles beállítások ellenőrzése, az első admin, a belépési korlát és a kéréskorlátok, a mentések állapota, a lemez figyelése, a futó verzió, a terhelési próba segédfüggvényei; tesztekkel |
+| `ops/`, `docker/` | Az éles szerver szkriptjei (frissítés, mentés, visszaállítás, próba-visszaállítás, terhelési próba); a konténerek indító, mentő és állapotellenőrző szkriptjei, a Caddyfile |
 | `lib/calendar/` | A beosztás naptárként: az .ics szöveg (RFC 5545: sortördelés, escape, UTC, fejléc), az események a műszakokból, a letöltés és a feliratkozás időszaka, a nyilvános cím; tiszta függvények tesztekkel |
 | `lib/task-types.ts` | Feladattípusok: egy új járat taskjai a légitársaság aktív feladattípusai szerint, és ugyanannak az embernek két feladattípusa egy járaton |
 | `lib/planning/` | Tervezés: bemenet (napi ablakok), a pozíció szabályai, minimális pozíciószám, kiegyenlítés és mutatók, betölthetőség párosítással, a terv nézete, mentés a tervezetbe, kiosztás átvétele; tiszta függvények tesztekkel |
