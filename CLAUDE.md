@@ -1,6 +1,6 @@
 # Ground Handling App – projektleírás
 
-*Verzió: 44 · 2026. október 3.*
+*Verzió: 45 · 2026. október 5.*
 
 Nyílt forráskódú webalkalmazás repülőtéri földi kiszolgálás (ground handling) szervezésére. Minden járatfordulóhoz feladattípusonként egy task tartozik, benne mérföldkövekkel, amelyeknek van tervezett és tényleges időpontja. A mérföldkövek légitársaságonként testreszabható sablonokból jönnek. A hozzáférés szerepkör alapú.
 
@@ -830,7 +830,7 @@ Külön oldal, asztali gépre; telefonon ne törjön el, de nem arra optimalizá
 
 ## 13. mérföldkő – üzemeltetés: éles telepítés bérelt szerverre
 
-**Kész** (2026. október 2.), az utómunka kivételével: **most az utómunkát építjük** (lásd a szakasz végén). A leírás a megépült működés referenciája; a megvalósítás pontosításai a „További eldöntött szabályok” 91–93. pontjában. Helyben kipróbálva, valódi VPS-en még nem. A projekt gazdája egy bérelt Linux szerveren (VPS) üzemelteti az alkalmazást, saját domainnel és HTTPS-sel. A cél: egy ember néhány paranccsal telepíteni, frissíteni, menteni és visszaállítani tudja, és lássa, ha baj van. A domainen és a szerveren kívül külső szolgáltatás nem kell.
+**Kész** (2026. október 2.); az utómunka 1–5. pontja is (2026. október 5.): **most az utómunka 6. pontját építjük** (lásd a szakasz végén). A leírás a megépült működés referenciája; a megvalósítás pontosításai a „További eldöntött szabályok” 91–96. pontjában. Helyben kipróbálva, valódi VPS-en még nem. A projekt gazdája egy bérelt Linux szerveren (VPS) üzemelteti az alkalmazást, saját domainnel és HTTPS-sel. A cél: egy ember néhány paranccsal telepíteni, frissíteni, menteni és visszaállítani tudja, és lássa, ha baj van. A domainen és a szerveren kívül külső szolgáltatás nem kell.
 
 ### Telepítés
 
@@ -883,6 +883,7 @@ Külön oldal, asztali gépre; telefonon ne törjön el, de nem arra optimalizá
 3. **Lemezfigyelés:** az admin oldalon a lemez foglaltsága és a mentések mérete; 80% fölött (helyőrző) figyelmeztetés, az állapotvégpont is jelzi (az alkalmazás ettől nem számít betegnek).
 4. **README:** a szerverigény induláshoz 2 vCPU, 4 GB memória és 40 GB lemez; a swap továbbra is javasolt.
 5. **Terhelési próba:** szkript, amely sok egyidejű felhasználót szimulál valós használati mintával (belépés, napi lista, task nézet, rögzítés, ügynök nézet, „Beosztásom”), és megmondja, hány egyidejű felhasználónál romlik el a válaszidő (cél: a kérések 95%-a 1 másodperc alatt, helyőrző). Az éles összeállításon fut, a valódi VPS-en élesítés előtt is. Az eredmény (melyik gépen hány felhasználó) a README-be kerül. Később ezzel igazoljuk a 3000 egyidejű felhasználós célt.
+6. **Az ügynök nézet gyorsítása:** a terhelési próba szerint az ügynök nézet a nap összes taskját betölti és kiszámolja, és csak utána szűr a sajátjaira; a kérések 90%-a ilyen. Ezentúl csak azoknak a járatoknak a taskjait tölti be és számolja, amelyeken a felhasználó ügynök vagy gyakornok (a járat többi taskjával együtt, mert a járat napja és sorrendje az elsődleges task szerint dől el). Az eredmény nem változik (teszt: ugyanaz a lista, mint eddig). A terhelési próba újra a 300 és az 1000 járatos nappal; a README táblázata frissül.
 
 ## 14. mérföldkő – több állomás egy cégen belül
 
@@ -967,7 +968,7 @@ Külön oldal, asztali gépre; telefonon ne törjön el, de nem arra optimalizá
 - **Állapot nélküli, több példányban futtatható:** ami a memóriában van, az csak gyorsítótár lehet. A korlátozások (a belépési kísérletek, a fogadó API, a naptárvégpont) állapota közös tárban, az adatbázisban van; új szolgáltatás (pl. Redis) csak akkor, ha a mérés szerint kell.
 - **Példányszám** a `.env`-ben (alapból 1). A Caddy a példányok között osztja el a kéréseket, és a beteg példányt kihagyja. A példányok ugyanabból az image-ből futnak, a feltöltött fájlok közös kötetről.
 - **Egyszer futó feladatok:** a migráció az indulás előtt egy külön, egyszeri lépés, nem példányonként; ha később időzített feladat lesz, az is egyszer fut.
-- **Lekérdezések:** indexek a gyakori szűrésekre (állomás, nap, ügynök, járatrész); az ismétlődő lekérdezések (N+1) kiszűrése; lapozás a hosszú listákon (üzenetek, naplók, hibajegyek, importnapló, képzési rekordok, eszközök). A nehéz nézetek (sávos nézet, tervező, létszámigény) csak a kért állomás és napok adatát töltik be.
+- **Lekérdezések:** indexek a gyakori szűrésekre (állomás, nap, ügynök, járatrész); az ismétlődő lekérdezések (N+1) kiszűrése; lapozás a hosszú listákon (üzenetek, naplók, hibajegyek, importnapló, képzési rekordok, eszközök). A nehéz nézetek (napi járatlista, sávos nézet, tervező, létszámigény) csak a kért állomás és napok adatát töltik be, és egy lassú nézet nem tarthatja fel a többi kérést. Cél: a napi járatlista 1000 járatos napon is 1 másodperc alatt (a 13. mérföldkő mérése szerint most kb. 6 másodperc).
 
 ### Adatbázis
 
@@ -1084,6 +1085,9 @@ Ezeket a kérdéseket a megrendelő 2026. szeptember 22-én jóváhagyta; a kód
 91. **Beteg alkalmazás újraindítása:** az állapotellenőrző szkript három egymást követő hiba után leállítja az alkalmazást, és az újraindítási szabály indítja újra (a sima Compose magától nem teszi).
 92. **Visszaállítás előtt** a mostani állapotról is mentés készül.
 93. **Nyilvános cím:** az éles Compose az `APP_PUBLIC_URL`-t az Auth.js-nek is átadja (`AUTH_URL`).
+94. **Képek kicsinyítése:** az átlátszó PNG fehér háttérrel lesz JPEG, a fájl neve `.jpg`-re vált; a nem olvasható képet a feltöltés elutasítja.
+95. **Növekményes mentés:** a feltöltött fájlok a mentési könyvtár közös tárába kerülnek, mindegyik egyszer; a csomag az adatbázist és az akkor meglévő fájlok listáját tartalmazza. Visszaállítás előtt a rendszer ellenőrzi, hogy a csomag minden fájlja megvan-e a tárban; ha nincs meg mind, semmi sem változik. A korábbi, minden fájlt tartalmazó csomagok is visszaállíthatók.
+96. **Terhelési próba:** 90% ügynök és 10% műszakvezető, 10–30 másodperc gondolkodási idővel, lépcsőnként növekvő létszámmal; csak próbaadatokkal, amelyeket a végén eltávolít, és valódi járatok mellett nem fut.
 
 ## Később (most ne építsd)
 

@@ -1,6 +1,6 @@
 # Ground Handling App – projekt-összefoglaló
 
-*Verzió: 40 · 2026. október 3.*
+*Verzió: 41 · 2026. október 5.*
 
 ## A projekt
 
@@ -132,6 +132,8 @@ A projekt gazdája a földi kiszolgálásban dolgozik, a domain-szabályok az ő
 110. **Felhasználók több állomáson:** a szerepkör egy állomásra vagy minden állomásra szól (központi felhasználók); a hatókör a kiválasztott állomáson belül; állomásváltó. Új **Állomásadmin** szerepkör: a saját állomás felhasználói, beállításai és légitársaság-beállításai. Senki nem adhat több jogot, mint amennyi neki van.
 111. **Üzenetek több állomáson:** továbbra is egy fogadó API, a rendszer az üzenet állomáskódjaiból válogat; egy üzenet több állomás járatára is hathat (pl. BUD–IST MVT).
 112. **Skálázás (15. mérföldkő):** előbb mérés, aztán javítás; több alkalmazáspéldány terheléselosztással, kapcsolatkészlet, indexek és lapozás; a cél a 3000 egyidejű felhasználó méréssel igazolva. Folyamatos működés nem cél, kiesésnél visszaállítás mentésből; az adatbázis-mentés gyakorisága beállítható.
+113. **Elfogadott pontosítások a 13. mérföldkő utómunkájából** (CLAUDE.md 94–96.): az átlátszó PNG fehér háttérrel lesz JPEG; a fájlok a mentés közös tárába egyszer kerülnek, visszaállítás előtt a rendszer ellenőrzi, hogy mind megvan; a terhelési próba 90% ügynökkel és 10% műszakvezetővel, csak próbaadatokkal fut.
+114. **Az ügynök nézet gyorsítása előrehozva** (a 14. mérföldkő elé): a terhelési próba szerint az ügynök nézet a nap összes taskját kiszámolja, mielőtt a sajátjaira szűr, és a kérések 90%-a ilyen. Kis javítás, az élesítés előtt hasznos; a napi járatlista gyorsítása a 15. mérföldkőben marad.
 
 ## Még ellenőrizendő feltételezések
 
@@ -166,6 +168,7 @@ A projekt gazdája a földi kiszolgálásban dolgozik, a domain-szabályok az ő
 - Oktatás: az e-vizsgát a vizsgáztató vagy a koordinátor nyitja meg a vizsgázónak; a vizsgázó a helyes válaszokat nem látja; több helyes válasznál csak a teljesen helyes ér pontot; az OJT-követelmény helyőrzői (10 megfelelő gyakorlás, a kötelező mérföldkövek 100%-ban, eltérés-küszöb nélkül); a gyakorlati vizsga OJT nélkül is indítható, figyelmeztetéssel; új Mentor és Vizsgáztató szerepkör; a gyakornok a sávos nézetben és az ütközésvizsgálatban látszik, a létszámigényben nem.
 - Több állomás: cégszintű a műszakrész-típus, az eszköztípus, a késéskód-tábla és a légitársaság késéskód-dokumentuma, az importprofil; a szerepkör állomásonként eltérhet; ugyanannak az embernek állomások között sem lehet átfedő műszakja; a képzési rekordot a képzés állomása rögzíti, de az ember minden rekordja látszik.
 - Skálázás: a terhelési profil felhasználónként 30 másodpercenként egy kérés (kb. 100 kérés/s, csúcsban kétszerese), a kérések 95%-a 1 másodperc alatt; nagy üzemben óránkénti adatbázis-mentés javasolt.
+- Terhelési próba (fejlesztői laptopon): 300 járatos napon 100 egyidejű felhasználóig teljesül a cél, 1000 járatos napon csak 10-ig (a napi járatlista kb. 6 mp); a bérelt szerveren élesítés előtt mérendő.
 
 ## Nyitott kérdések
 
@@ -196,5 +199,5 @@ A projekt gazdája a földi kiszolgálásban dolgozik, a domain-szabályok az ő
 ## Következő lépés
 
 1. Az 1–9. mérföldkő kész (MVP; jogosultság, beosztás, sávos nézet; járatrend-import; tervezői nézet; feladattípusok; képzések és jogosítások; üzenetek; üzenetek bővítése; létszámigény a tervezettel együtt, 700 zöld teszttel), a késéskód-dokumentumokkal együtt.
-2. A 10. mérföldkő (oktatás: e-vizsga, OJT és kibocsátás, kizáró szempontokkal) és a 11. mérföldkő (földi eszközök és hibajegy) kész, 787 zöld teszttel. A 12. mérföldkő (ügynöki beosztásnézet, naptármentéssel és feliratkozással) is kész, 814 zöld teszttel. A 13. mérföldkő (üzemeltetés, éles telepítés bérelt szerverre) is kész, 836 zöld teszttel; helyben kipróbálva, valódi VPS-en még nem. Most: a 13. mérföldkő utómunkája (képkicsinyítés, növekményes fájlmentés, lemezfigyelés, README, terhelési próba); utána a 14. mérföldkő (több állomás) és a 15. (skálázás 3000 egyidejű felhasználóra), CLAUDE.md 44. verzió. A 11. mérföldkő a járművek és a hibajegy, egyeztetés után.
+2. A 10. mérföldkő (oktatás: e-vizsga, OJT és kibocsátás, kizáró szempontokkal) és a 11. mérföldkő (földi eszközök és hibajegy) kész, 787 zöld teszttel. A 12. mérföldkő (ügynöki beosztásnézet, naptármentéssel és feliratkozással) is kész, 814 zöld teszttel. A 13. mérföldkő (üzemeltetés, éles telepítés bérelt szerverre) is kész, 836 zöld teszttel; helyben kipróbálva, valódi VPS-en még nem. A 13. mérföldkő utómunkájának 1–5. pontja kész (képkicsinyítés, növekményes fájlmentés, lemezfigyelés, README, terhelési próba), 851 zöld teszttel. Most: az ügynök nézet gyorsítása (utómunka 6.); utána a 14. mérföldkő (több állomás) és a 15. (skálázás 3000 egyidejű felhasználóra), CLAUDE.md 45. verzió. A 11. mérföldkő a járművek és a hibajegy, egyeztetés után.
 3. A projekt gazdájánál: a nyitott üzenet- és késéskódok; a SITA-átjáró; a valós GOU- és HDS-sablonok; a csatolt fájlok megőrzési ideje; az Ikarus-mentés ellenőrzése.
