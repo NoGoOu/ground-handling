@@ -45,6 +45,17 @@ docker exec -e NAME="$NAME" "$CONTAINER" sh -eu -c '
   echo "  felhasználók: $(q "SELECT count(*) FROM \"User\"") (aktív admin: $(q "SELECT count(*) FROM \"User\" u JOIN \"UserRole\" ur ON ur.\"userId\" = u.id JOIN \"Role\" r ON r.id = ur.\"roleId\" WHERE u.active AND r.\"builtIn\""))"
   echo "  járatok: $(q "SELECT count(*) FROM \"Flight\""), taskok: $(q "SELECT count(*) FROM \"Task\""), műszakok: $(q "SELECT count(*) FROM \"Shift\"")"
   echo "  képzési rekordok: $(q "SELECT count(*) FROM \"TrainingRecord\""), eszközök: $(q "SELECT count(*) FROM \"Equipment\""), hibajegyek: $(q "SELECT count(*) FROM \"Fault\"")"
-  echo "Feltöltött fájlok a mentésben: $(tar -tf "$WORK/uploads.tar" | grep -vc "/$" || true)"
+  if [ -f "$WORK/files.txt" ]; then
+    # Every file the backup lists must be in the shared store.
+    TOTAL=0; MISSING=0
+    while IFS= read -r NAME; do
+      TOTAL=$((TOTAL + 1))
+      [ -f "/backups/files/$NAME" ] || { echo "  HIÁNYZIK a tárból: $NAME"; MISSING=$((MISSING + 1)); }
+    done < "$WORK/files.txt"
+    echo "Feltöltött fájlok a mentésben: $TOTAL, ebből hiányzik a tárból: $MISSING"
+    [ "$MISSING" -eq 0 ] || exit 1
+  else
+    echo "Feltöltött fájlok a mentésben (régi formátum): $(tar -tf "$WORK/uploads.tar" | grep -vc "/$" || true)"
+  fi
 '
 echo "== A próba sikerült: a mentés visszaállítható. Az ideiglenes adatbázis törlődik."

@@ -20,6 +20,10 @@ if [ ! -f "backups/$NAME" ]; then
   exit 1
 fi
 
+# The backup must be whole before anything stops or changes. (The commands in
+# the containers get no input: they must not eat the answers typed here.)
+"${COMPOSE[@]}" exec -T backup sh /backup/restore.sh --check "/backups/$NAME" < /dev/null
+
 echo "FIGYELEM: a mostani adatbázis és a feltöltött fájlok helyére a(z) $NAME tartalma kerül."
 echo "Ami a mentés óta történt, elvész (előtte a mostani állapotról mentés készül)."
 read -r -p "A folytatáshoz írd be: VISSZAÁLLÍT  > " ANSWER
@@ -29,7 +33,7 @@ if [ "$ANSWER" != "VISSZAÁLLÍT" ]; then
 fi
 
 echo "== Mentés a mostani állapotról"
-if ! "${COMPOSE[@]}" exec -T backup sh /backup/backup.sh pre-restore; then
+if ! "${COMPOSE[@]}" exec -T backup sh /backup/backup.sh pre-restore < /dev/null; then
   read -r -p "A mostani állapotot nem sikerült menteni. Folytatod mégis? (igen/nem) > " AGAIN
   [ "$AGAIN" = "igen" ] || { echo "Megszakítva."; exit 1; }
 fi
@@ -38,7 +42,11 @@ echo "== Az alkalmazás leállítása"
 "${COMPOSE[@]}" stop app
 
 echo "== Visszaállítás"
-"${COMPOSE[@]}" exec -T backup sh /backup/restore.sh "/backups/$NAME"
+if ! "${COMPOSE[@]}" exec -T backup sh /backup/restore.sh "/backups/$NAME" < /dev/null; then
+  echo "A visszaállítás NEM sikerült. Az alkalmazás újraindul; ha az adatbázis közben sérült, állítsd vissza a fenti, mostani állapotról készült mentést." >&2
+  "${COMPOSE[@]}" start app
+  exit 1
+fi
 
 echo "== Az alkalmazás indítása"
 "${COMPOSE[@]}" start app

@@ -395,7 +395,9 @@ Utána a `https://<domain>` címen belépve az `Admin` oldalon vedd fel, amit a 
 
 ### Mentés
 
-- **Napi automatikus mentés** `BACKUP_TIME`-kor (alapból 03:30, budapesti idő szerint): az adatbázis és a feltöltött fájlok egy csomagba, a szerver `backups` könyvtárába (`backup-ÉÉÉÉHHNN-ÓÓPPMM.tar.gz`). A `BACKUP_KEEP_DAYS`-nél (alapból 14) régebbiek törlődnek. A mentés a Compose része, a szerver crontabja nem kell hozzá.
+- **Napi automatikus mentés** `BACKUP_TIME`-kor (alapból 03:30, budapesti idő szerint), a szerver `backups` könyvtárába. A mentés a Compose része, a szerver crontabja nem kell hozzá.
+  - Az adatbázis naponta teljes mentést kap: `backup-ÉÉÉÉHHNN-ÓÓPPMM.tar.gz`, benne a fájllista is, hogy akkor mely feltöltött fájlok voltak meg. A `BACKUP_KEEP_DAYS`-nél (alapból 14) régebbiek törlődnek.
+  - A feltöltött fájlok **növekményesen**, egy közös tárba kerülnek (`backups/files`): mindegyik egyszer, nem naponta újra, mert egy feltöltött fájl soha nem változik. Ha egy fájlt már egyik megőrzött mentés sem említ (az alkalmazásból törölték, és azóta lejárt a megőrzés), a tárból is kikerül.
 - **Kézi mentés**, pl. egy nagyobb módosítás előtt: `ops/backup.sh`.
 - Az `Admin` oldal „Üzemeltetés” kártyája mutatja a legutóbbi sikeres mentést; ha 2 napnál régebbi, vagy nincs, piros figyelmeztetést ad. A mentés naplója: `docker compose -f docker-compose.prod.yml logs backup`.
 - **Másolat a szerveren kívülre** – ez az üzemeltető dolga, mert a szerverrel együtt a mentés is elveszhet. A legegyszerűbb a saját gépedről, `rsync`-kel (rendszeresen, pl. hetente):
@@ -403,6 +405,8 @@ Utána a `https://<domain>` címen belépve az `Admin` oldalon vedd fel, amit a 
   ```bash
   rsync -av --ignore-existing <felhasználó>@<szerver>:ground-handling/backups/ ~/ground-handling-mentesek/
   ```
+
+  A parancs a teljes `backups` könyvtárat másolja, a `files` tárral együtt; az `--ignore-existing` miatt minden alkalommal csak az új csomagok és az új fájlok jönnek át.
 
 - A mentés személyes adatokat tartalmaz (pl. képzési rekordok és csatolmányaik): a másolatot is biztonságos helyen tárold.
 
@@ -415,7 +419,8 @@ ops/restore.sh backup-20261002-033000.tar.gz    # visszaállítás
 
 A szkript megerősítést kér (be kell írni: `VISSZAÁLLÍT`), előtte a mostani állapotról is mentést készít, leállítja az alkalmazást, az adatbázist teljesen újra létrehozza a mentésből, a feltöltött fájlokat kicseréli, majd elindítja az alkalmazást, és megvárja, hogy egészséges legyen. Ami a mentés óta történt, elvész.
 
-- **Új szerverre:** telepítsd a 3. lépésig, másold a mentést a `backups` könyvtárba, és futtasd az `ops/restore.sh`-t.
+- **Új szerverre:** telepítsd a 3. lépésig, másold a teljes `backups` könyvtárat (a csomagokat és a `files` tárat) a szerverre, és futtasd az `ops/restore.sh`-t.
+- **Ép-e a mentés:** a visszaállítás előbb ellenőrzi, hogy a csomag és a listáján szereplő minden fájl megvan-e; ha nem, el sem indul, és semmi sem változik. A régi, minden fájlt magában tartó csomagok is visszaállíthatók.
 - **Verzió:** a mentést ugyanazzal vagy újabb verzióval állítsd vissza; egy régebbi mentést az induló migrációk felhoznak. Újabb verzió mentését régebbi verzióra ne állítsd vissza.
 - **Próba-visszaállítás:** `ops/restore-test.sh` (vagy a mentés nevével) egy ideiglenes, üres adatbázisba tölti a mentést, és kiírja, mi van benne (táblák, felhasználók, járatok, taskok, műszakok, képzési rekordok, eszközök, hibajegyek, fájlok). Az éleshez nem nyúl. Érdemes havonta lefuttatni: így derül ki, hogy a mentés tényleg használható.
 
