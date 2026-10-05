@@ -2,6 +2,7 @@ import Link from "next/link";
 import { messages } from "@/lib/messages";
 import { fmt } from "@/lib/messages/format";
 import { formatSize, latestBackupState } from "@/lib/ops/backups";
+import { backupSizes, watchedDisks } from "@/lib/ops/disk";
 import { appVersion, formatVersion } from "@/lib/ops/version";
 import { canManageMessaging, canManageSettings, canOpenAdmin } from "@/lib/permissions";
 import { requireCapability } from "@/lib/session";
@@ -21,7 +22,8 @@ export default async function AdminPage() {
     ...(canManageMessaging(user) ? [{ href: "/admin/messaging", title: t.messaging, hint: t.messagingHint }] : []),
   ];
   // Operating the server (13. mérföldkő): the running version and the latest backup.
-  const backup = canManageSettings(user) ? await latestBackupState() : null;
+  const ops = canManageSettings(user);
+  const [backup, disks, sizes] = ops ? await Promise.all([latestBackupState(), watchedDisks(), backupSizes()]) : [null, [], null];
   const o = messages.ops.adminPage;
   return (
     <div className="flex flex-col gap-4">
@@ -41,6 +43,21 @@ export default async function AdminPage() {
               })}
             </p>
           )}
+          {sizes && (
+            <p className="text-neutral-700">
+              {fmt(o.backupSizes, { total: formatSize(sizes.packages + sizes.files), db: formatSize(sizes.packages), files: formatSize(sizes.files) })}
+            </p>
+          )}
+          {disks.map(({ label, usage }) => (
+            <p key={label} className={usage.warning ? "font-medium text-red-700" : "text-neutral-700"}>
+              {fmt(usage.warning ? o.diskWarning : o.disk, {
+                disk: o.diskLabels[label],
+                used: usage.usedPercent,
+                free: formatSize(usage.freeBytes),
+                total: formatSize(usage.totalBytes),
+              })}
+            </p>
+          ))}
         </section>
       )}
       <ul className="grid gap-3 sm:grid-cols-2">

@@ -121,6 +121,7 @@ describe("the latest backup on the admin page", () => {
     expect(formatSize(32_768)).toBe("32 kB");
     expect(formatSize(100)).toBe("1 kB");
     expect(formatSize(1_468_006)).toBe("1.4 MB");
+    expect(formatSize(25_232_932_864)).toBe("23.5 GB");
   });
 
   it("lists only finished packages, the newest first", async () => {
@@ -140,5 +141,31 @@ describe("the latest backup on the admin page", () => {
       ["backup-20261001-033000.tar.gz", 1],
     ]);
     expect(await listBackups(path.join(dir, "missing"))).toBeNull();
+  });
+});
+
+describe("watching the disk", () => {
+  it("tells the share in use like df, and warns above 80 percent", async () => {
+    const { diskUsage } = await import("@/lib/ops/disk");
+    const GB = 1_073_741_824;
+    expect(diskUsage(40 * GB, 23 * GB)).toEqual({ totalBytes: 40 * GB, freeBytes: 23 * GB, usedPercent: 43, warning: false });
+    expect(diskUsage(40 * GB, 8 * GB).warning).toBe(false);
+    expect(diskUsage(40 * GB, 7.9 * GB)).toMatchObject({ usedPercent: 80, warning: false });
+    expect(diskUsage(40 * GB, 7.5 * GB)).toMatchObject({ usedPercent: 81, warning: true });
+    expect(diskUsage(0, 0).usedPercent).toBe(0);
+  });
+
+  it("adds up the files under a directory", async () => {
+    const { mkdtemp, mkdir, writeFile } = await import("node:fs/promises");
+    const { tmpdir } = await import("node:os");
+    const path = await import("node:path");
+    const { directorySize } = await import("@/lib/ops/disk");
+    const dir = await mkdtemp(path.join(tmpdir(), "gh-disk-"));
+    await mkdir(path.join(dir, "files", "faults"), { recursive: true });
+    await writeFile(path.join(dir, "backup-20261005-033000.tar.gz"), "x".repeat(1000));
+    await writeFile(path.join(dir, "files", "faults", "a.jpg"), "y".repeat(500));
+    expect(await directorySize(dir)).toBe(1500);
+    expect(await directorySize(path.join(dir, "files"))).toBe(500);
+    expect(await directorySize(path.join(dir, "missing"))).toBe(0);
   });
 });

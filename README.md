@@ -310,7 +310,7 @@ Ez a fejezet egy bérelt Linux szerverre (VPS) telepíti az alkalmazást, saját
 
 ### Mire van szükség
 
-- **Szerver:** Linux VPS, például Ubuntu 24.04 LTS vagy Debian 12. Ajánlott: 2 vCPU, 2 GB RAM és 2 GB swap (az alkalmazás a szerveren épül, az építéshez kell a memória), legalább 20 GB lemez. Ezek helyőrző értékek: a lemezigény a feltöltött fájlokkal és a mentésekkel nő.
+- **Szerver:** Linux VPS, például Ubuntu 24.04 LTS vagy Debian 12. Induláshoz: 2 vCPU, 4 GB memória és 40 GB lemez; mellé 2 GB swap továbbra is javasolt (az alkalmazás a szerveren épül, az építés memóriát kér). Ezek helyőrző értékek: a lemezigény a feltöltött fájlokkal és a mentésekkel nő (az admin oldal mutatja, lásd „Állapotfigyelés”), a felhasználók számához illő méretet a terhelési próba mondja meg.
 - **Domain**, amelynek a DNS-ét beállíthatod (pl. `beosztas.example.com`).
 - SMTP-szerver, ha emailben is küldesz üzenetet (nem kötelező).
 
@@ -440,7 +440,8 @@ Ha már az új verzió fut, nincs teendő (újraépítés: `ops/update.sh --forc
 
 ### Állapotfigyelés
 
-- **Állapotvégpont:** `https://<domain>/api/health`, belépés nélkül. Megmondja, elérhető-e az adatbázis, írható-e a feltöltési könyvtár, és melyik verzió fut; hibánál 503-at ad. Érzékeny adat nincs benne.
+- **Állapotvégpont:** `https://<domain>/api/health`, belépés nélkül. Megmondja, elérhető-e az adatbázis, írható-e a feltöltési könyvtár, melyik verzió fut, és mennyire tele a lemez (`disk`: `ok`, illetve 80% fölött `warning`, a foglaltság százalékával); hibánál 503-at ad. A tele lemez miatt nem ad 503-at, és az alkalmazás nem indul újra. Érzékeny adat nincs benne.
+- **Lemez:** az `Admin` oldal „Üzemeltetés” kártyája mutatja a lemez foglaltságát és a szabad helyet, valamint a mentések méretét (adatbázis-csomagok és fájltár); 80% fölött (helyőrző) piros figyelmeztetést ad.
 - **Docker:** ugyanezt kérdezi 30 másodpercenként; ha háromszor egymás után hibát kap, újraindítja az alkalmazást. Állapot: `docker compose -f docker-compose.prod.yml ps`.
 - **Naplók:** `docker compose -f docker-compose.prod.yml logs <app|db|backup|caddy>`. Szolgáltatásonként legfeljebb 5 × 10 MB, a régebbi magától törlődik, így a lemez nem telik meg.
 - **Külső figyelő (nem kötelező):** egy ingyenes uptime-figyelő (pl. UptimeRobot, vagy a saját gépeden futó Uptime Kuma) 5 percenként kérje le a `https://<domain>/api/health` címet. Riasszon, ha a válasz nem 200, vagy nincs benne `"status":"ok"`.
@@ -454,7 +455,7 @@ Ha már az új verzió fut, nincs teendő (újraépítés: `ops/update.sh --forc
 | 502-es hiba | A Caddy fut, de az alkalmazás nem: `docker compose -f docker-compose.prod.yml ps` és `logs app`. |
 | Nem lehet belépni („Túl sok sikertelen…”) | 15 perc várakozás, vagy a fenti `LoginAttempt` törlés. Elfelejtett admin jelszó: egy másik admin állít újat. Ha nincs másik: az elfelejtett admint inaktiváld (`docker compose -f docker-compose.prod.yml exec db psql -U ground_handling -d ground_handling -c "UPDATE \"User\" SET active = false WHERE username = '<név>'"`), hozz létre új admint az első admin parancsával, és vele állíts új jelszót a régi fióknak, majd aktiváld újra. |
 | Az admin oldal régi mentést jelez | `docker compose -f docker-compose.prod.yml logs backup`; kézi mentés: `ops/backup.sh`; elég-e a lemez: `df -h`. |
-| Fogy a lemez | `df -h`, `docker system df`; a frissítések után megmaradt régi image-ek: `docker image prune -f`; a mentések megőrzése: `BACKUP_KEEP_DAYS`. |
+| Fogy a lemez (piros figyelmeztetés az admin oldalon) | `df -h`, `docker system df`; a frissítések után megmaradt régi image-ek: `docker image prune -f`; a mentések megőrzése: `BACKUP_KEEP_DAYS`. |
 | Az építés megszakad (kevés memória) | Swap (1. lépés), vagy nagyobb szerver. |
 
 ## Fejlesztés

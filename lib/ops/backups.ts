@@ -22,10 +22,11 @@ export function backupState(latest: { name: string; at: Date; bytes: number } | 
   return { kind: old ? "old" : "ok", ...latest };
 }
 
-/** "32 kB", "1.4 MB": the size of a backup. */
+/** "32 kB", "1.4 MB", "23.5 GB": the size of a backup or a disk. */
 export function formatSize(bytes: number): string {
   if (bytes < 1_048_576) return `${Math.max(1, Math.round(bytes / 1024))} kB`;
-  return `${(bytes / 1_048_576).toFixed(1)} MB`;
+  if (bytes < 1_073_741_824) return `${(bytes / 1_048_576).toFixed(1)} MB`;
+  return `${(bytes / 1_073_741_824).toFixed(1)} GB`;
 }
 
 /** The finished backups of a directory, the newest first by the time they were completed. */

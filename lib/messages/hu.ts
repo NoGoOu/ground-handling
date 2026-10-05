@@ -2292,6 +2292,10 @@ export const hu = {
       backupOld: "Figyelem: a legutóbbi sikeres mentés régebbi 2 napnál: {time} ({name}). Nézd meg a mentés naplóját: docker compose -f docker-compose.prod.yml logs backup",
       backupNone: "Figyelem: még nincs sikeres mentés. Készíts egyet: ops/backup.sh",
       backupUnconfigured: "A mentés ezen a szerveren nincs beállítva (csak az éles telepítésben fut).",
+      backupSizes: "A mentések mérete: {total} (adatbázis-csomagok: {db}, fájltár: {files}).",
+      disk: "{disk}: {used}% foglalt, {free} szabad ({total}).",
+      diskWarning: "Figyelem: {disk} {used}%-a foglalt, csak {free} szabad ({total}). Szabadíts fel helyet (pl. docker image prune -f), vagy csökkentsd a mentések megőrzését.",
+      diskLabels: { uploads: "Lemez", backups: "A mentések lemeze" },
     },
     config: {
       problem: "{name}: {text}",

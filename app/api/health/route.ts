@@ -3,6 +3,7 @@ import { mkdir, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { uploadDir } from "@/lib/data/storage";
 import { prisma } from "@/lib/db";
+import { fullestDisk } from "@/lib/ops/disk";
 import { appVersion } from "@/lib/ops/version";
 
 // The health of the app (CLAUDE.md, 13. mérföldkő, "Állapotfigyelés"): is the
@@ -35,10 +36,17 @@ async function uploadsOk(): Promise<boolean> {
 }
 
 export async function GET() {
-  const [db, uploads] = await Promise.all([databaseOk(), uploadsOk()]);
+  const [db, uploads, disk] = await Promise.all([databaseOk(), uploadsOk(), fullestDisk()]);
   const ok = db && uploads;
   return Response.json(
-    { status: ok ? "ok" : "error", db: db ? "ok" : "error", uploads: uploads ? "ok" : "error", version: appVersion() },
+    {
+      status: ok ? "ok" : "error",
+      db: db ? "ok" : "error",
+      uploads: uploads ? "ok" : "error",
+      // A full disk is told, but the app is not sick for it (13. mérföldkő, utómunka).
+      disk: disk ? { status: disk.warning ? "warning" : "ok", usedPercent: disk.usedPercent } : { status: "unknown" },
+      version: appVersion(),
+    },
     { status: ok ? 200 : 503, headers: { "Cache-Control": "no-store" } },
   );
 }
