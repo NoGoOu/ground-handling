@@ -1,6 +1,6 @@
 # Ground Handling App – projektleírás
 
-*Verzió: 45 · 2026. október 5.*
+*Verzió: 46 · 2026. október 24.*
 
 Nyílt forráskódú webalkalmazás repülőtéri földi kiszolgálás (ground handling) szervezésére. Minden járatfordulóhoz feladattípusonként egy task tartozik, benne mérföldkövekkel, amelyeknek van tervezett és tényleges időpontja. A mérföldkövek légitársaságonként testreszabható sablonokból jönnek. A hozzáférés szerepkör alapú.
 
@@ -830,7 +830,7 @@ Külön oldal, asztali gépre; telefonon ne törjön el, de nem arra optimalizá
 
 ## 13. mérföldkő – üzemeltetés: éles telepítés bérelt szerverre
 
-**Kész** (2026. október 2.); az utómunka 1–5. pontja is (2026. október 5.): **most az utómunka 6. pontját építjük** (lásd a szakasz végén). A leírás a megépült működés referenciája; a megvalósítás pontosításai a „További eldöntött szabályok” 91–96. pontjában. Helyben kipróbálva, valódi VPS-en még nem. A projekt gazdája egy bérelt Linux szerveren (VPS) üzemelteti az alkalmazást, saját domainnel és HTTPS-sel. A cél: egy ember néhány paranccsal telepíteni, frissíteni, menteni és visszaállítani tudja, és lássa, ha baj van. A domainen és a szerveren kívül külső szolgáltatás nem kell.
+**Kész** (2026. október 2.); az utómunkával együtt (2026. október 5.). A leírás a megépült működés referenciája; a megvalósítás pontosításai a „További eldöntött szabályok” 91–96. pontjában. Helyben kipróbálva, valódi VPS-en még nem. A projekt gazdája egy bérelt Linux szerveren (VPS) üzemelteti az alkalmazást, saját domainnel és HTTPS-sel. A cél: egy ember néhány paranccsal telepíteni, frissíteni, menteni és visszaállítani tudja, és lássa, ha baj van. A domainen és a szerveren kívül külső szolgáltatás nem kell.
 
 ### Telepítés
 
@@ -885,9 +885,70 @@ Külön oldal, asztali gépre; telefonon ne törjön el, de nem arra optimalizá
 5. **Terhelési próba:** szkript, amely sok egyidejű felhasználót szimulál valós használati mintával (belépés, napi lista, task nézet, rögzítés, ügynök nézet, „Beosztásom”), és megmondja, hány egyidejű felhasználónál romlik el a válaszidő (cél: a kérések 95%-a 1 másodperc alatt, helyőrző). Az éles összeállításon fut, a valódi VPS-en élesítés előtt is. Az eredmény (melyik gépen hány felhasználó) a README-be kerül. Később ezzel igazoljuk a 3000 egyidejű felhasználós célt.
 6. **Az ügynök nézet gyorsítása:** a terhelési próba szerint az ügynök nézet a nap összes taskját betölti és kiszámolja, és csak utána szűr a sajátjaira; a kérések 90%-a ilyen. Ezentúl csak azoknak a járatoknak a taskjait tölti be és számolja, amelyeken a felhasználó ügynök vagy gyakornok (a járat többi taskjával együtt, mert a járat napja és sorrendje az elsődleges task szerint dől el). Az eredmény nem változik (teszt: ugyanaz a lista, mint eddig). A terhelési próba újra a 300 és az 1000 járatos nappal; a README táblázata frissül.
 
+## Közbeiktatva: valós járatok az Ikarus-mentésből, a tervező kipróbálása
+
+**Ezt építjük most,** a 14. mérföldkő 2. lépése előtt, a szokásos terv-jóváhagyással. A 14. mérföldkő 1. lépése után minden adat a BUD állomásé, így ez a mostani állapotra épül; a 14. mérföldkő utána a 2. lépéssel folytatódik.
+
+A projekt gazdája 2026. szeptember 28. óta félóránként menti a repülőtéri AODB járatlistáját a saját gépére. Ebből valós BUD-járatok kerülnek a helyi fejlesztői példányba, és ezeken próbáljuk ki a tervezőt (automatikus beosztás) és a létszámigényt. Az eredményt a valósághoz mérjük: egy átlagos hétköznapon kb. 20–40 ügynök dolgozik.
+
+### Adatvédelem
+
+- A pillanatképek, és bármi, ami belőlük készül (járatlista, járatszám, lajstrom, napi riport), **nem kerülhet a nyilvános repóba**; a forrás címe sem. Az importáló a mentés mappáját paraméterként kapja.
+- A tesztek csak kitalált mintákkal dolgoznak (kitalált járatszámok és lajstromok), a valós fájlok szerkezetét követve.
+- A STATUS.md-be csak összesített számok kerülhetnek (napok, járatok és fordulók száma, párosítási arány, pozíciószám, napi csúcs), légitársaság, járatszám és lajstrom nélkül.
+- Az importáló csak fejlesztői és demo módban fut; éles módban (`APP_ENV=production`) megtagadja. A valós adatforrás éles bekötése külön döntés, később.
+- Az importált járatok egy paranccsal eltávolíthatók, a többi adat érintetlen marad.
+
+### A mentés formátuma
+
+- Napi mappák (`éééé-hh-nn`), bennük félóránként egy fájl: `aodb_ééééhhnn_óóppZ.json` (UTC). A fájl UTF-8, bájtsorrend-jellel (BOM) is lehet. Hézagok vannak: kikapcsolt gép, hálózati hiba, egy hiányzó nap.
+- Egy fájl egy gördülő ablak a járatlistából: `data.arrivalFlights` és `data.departureFlights`, valamint `data.updateDate`. Egy járat sok egymást követő fájlban szerepel.
+- Rekordonként: `id` (az AODB azonosítója), `flightNumber` (pl. légitársaság-kód + szám, kötőjel nélkül), `route` (a másik repülőtér IATA-kódja), `scheduledTime` (`nn.hh.éééé óó:pp`), `estimatedTime` és `actualTime` (csak `óó:pp`), `standExt` (állóhely), `registration` (kötőjel nélkül, az indulásnál gyakran még üres), `aircraftTypeIata`, `handlerCargo`, `bestSlot`. **Minden idő UTC.**
+- Nincs benne következő járat, törölt jelzés és utasonkénti adat. A `pax`, `cargoWeight`, `bagWeight`, `mailWeight`, `checkInRange` és `bestSlot` mezőt most nem használjuk.
+
+### Összefésülés
+
+- Rekordonként (irány + `id`) a legutolsó pillanatkép értékei számítanak. A tényleges idő és a lajstrom, ha egyszer megjelent, megmarad akkor is, ha egy későbbi pillanatképben üres, vagy a járat kiesik az ablakból.
+- A nap nélküli idő (`estimatedTime`, `actualTime`) napja: a menetrendi időhöz legközelebbi (51. szabály).
+- Minden járat bekerül, ami a listán van (a `handlerCargo` értékétől függetlenül).
+- A légitársaság a járatszám légitársaság-kódjából adódik. Ha a rendszerben nincs ilyen légitársaság, létrejön (a neve a kód), az „Alap” feladattípussal és a demo sablonnal, elsődlegesként; „Ikarus-import” jelöléssel, hogy az eltávolításkor felismerhető legyen.
+- Az azonosítás a járatrend-import szabálya szerint (légitársaság + járatszám + menetrendi dátum + állomás), mellette a járatrészen tárolódik az AODB-azonosító, így az újrafuttatás nem duplikál.
+
+### Fordulók lajstrom alapján
+
+- Az érkezés párja ugyanannak a lajstromnak az érkezés után következő első indulása, ha 24 órán belül van (helyőrző), és azt még nem kapta meg korábbi érkezés. Ami így nem párosul (nincs lajstrom, nincs következő indulás), egyoldalú járat lesz (11. időszámítási szabály).
+- Ha újrafuttatáskor a párosítás megváltozik (pl. gépcsere miatt más a lajstrom), a 3. mérföldkő összevonási szabálya érvényes: üzemi adat nélküli, importból létrejött járat átrendeződhet, a többi „párosítás változott” jelzést kap.
+
+### Mit ír a járatra
+
+- Menetrendi rész: járatszámok, STA, STD, indulóállomás, célállomás, típus, lajstrom, állóhely.
+- ETA és ETD a becsült időből, forrásként „Ikarus”; ATA és ATD a tényleges időből, rendszerből kapott értékként (9. időszámítási szabály).
+- Törölt jelzést nem állít, mert a mentésben nincs ilyen adat.
+
+### Futtatás
+
+- Parancs a projekt gazdájának gépén (pl. `scripts/ikarus-import.ts --dir <mappa> [--from <nap>] [--to <nap>]`):
+  - alapból próbafuttatás összesítéssel: napok, rekordok, járatok (új, változott, változatlan), fordulók (párosított, csak érkező, csak induló), hibás sorok okkal; semmi nem íródik;
+  - `--apply`-ra ír, a meglévő importnaplóba („Ikarus” profillal);
+  - `remove` minden Ikarus-importból jött járatot és a hozzá létrehozott légitársaságot eltávolít.
+
+### Kiértékelés
+
+- **Riport** a projekt gazdájának gépére (CSV és rövid szöveges összefoglaló, a repón kívül): naponként a járatok és a fordulók száma (gyors, hosszú, egyoldalú), a tervező számolása a mostani tervezési beállításokkal (pozíciószám, összes munkaóra, betölthetőség nélkül), a létszámigény napi csúcsa és ideje; az egész időszakra a hétköznapi és a hétvégi átlag.
+- A tervező és a létszámigény felülete a valós napokon is működik, napváltóval, a meglévő számításokkal.
+- **Összevetés:** ha a terv jelentősen eltér a valóságtól (átlagos hétköznapon kb. 20–40 ügynök), a projekt gazdájával a sablon foglaltsági paramétereit (`travelMinutes`, `departureReportMinutes`, `postDepartureMinutes`, `minTurnaroundMinutes`, `minBreakMinutes`) és a tervezési beállításokat hangoljuk. Ez beállítás, nem kódváltozás; a riport újrafuttatható.
+
+### Lépésterv
+
+1. Beolvasás és összefésülés tiszta függvényként (`lib/ikarus/`): fájlok és napi mappák, BOM, UTC, a nap nélküli idők napja, rekordonkénti összefésülés; tesztek kitalált mintákkal (hézag, az ablakból kieső járat, lajstrom- és állóhelyváltás, menetrendi időváltás, éjfél körüli idők)
+2. Fordulók lajstrom alapján, tiszta függvényként; tesztek (a 24 órás határ, egy indulás nem jut két érkezésnek, lajstrom nélkül egyoldalú, éjszakázó gép)
+3. Írás az adatbázisba: próbafuttatás, `--apply`, idempotens újrafuttatás az AODB-azonosítóval, ismeretlen légitársaság létrehozása, `remove`, importnapló, tiltás éles módban; tesztek
+4. Kiértékelő riport a repón kívülre; a tervező és a létszámigény kipróbálása néhány valós napon
+5. README (rövid leírás a forrás címe nélkül), STATUS.md (csak összesített számokkal)
+
 ## 14. mérföldkő – több állomás egy cégen belül
 
-**A 13. mérföldkő utómunkája után**, a szokásos terv-jóváhagyással. Egy cég több állomása (BUD mellett más repülőterek, akár más időzónában) ugyanazon a rendszeren, egy adatbázisban. Minden állomás a saját járataival, beosztásával és beállításaival dolgozik; a központi felhasználók több vagy minden állomást látnak. A meglévő működés nem változik: a migráció után minden adat a BUD állomásé, és a meglévő tesztek zöldek maradnak.
+**Az 1. lépés kész** (2026. október 5.); a 2. lépéstől a közbeiktatott Ikarus-import után folytatódik (lásd a 13. mérföldkő után), a szokásos terv-jóváhagyással. Egy cég több állomása (BUD mellett más repülőterek, akár más időzónában) ugyanazon a rendszeren, egy adatbázisban. Minden állomás a saját járataival, beosztásával és beállításaival dolgozik; a központi felhasználók több vagy minden állomást látnak. A meglévő működés nem változik: a migráció után minden adat a BUD állomásé, és a meglévő tesztek zöldek maradnak.
 
 **Általános szabály:** ahol ez a leírás Europe/Budapest-et, budapesti napot vagy BUD-ot említ (napi lista, üzemnap, beosztás, publikálás, tervező, létszámigény, jogosítás- és eszközhatáridő, import, üzenetek), a 14. mérföldkőtől az adott állomás időzónája, illetve az adott állomás értendő.
 

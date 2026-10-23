@@ -1,6 +1,6 @@
 # Ground Handling App – projekt-összefoglaló
 
-*Verzió: 41 · 2026. október 5.*
+*Verzió: 42 · 2026. október 24.*
 
 ## A projekt
 
@@ -134,6 +134,7 @@ A projekt gazdája a földi kiszolgálásban dolgozik, a domain-szabályok az ő
 112. **Skálázás (15. mérföldkő):** előbb mérés, aztán javítás; több alkalmazáspéldány terheléselosztással, kapcsolatkészlet, indexek és lapozás; a cél a 3000 egyidejű felhasználó méréssel igazolva. Folyamatos működés nem cél, kiesésnél visszaállítás mentésből; az adatbázis-mentés gyakorisága beállítható.
 113. **Elfogadott pontosítások a 13. mérföldkő utómunkájából** (CLAUDE.md 94–96.): az átlátszó PNG fehér háttérrel lesz JPEG; a fájlok a mentés közös tárába egyszer kerülnek, visszaállítás előtt a rendszer ellenőrzi, hogy mind megvan; a terhelési próba 90% ügynökkel és 10% műszakvezetővel, csak próbaadatokkal fut.
 114. **Az ügynök nézet gyorsítása előrehozva** (a 14. mérföldkő elé): a terhelési próba szerint az ügynök nézet a nap összes taskját kiszámolja, mielőtt a sajátjaira szűr, és a kérések 90%-a ilyen. Kis javítás, az élesítés előtt hasznos; a napi járatlista gyorsítása a 15. mérföldkőben marad.
+115. **Valós járatok az Ikarus-mentésből** (a 14. mérföldkő 2. lépése előtt): a félóránkénti AODB-pillanatképekből (szeptember 28-tól) importáló készül, csak a projekt gazdájának helyi fejlesztői példányába; a listán szereplő minden járat bekerül, a fordulók a lajstrom alapján párosulnak (24 órán belüli következő indulás). Ezeken próbáljuk ki a tervezőt és a létszámigényt, és a valósághoz mérjük: egy átlagos hétköznapon kb. 20–40 ügynök dolgozik. A mentés és minden belőle készült adat a repón kívül marad; éles módban az importáló nem fut.
 
 ## Még ellenőrizendő feltételezések
 
@@ -177,7 +178,7 @@ A projekt gazdája a földi kiszolgálásban dolgozik, a domain-szabályok az ő
 - Késési (`ED`) MVT minta, ha van; az LDM `PAD`, `CRW`, `DHC`, `TB`, a CPM `4/1` és `.TW`, valamint a Lufthansa XOM és XCS kód jelentése.
 - Slottörlés és más slotüzenet mintája.
 - Mit csinál pontosan egy GOU- és egy HDS-ügynök a járaton, mikortól meddig? Illeszkednek-e rájuk a mostani foglaltsági képletek, vagy más paraméter kell?
-- Összekapcsolható-e utólag egy csak érkező és egy későbbi csak induló járat fordulóvá (pl. a lajstrom alapján)?
+- Összekapcsolható-e utólag egy csak érkező és egy későbbi csak induló járat fordulóvá (pl. a lajstrom alapján)? Az Ikarus-importnál igen, lajstrom alapján (115.); a kézi és a járatrend-importból jött járatoknál még nyitott.
 - Meddig őrizzük meg a képzési adatokat, a feltöltött fájlokat, a vizsgakísérleteket és az értékeléseket?
 - Az OJT-követelmény valós értékei képzésenként (most helyőrző: 10 gyakorlás; a demóban 2).
 
@@ -185,7 +186,6 @@ A projekt gazdája a földi kiszolgálásban dolgozik, a domain-szabályok az ő
 
 - Személyre szabható elrendezés (az infografika fix változata után)
 - Az SI elemeinek feldolgozása (DAA, nettó bontás, poggyászdarabszámok), ha a minták alapján egységesíthető
-- Valós tesztadat: az Ikarus AODB-oldal mentése elindult (félóránként, 30 napig, a projekt gazdájának gépén, a repón kívül; a nyilvános repóba nem kerülhet). Utána importer a pillanatképekből (összefésülés rekordazonosító szerint, a nap a menetrendi időből, éjfélre figyelve).
 - Email- és SITA-átjáró a bejövő üzenetekhez (a fogadó API-ra csatlakozik)
 - A BUD-on lévő ULD-készlet követése az UCM-ekből
 - A beosztás TRN részének összekötése egy konkrét képzéssel
@@ -199,5 +199,5 @@ A projekt gazdája a földi kiszolgálásban dolgozik, a domain-szabályok az ő
 ## Következő lépés
 
 1. Az 1–9. mérföldkő kész (MVP; jogosultság, beosztás, sávos nézet; járatrend-import; tervezői nézet; feladattípusok; képzések és jogosítások; üzenetek; üzenetek bővítése; létszámigény a tervezettel együtt, 700 zöld teszttel), a késéskód-dokumentumokkal együtt.
-2. A 10. mérföldkő (oktatás: e-vizsga, OJT és kibocsátás, kizáró szempontokkal) és a 11. mérföldkő (földi eszközök és hibajegy) kész, 787 zöld teszttel. A 12. mérföldkő (ügynöki beosztásnézet, naptármentéssel és feliratkozással) is kész, 814 zöld teszttel. A 13. mérföldkő (üzemeltetés, éles telepítés bérelt szerverre) is kész, 836 zöld teszttel; helyben kipróbálva, valódi VPS-en még nem. A 13. mérföldkő utómunkájának 1–5. pontja kész (képkicsinyítés, növekményes fájlmentés, lemezfigyelés, README, terhelési próba), 851 zöld teszttel. Most: az ügynök nézet gyorsítása (utómunka 6.); utána a 14. mérföldkő (több állomás) és a 15. (skálázás 3000 egyidejű felhasználóra), CLAUDE.md 45. verzió. A 11. mérföldkő a járművek és a hibajegy, egyeztetés után.
-3. A projekt gazdájánál: a nyitott üzenet- és késéskódok; a SITA-átjáró; a valós GOU- és HDS-sablonok; a csatolt fájlok megőrzési ideje; az Ikarus-mentés ellenőrzése.
+2. A 10. mérföldkő (oktatás: e-vizsga, OJT és kibocsátás, kizáró szempontokkal) és a 11. mérföldkő (földi eszközök és hibajegy) kész, 787 zöld teszttel. A 12. mérföldkő (ügynöki beosztásnézet, naptármentéssel és feliratkozással) is kész, 814 zöld teszttel. A 13. mérföldkő (üzemeltetés, éles telepítés bérelt szerverre) is kész, 836 zöld teszttel; helyben kipróbálva, valódi VPS-en még nem. A 13. mérföldkő utómunkájának 1–5. pontja kész (képkicsinyítés, növekményes fájlmentés, lemezfigyelés, README, terhelési próba), 851 zöld teszttel. Az utómunka 6. pontja (az ügynök nézet gyorsítása) is kész, és a 14. mérföldkő (több állomás) 1. lépése: az állomás az adatmodellben, minden adat a BUD-é. Most, közbeiktatva: valós járatok az Ikarus-mentésből, és rajtuk a tervező és a létszámigény kipróbálása (115.); utána a 14. a 2. lépéstől, majd a 15. (skálázás), CLAUDE.md 46. verzió.
+3. A projekt gazdájánál: a nyitott üzenet- és késéskódok; a SITA-átjáró; a valós GOU- és HDS-sablonok; a csatolt fájlok megőrzési ideje; a tervező eredményének összevetése a valós létszámmal.
