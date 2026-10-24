@@ -4,6 +4,7 @@
 
 ## Mi készült el
 
+- Ikarus-import, 5. lépés: README („Valós járatok helyi kipróbáláshoz”: a parancsok, a működés és a riport, a forrás címe nélkül; a `lib/ikarus/` a felépítésben). A közbeiktatott rész ezzel kész.
 - Ikarus-import, 4. lépés: kiértékelő riport (`scripts/ikarus-report.ts`, `lib/ikarus/report.ts`): CSV naponként (járatok, gyors, hosszú és egyoldalú fordulók, a tervező pozíciószáma és munkaórája a mostani beállításokkal, betölthetőség nélkül, a létszámigény csúcsa és ideje) és szöveges összefoglaló (hétköznapi és hétvégi átlag, a beállítások). Csak a repón kívülre ír; a hiányos napokat (hézag a mentésben, vagy a nap még nem ért véget) jelöli, és kihagyja az átlagból. Futása kb. 2 perc a 27 napra, főleg a napi járatlista lekérdezései miatt (a 15. mérföldkő gyorsítja).
 - Az eredmény a valódi mentésen (27 nap, ebből 22 teljes): hétköznap átlagosan 167 járat, 29,2 pozíció, 241 munkaóra, a létszámigény csúcsa 16,6; hétvégén 149 járat, 27,3 pozíció, 219 munkaóra, csúcs 15,8. A valóság hétköznap kb. 20–40 ügynök: a pozíciószám ezen belül van, a mostani sablon- és tervezési paraméterekkel.
 - A tervező és a létszámigény felülete valós napokon kipróbálva (háromnapos terv, napi nézet, heti áttekintés): működik, a számok egyeznek a riporttal. A betölthetőségi figyelmeztetés várható, mert a demo adatbázisban kevés az ügynök.
@@ -11,7 +12,7 @@
 
 ## Állapot
 
-- Utolsó commit: lásd `git log -1` (feat: report the planner and the staffing demand on the real days)
+- Utolsó commit: lásd `git log -1` (docs: describe the Ikarus import and its report)
 - Tesztek: 902 zöld; tsc és lint tiszta.
 
 ## Eltérések a CLAUDE.md-től
@@ -30,4 +31,5 @@
 
 ## Következő lépés
 
-- Ikarus-import, 5. lépés: README (rövid leírás a forrás címe nélkül), STATUS.md. Utána a 14. mérföldkő a 2. lépéssel.
+- A tervezés döntése az Ikarus-eredmény alapján (kell-e hangolás; a pozíciószám most a 20–40-es sávon belül van).
+- 14. mérföldkő, 2. lépés: az időzóna kötelező paraméter a `lib/time.ts`-ben és minden napfüggő függvényben, Europe/Istanbul és óraátállítási tesztekkel.

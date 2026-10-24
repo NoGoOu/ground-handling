@@ -524,6 +524,31 @@ Ha a Docker nem elérhető, a Prisma saját helyi Postgrese is megfelel fejleszt
 | `npm run db:migrate` | Új migráció a séma módosítása után |
 | `npm run db:studio` | Prisma Studio az adatok böngészéséhez |
 
+### Valós járatok helyi kipróbáláshoz (Ikarus-mentés)
+
+A repülőtéri AODB járatlistájának félóránkénti mentéséből valós BUD-járatok tölthetők a **helyi fejlesztői vagy demo** példányba, hogy a tervező és a létszámigény valós napokon is kipróbálható legyen. Éles módban (`APP_ENV=production`) a parancsok nem futnak.
+
+**Adatvédelem:** a mentés mappája és a riport a repón kívül marad (pl. a repó mellett: `../ikarus-adatok` és `../ikarus-riport`); semmi belőlük nem kerülhet a repóba. A tesztek kitalált mintákkal dolgoznak. A riport csak a repón kívülre írható, a parancs ezt ellenőrzi.
+
+A mappa szerkezete: napi mappák (`ÉÉÉÉ-HH-NN`), bennük félóránként egy fájl (`aodb_ÉÉÉÉHHNN_óóppZ.json`, UTC). Hézag lehet benne.
+
+```bash
+# próbafuttatás: összesítés, semmi nem íródik
+npx tsx scripts/ikarus-import.ts --dir ../ikarus-adatok
+# írás (alapból a teljes mentés; --from/--to ÉÉÉÉ-HH-NN szűkíti; --user: kinek a nevén kerüljön az importnaplóba)
+npx tsx scripts/ikarus-import.ts --dir ../ikarus-adatok --apply
+# kiértékelés a repón kívülre: CSV naponként és szöveges összefoglaló
+npx tsx scripts/ikarus-report.ts --dir ../ikarus-adatok --out ../ikarus-riport
+# minden Ikarus-járat és a hozzájuk létrehozott légitársaságok eltávolítása
+npx tsx scripts/ikarus-import.ts remove
+```
+
+- Rekordonként a legutolsó pillanatkép számít; a tényleges idő és a lajstrom, ha egyszer megjelent, megmarad. A nap nélküli idők a menetrendi időhöz legközelebbi napra kerülnek.
+- A fordulók a lajstrom alapján párosulnak: az érkezés párja ugyanannak a gépnek az első szabad indulása 24 órán belül, a gép következő érkezése előtt; ami nem párosul, csak érkező vagy csak induló járat lesz.
+- A járatra a menetrendi rész, az állóhely, az ETA/ETD („Ikarus” forrással; a később kézzel vagy üzenetből megadott becslést nem írja felül) és az ATA/ATD (rendszerértékként) kerül; törölt jelzést nem állít. Az ismeretlen légitársaság-kódhoz légitársaság jön létre az „Alap” feladattípussal és a demo sablonnal.
+- Az újrafuttatás nem duplikál: a járatrészek az AODB-azonosítójukkal azonosíthatók. Ha a párosítás változik, a járatrend-import összevonási szabálya érvényes.
+- A riport naponként: járatok, gyors, hosszú és egyoldalú fordulók, a tervező pozíciószáma és munkaórája a mostani tervezési beállításokkal (a jogosítások betölthetősége nélkül), a létszámigény csúcsa. A hiányos napok (hézag a mentésben, vagy a nap még nem ért véget) kimaradnak a hétköznapi és a hétvégi átlagból. Ha a pozíciószám jelentősen eltér a valóságtól, a sablon foglaltsági paramétereit és a tervezési beállításokat érdemes hangolni, majd a riportot újrafuttatni.
+
 ## Felépítés
 
 | Hely | Tartalom |
@@ -543,6 +568,7 @@ Ha a Docker nem elérhető, a Prisma saját helyi Postgrese is megfelel fejleszt
 | `lib/data/messages.ts`, `lib/data/outbound.ts` | Üzenetek tárolása, verziózása, hatása a járatra; kimenő üzenetek küldése címzettenkénti állapottal |
 | `lib/qualifications.ts`, `lib/training.ts` | Jogosítások: a rekordokból számolt érvényesség és állapot, a task részeinek követelménye és teljesülése; a rekord szabályai és a fájlok ellenőrzése |
 | `lib/import/` | Járatrend-import: fájlbeolvasás, átalakítások, oszlop-párosítás, fordulók képzése, összevetés a meglévő járatokkal; tiszta függvények, tesztek a mintafájllal |
+| `lib/ikarus/` | Az Ikarus-mentés (AODB-pillanatképek): beolvasás, összefésülés, fordulók lajstrom alapján, átalakítás a járatrend-import formájára, a kiértékelő riport; tiszta függvények, tesztek kitalált mintákkal |
 | `lib/permissions/` | A jogosultságok katalógusa és a jogosultsági szabályok (a proxy, az oldalak és minden szerverművelet ezt használja) |
 | `lib/time.ts` | Átváltás UTC és Europe/Budapest között |
 | `lib/messages/hu.ts` | A felület összes magyar szövege |
