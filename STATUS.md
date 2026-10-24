@@ -4,15 +4,15 @@
 
 ## Mi készült el
 
-- Ikarus-import, 3. lépés: írás az adatbázisba (`scripts/ikarus-import.ts`, `lib/data/ikarus.ts`, `lib/ikarus/convert.ts`). Alapból próbafuttatás összesítéssel; `--apply` ír az importnaplóba („Ikarus” profillal); `remove` eltávolít; éles módban megtagadja. Migráció: AODB-azonosító a járatrészeken, „Ikarus” ETA/ETD-forrás, „Ikarus-import” jelölés a légitársaságon.
-- A járatrend-import próbafuttatását és mentését használja: a járatot először az AODB-azonosító találja meg; az Ikarus által írt becsült és tényleges idő az újrafuttatásnál nem számít üzemi adatnak, így a párosítás átrendeződhet (3. mérföldkő szabálya).
-- Próba a valódi mentésen, a helyi fejlesztői példányban: 1082 pillanatkép, 6549 járatrész, 3543 járat (3005 forduló, 253 csak érkező, 285 csak induló; az érkezések 92%-a párosul). Az újrafuttatás nem duplikál; egy későbbi futás 1 járatot átpárosított, 1-et összevont, ütközés nélkül. A `remove` után csak a korábbi adatok maradnak.
-- (1–2. lépés: beolvasás, összefésülés, fordulók lajstrom alapján, `lib/ikarus/`.)
+- Ikarus-import, 4. lépés: kiértékelő riport (`scripts/ikarus-report.ts`, `lib/ikarus/report.ts`): CSV naponként (járatok, gyors, hosszú és egyoldalú fordulók, a tervező pozíciószáma és munkaórája a mostani beállításokkal, betölthetőség nélkül, a létszámigény csúcsa és ideje) és szöveges összefoglaló (hétköznapi és hétvégi átlag, a beállítások). Csak a repón kívülre ír; a hiányos napokat (hézag a mentésben, vagy a nap még nem ért véget) jelöli, és kihagyja az átlagból. Futása kb. 2 perc a 27 napra, főleg a napi járatlista lekérdezései miatt (a 15. mérföldkő gyorsítja).
+- Az eredmény a valódi mentésen (27 nap, ebből 22 teljes): hétköznap átlagosan 167 járat, 29,2 pozíció, 241 munkaóra, a létszámigény csúcsa 16,6; hétvégén 149 járat, 27,3 pozíció, 219 munkaóra, csúcs 15,8. A valóság hétköznap kb. 20–40 ügynök: a pozíciószám ezen belül van, a mostani sablon- és tervezési paraméterekkel.
+- A tervező és a létszámigény felülete valós napokon kipróbálva (háromnapos terv, napi nézet, heti áttekintés): működik, a számok egyeznek a riporttal. A betölthetőségi figyelmeztetés várható, mert a demo adatbázisban kevés az ügynök.
+- (1–3. lépés: beolvasás, összefésülés, fordulók lajstrom alapján, írás az adatbázisba.)
 
 ## Állapot
 
-- Utolsó commit: lásd `git log -1` (feat: write the Ikarus flights into the database)
-- Tesztek: 896 zöld; tsc és lint tiszta; a migráció után a séma-eltérés üres.
+- Utolsó commit: lásd `git log -1` (feat: report the planner and the staffing demand on the real days)
+- Tesztek: 902 zöld; tsc és lint tiszta.
 
 ## Eltérések a CLAUDE.md-től
 
@@ -30,4 +30,4 @@
 
 ## Következő lépés
 
-- Ikarus-import, 4. lépés: kiértékelő riport a repón kívülre; a tervező és a létszámigény kipróbálása néhány valós napon.
+- Ikarus-import, 5. lépés: README (rövid leírás a forrás címe nélkül), STATUS.md. Utána a 14. mérföldkő a 2. lépéssel.
