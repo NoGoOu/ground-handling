@@ -4,13 +4,14 @@
 
 ## Mi készült el
 
-- Közbeiktatva, Ikarus-import, 1. lépés: beolvasás és összefésülés tiszta függvényként (`lib/ikarus/`): a napi mappák és a fájlnevek (UTC), BOM, a menetrendi idő UTC-ben, a nap nélküli idők a menetrendi időhöz legközelebbi napra (51. szabály), rekordonkénti összefésülés (irány + AODB-azonosító; a tényleges idő és a lajstrom megmarad). Tesztek kitalált mintákkal.
-- Próbaolvasás a valódi mentésen (a repón kívül): 26 napi mappa, 1080 pillanatkép, 6541 rekord (3253 érkezés, 3288 indulás), olvashatatlan fájl és rekord nincs.
+- Ikarus-import, 2. lépés: fordulók lajstrom alapján, tiszta függvényként (`lib/ikarus/pairing.ts`): az érkezés párja ugyanannak a lajstromnak az első, még szabad indulása az érkezés után, 24 órán belül, és a gép következő érkezése előtt; ami nem párosul, egyoldalú. Tesztek: a 24 órás határ, egy indulás nem jut két érkezésnek, a kimaradt indulás nem viszi el a következő fordulóét, lajstrom nélkül egyoldalú, éjszakázó gép.
+- Próba a valódi mentésen (a repón kívül): 6543 rekordból 3003 forduló, 251 csak érkező, 286 csak induló; az érkezések 92%-a párosul. A földi idő mediánja 55 perc.
+- (1. lépés: beolvasás és összefésülés, `lib/ikarus/`.)
 
 ## Állapot
 
-- Utolsó commit: lásd `git log -1` (feat: read and merge the Ikarus snapshots)
-- Tesztek: 874 zöld; tsc és lint tiszta.
+- Utolsó commit: lásd `git log -1` (feat: pair the Ikarus flights by registration)
+- Tesztek: 882 zöld; tsc és lint tiszta.
 
 ## Eltérések a CLAUDE.md-től
 
@@ -23,4 +24,4 @@
 
 ## Következő lépés
 
-- Ikarus-import, 2. lépés: fordulók lajstrom alapján, tiszta függvényként, tesztekkel.
+- Ikarus-import, 3. lépés: írás az adatbázisba (próbafuttatás, `--apply`, újrafuttatás az AODB-azonosítóval, `remove`, importnapló, tiltás éles módban).
