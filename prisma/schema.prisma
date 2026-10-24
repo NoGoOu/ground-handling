@@ -343,6 +343,8 @@ model Airline {
   addresses          AddressBookEntry[]
   /// Its own delay code document and the log of the earlier ones (8. mérföldkő, utómunka).
   delayCodeDocuments DelayCodeDocument[]
+  /// Made by the Ikarus import for an unknown code; "remove" takes it away again.
+  ikarusImport       Boolean              @default(false)
 }
 
 /// A kind of work on a flight, e.g. GOU or HDS (5. mérföldkő). Every flight has
@@ -476,6 +478,9 @@ model Flight {
   departureRegistration String?
   /// The flight plan id of the departure (8. mérföldkő): later slot messages match by it.
   departureIfplid       String?
+  /// The AODB id of each part, on flights of the Ikarus import: a re-run finds them by it.
+  arrivalAodbId         Int?
+  departureAodbId       Int?
 
   // "Késés és törlés": where the current ETA and ETD came from.
   etaSource       EstimateSource?
@@ -515,6 +520,8 @@ model Flight {
 
   @@unique([airlineId, inboundFlightNumber, arrivalFlightDate, origin])
   @@unique([airlineId, outboundFlightNumber, departureFlightDate, destination])
+  @@unique([stationId, arrivalAodbId])
+  @@unique([stationId, departureAodbId])
   @@index([departureIfplid])
   @@index([sta])
   @@index([std])
@@ -579,6 +586,8 @@ model MilestoneRecord {
 enum EstimateSource {
   MANUAL
   MESSAGE
+  /// From the AODB backup (Ikarus import).
+  IKARUS
 }
 
 enum FlightEventKind {

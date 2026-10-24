@@ -45,7 +45,7 @@ export function mergeSnapshots(snapshots: readonly Snapshot[]): MergeResult {
     for (const [direction, records] of lists) {
       for (const raw of records) {
         occurrences++;
-        const read = readRecord(raw);
+        const read = readRecord(raw, direction);
         if (!read.ok) {
           errors.push({ direction, aodbId: read.aodbId, error: read.error, snapshot: snapshot.takenAt });
           continue;

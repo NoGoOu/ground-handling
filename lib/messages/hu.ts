@@ -1020,7 +1020,7 @@ export const hu = {
     columns: { name: "Név", iataCode: "IATA", templates: "Sablonok", taskTypes: "Feladattípusok" },
     errors: {
       name: "Add meg a nevet (legfeljebb 100 karakter).",
-      iataCode: "Az IATA-kód 2 karakter: betű vagy szám.",
+      iataCode: "A kód 2 karakter (betű vagy szám), vagy 3 betű (ICAO).",
       iataTaken: "Ez az IATA-kód már foglalt.",
     },
   },
@@ -1384,7 +1384,7 @@ export const hu = {
     },
   },
   estimate: {
-    source: { MANUAL: "kézi", MESSAGE: "üzenet" },
+    source: { MANUAL: "kézi", MESSAGE: "üzenet", IKARUS: "Ikarus" },
     by: "{name}, {time}",
   },
   cancel: {
@@ -2022,7 +2022,7 @@ export const hu = {
     confirmRemove: "Biztosan törlöd ezt a késésrekordot?",
     removed: "Törölve.",
     row: "{code}: {minutes} perc",
-    source: { MANUAL: "kézi", MESSAGE: "üzenetből" },
+    source: { MANUAL: "kézi", MESSAGE: "üzenetből", IKARUS: "Ikarus" },
     recorded: "{source} · {name}, {time}",
     byMessage: "üzenet",
     total: "Összesen: {sum} perc · a késés: {delay}",
@@ -2324,6 +2324,43 @@ export const hu = {
       created: "Létrejött: {name} ({username}), Admin szerepkörrel. Most már be tudsz lépni.",
       cancelled: "Megszakítva.",
     },
+  },
+  // The Ikarus import's command (CLAUDE.md, "Közbeiktatva: valós járatok az Ikarus-mentésből").
+  ikarus: {
+    usage:
+      "Használat:\n  npx tsx scripts/ikarus-import.ts --dir <mappa> [--from ÉÉÉÉ-HH-NN] [--to ÉÉÉÉ-HH-NN] [--apply] [--user <felhasználónév>]\n  npx tsx scripts/ikarus-import.ts remove",
+    refusedInProduction: "Éles módban (APP_ENV=production) az Ikarus-import nem fut: a valós adatforrás éles bekötése külön döntés.",
+    noDir: "Nincs ilyen mappa: {dir}",
+    badDate: "{option}: ÉÉÉÉ-HH-NN alakú nap kell.",
+    badRange: "A --from nem lehet későbbi a --to-nál.",
+    noSnapshots: "A mappában nincs pillanatkép a kért időszakra.",
+    noUser: "Nincs ilyen aktív felhasználó: {username}",
+    noAdmin: "Nincs aktív admin felhasználó; add meg a --user kapcsolóval, kinek a nevén kerüljön a naplóba.",
+    dryRunTitle: "Ikarus-import – próbafuttatás (semmi nem íródott)",
+    appliedTitle: "Ikarus-import – mentve (importnapló: {run})",
+    period: "Időszak: {start} – {end}",
+    snapshots: "Pillanatképek: {count} (olvashatatlan: {unreadable})",
+    records: "Rekordok: {occurrences} előfordulás, {legs} járatrész (kettőzött: {duplicates})",
+    recordErrors: "Hibás rekordok: {list}",
+    recordErrorNames: {
+      id: "azonosító nélkül",
+      flightNumber: "olvashatatlan járatszám",
+      route: "állomás nélkül",
+      scheduledTime: "olvashatatlan menetrendi idő",
+      estimatedTime: "olvashatatlan becsült idő (üresen maradt)",
+      actualTime: "olvashatatlan tényleges idő (üresen maradt)",
+    },
+    turnarounds: "Fordulók: {total} (párosított: {paired}, csak érkező: {arrivalOnly}, csak induló: {departureOnly}); az érkezések {rate}%-a párosul",
+    unpaired: "  Párosítatlan érkezés: lajstrom nélkül {noRegistration}, nincs indulás 24 órán belül {noDeparture}",
+    flights:
+      "Járatok: új {new}, változott {changed}, csak becsült vagy tényleges időben, állóhelyben változott {live}, változatlan {unchanged}; átpárosított {repaired}, összevont {merged}",
+    conflicts: "Ütközés (kézi döntés kell, nem íródik): {total} (üzemi adat van rajta: {operational}, összevonás nem lehetséges: {merge}, egy rész elveszne: {lostLeg})",
+    errors: "Hibás (nem íródik): {total}",
+    newAirlines: "Új légitársaság (az „Alap” feladattípussal és a demo sablonnal): {count}",
+    applyHint: "Íráshoz futtasd újra a --apply kapcsolóval.",
+    importFile: "Ikarus-mentés ({count} pillanatkép)",
+    removed: "Eltávolítva: {flights} járat, {airlines} légitársaság; párosítatlanná vált üzenet: {messages}.",
+    removeBlocked: "Nem távolítottam el semmit: {count} gyakorlati vizsga Ikarus-járat taskján van. A vizsga képzési nyilvántartás, nem törlöm.",
   },
 } as const;
 

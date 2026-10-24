@@ -33,6 +33,9 @@ export interface ExistingFlight {
   importProfileId: string | null;
   /** Created by hand or by an import; only an imported flight may be merged away. */
   source: "MANUAL" | "IMPORT";
+  /** The AODB ids of the parts, on flights of the Ikarus import. */
+  arrivalAodbId?: number | null;
+  departureAodbId?: number | null;
   /**
    * Records, estimates, actuals, cancellations, agents or entries in the
    * flight's log: the pairing may not change and the flight is never deleted.
@@ -108,6 +111,13 @@ const manualDepartureKey = (flightNumber: string, std: Date) => `MD|${flightNumb
 const legArrivalKey = (leg: Leg) => arrivalKey(leg.flightNumber, leg.flightDate, leg.origin);
 const legDepartureKey = (leg: Leg) => departureKey(leg.flightNumber, leg.flightDate, leg.destination);
 
+// The Ikarus import knows each leg by its AODB id too: a leg whose route or
+// flight number changed is still the same leg.
+const aodbArrivalKey = (id: number) => `AA|${id}`;
+const aodbDepartureKey = (id: number) => `AD|${id}`;
+const legArrivalKeys = (leg: Leg) => [...(leg.aodbId != null ? [aodbArrivalKey(leg.aodbId)] : []), legArrivalKey(leg)];
+const legDepartureKeys = (leg: Leg) => [...(leg.aodbId != null ? [aodbDepartureKey(leg.aodbId)] : []), legDepartureKey(leg)];
+
 function existingArrivalKey(flight: ExistingFlight): string | null {
   if (!flight.inboundFlightNumber || !flight.sta) return null;
   return flight.arrivalFlightDate && flight.origin
@@ -120,6 +130,19 @@ function existingDepartureKey(flight: ExistingFlight): string | null {
   return flight.departureFlightDate && flight.destination
     ? departureKey(flight.outboundFlightNumber, flight.departureFlightDate, flight.destination)
     : manualDepartureKey(flight.outboundFlightNumber, flight.std);
+}
+
+/** Every key that finds a part of the flight: its AODB id first, then its flight number and day. */
+function existingArrivalKeys(flight: ExistingFlight): string[] {
+  const key = existingArrivalKey(flight);
+  if (!key) return [];
+  return flight.arrivalAodbId != null ? [aodbArrivalKey(flight.arrivalAodbId), key] : [key];
+}
+
+function existingDepartureKeys(flight: ExistingFlight): string[] {
+  const key = existingDepartureKey(flight);
+  if (!key) return [];
+  return flight.departureAodbId != null ? [aodbDepartureKey(flight.departureAodbId), key] : [key];
 }
 
 const same = (a: string | Date | null, b: string | Date | null) =>
@@ -161,7 +184,7 @@ export function diffImport({
 }): ImportDiff {
   const byKey = new Map<string, ExistingFlight>();
   for (const flight of existing) {
-    for (const key of [existingArrivalKey(flight), existingDepartureKey(flight)]) if (key) byKey.set(key, flight);
+    for (const key of [...existingArrivalKeys(flight), ...existingDepartureKeys(flight)]) byKey.set(key, flight);
   }
 
   // A leg a re-paired flight gives up is free for another turnaround.
@@ -173,14 +196,15 @@ export function diffImport({
     return null;
   };
   const flightOfArrival = (leg: Leg | null) =>
-    leg ? find([legArrivalKey(leg), manualArrivalKey(leg.flightNumber, leg.sta)]) : null;
+    leg ? find([...legArrivalKeys(leg), manualArrivalKey(leg.flightNumber, leg.sta)]) : null;
   const flightOfDeparture = (leg: Leg | null) =>
-    leg ? find([legDepartureKey(leg), manualDepartureKey(leg.flightNumber, leg.std)]) : null;
+    leg ? find([...legDepartureKeys(leg), manualDepartureKey(leg.flightNumber, leg.std)]) : null;
 
   const plannedKeys = new Set<string>();
   for (const { arrival, departure } of plan.turnarounds) {
-    if (arrival) plannedKeys.add(legArrivalKey(arrival));
-    if (departure) plannedKeys.add(legDepartureKey(departure));
+    for (const key of [...(arrival ? legArrivalKeys(arrival) : []), ...(departure ? legDepartureKeys(departure) : [])]) {
+      plannedKeys.add(key);
+    }
   }
   const airlineByCode = new Map(airlines.map((airline) => [airline.code, airline]));
 
@@ -226,12 +250,12 @@ export function diffImport({
     // The pairing differs. Re-pair only a flight without operational data, and
     // only when no flight has to disappear and no leg gets lost.
     const flightIds = [...new Set([byArrival?.id, byDeparture?.id].filter((id): id is string => !!id))];
-    // The carrier's other leg, if the new pairing does not keep it.
-    const [otherLeg, wantedLeg] =
+    // The carrier's other leg (all its keys), if the new pairing does not keep it.
+    const [otherKeys, wantedKeys] =
       carrier === byArrival
-        ? [existingDepartureKey(carrier), turnaround.departure && legDepartureKey(turnaround.departure)]
-        : [existingArrivalKey(carrier), turnaround.arrival && legArrivalKey(turnaround.arrival)];
-    const dropped = otherLeg && otherLeg !== wantedLeg ? otherLeg : null;
+        ? [existingDepartureKeys(carrier), turnaround.departure ? legDepartureKeys(turnaround.departure) : []]
+        : [existingArrivalKeys(carrier), turnaround.arrival ? legArrivalKeys(turnaround.arrival) : []];
+    const dropped = otherKeys.length > 0 && !otherKeys.some((key) => wantedKeys.includes(key)) ? otherKeys : null;
     if (byArrival && byDeparture && byArrival !== byDeparture) {
       const merge = mergeOf(byArrival, byDeparture, claimed);
       if (!merge) {
@@ -252,14 +276,14 @@ export function diffImport({
     }
     let reason: ConflictReason | null = null;
     if (carrier.operational || claimed.has(carrier.id)) reason = "operational";
-    else if (dropped && !plannedKeys.has(dropped)) reason = "lostLeg";
+    else if (dropped && !dropped.some((key) => plannedKeys.has(key))) reason = "lostLeg";
 
     if (reason) {
       entries.push({ kind: "conflict", turnaround, flightIds, reason });
       continue;
     }
     claimed.add(carrier.id);
-    if (dropped) released.add(dropped);
+    if (dropped) for (const key of dropped) released.add(key);
     entries.push({
       kind: "changed",
       turnaround,

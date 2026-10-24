@@ -6,10 +6,12 @@ describe("airline form validation", () => {
     expect(airlineSchema.parse({ name: " Demo ", iataCode: " zz " })).toEqual({ name: "Demo", iataCode: "ZZ" });
   });
 
-  it("accepts letters and digits, exactly two characters", () => {
+  it("accepts two letters or digits, or three letters", () => {
     expect(airlineSchema.safeParse({ name: "X", iataCode: "W6" }).success).toBe(true);
+    expect(airlineSchema.safeParse({ name: "X", iataCode: "WZZ" }).success).toBe(true);
     expect(airlineSchema.safeParse({ name: "X", iataCode: "W" }).success).toBe(false);
-    expect(airlineSchema.safeParse({ name: "X", iataCode: "WZZ" }).success).toBe(false);
+    expect(airlineSchema.safeParse({ name: "X", iataCode: "W6Z" }).success).toBe(false);
+    expect(airlineSchema.safeParse({ name: "X", iataCode: "WZZZ" }).success).toBe(false);
     expect(airlineSchema.safeParse({ name: "X", iataCode: "W-" }).success).toBe(false);
   });
 

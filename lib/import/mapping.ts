@@ -97,6 +97,8 @@ export interface Leg {
   registration: string | null;
   /** The aircraft's next flight, if the file says. */
   next: string | null;
+  /** The AODB id of the leg, from the Ikarus import: it finds the flight before the flight number does. */
+  aodbId?: number;
 }
 
 export type RowErrorCode =

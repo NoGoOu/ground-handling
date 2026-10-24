@@ -83,6 +83,7 @@ describe("a snapshot", () => {
   it("normalises a record: flight number, registration, empty fields", () => {
     const read = readRecord(
       sampleRecord({ flightNumber: "QQ0042", registration: "XX-QAA", standExt: "", route: "aaa", estimatedTime: "07:25" }),
+      "ARRIVAL",
     );
     expect(read).toMatchObject({
       ok: true,
@@ -100,16 +101,24 @@ describe("a snapshot", () => {
     });
   });
 
+  it("takes the airport next to Budapest from a route with a stop, and a number for general aviation", () => {
+    expect(readRecord(sampleRecord({ route: "AAA BBB" }), "ARRIVAL")).toMatchObject({ record: { route: "BBB" } });
+    expect(readRecord(sampleRecord({ route: "BBB AAA" }), "DEPARTURE")).toMatchObject({ record: { route: "BBB" } });
+    expect(readRecord(sampleRecord({ route: "016", flightNumber: "QQX200" }), "DEPARTURE")).toMatchObject({ record: { route: "016" } });
+    expect(readRecord(sampleRecord({ route: "AAA B" }), "ARRIVAL")).toMatchObject({ ok: false, error: "route" });
+  });
+
   it("takes a three-letter designator", () => {
-    expect(readRecord(sampleRecord({ flightNumber: "QQX123" }))).toMatchObject({ record: { airline: "QQX", flightNumber: "QQX123" } });
-    expect(readRecord(sampleRecord({ flightNumber: "Q12345" }))).toMatchObject({ record: { airline: "Q1", flightNumber: "Q12345" } });
+    expect(readRecord(sampleRecord({ flightNumber: "QQX123" }), "ARRIVAL")).toMatchObject({ record: { airline: "QQX", flightNumber: "QQX123" } });
+    expect(readRecord(sampleRecord({ flightNumber: "Q12345" }), "ARRIVAL")).toMatchObject({ record: { airline: "Q1", flightNumber: "Q12345" } });
   });
 
   it("leaves out a record without id, flight number or scheduled time, and empties a bad time", () => {
-    expect(readRecord(sampleRecord({ id: 0 }))).toEqual({ ok: false, error: "id", aodbId: null });
-    expect(readRecord(sampleRecord({ flightNumber: "12" }))).toEqual({ ok: false, error: "flightNumber", aodbId: 900001 });
-    expect(readRecord(sampleRecord({ scheduledTime: "2026-10-01 07:20" }))).toEqual({ ok: false, error: "scheduledTime", aodbId: 900001 });
-    expect(readRecord(sampleRecord({ actualTime: "7:2" }))).toMatchObject({ ok: true, errors: ["actualTime"], record: { actual: null } });
+    expect(readRecord(sampleRecord({ id: 0 }), "ARRIVAL")).toEqual({ ok: false, error: "id", aodbId: null });
+    expect(readRecord(sampleRecord({ flightNumber: "12" }), "ARRIVAL")).toEqual({ ok: false, error: "flightNumber", aodbId: 900001 });
+    expect(readRecord(sampleRecord({ route: "" }), "ARRIVAL")).toEqual({ ok: false, error: "route", aodbId: 900001 });
+    expect(readRecord(sampleRecord({ scheduledTime: "2026-10-01 07:20" }), "ARRIVAL")).toEqual({ ok: false, error: "scheduledTime", aodbId: 900001 });
+    expect(readRecord(sampleRecord({ actualTime: "7:2" }), "ARRIVAL")).toMatchObject({ ok: true, errors: ["actualTime"], record: { actual: null } });
   });
 });
 

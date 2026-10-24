@@ -12,5 +12,6 @@ export const airlineSchema = z.object({
     .string()
     .trim()
     .toUpperCase()
-    .pipe(z.string().regex(/^[A-Z0-9]{2}$/, e.iataCode)),
+    // Two characters (IATA), or three letters (ICAO), as flight numbers have them.
+    .pipe(z.string().regex(/^([A-Z0-9]{2}|[A-Z]{3})$/, e.iataCode)),
 });

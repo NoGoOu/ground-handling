@@ -4,6 +4,7 @@ import { newFlightTasksByAirline } from "@/lib/data/task-types";
 import { prisma } from "@/lib/db";
 import type { AirlineInfo, ExistingFlight, ImportDiff } from "@/lib/import/diff";
 import type { ImportMapping } from "@/lib/import/mapping";
+import { isOperational } from "@/lib/import/operational";
 import type { ImportedTurnaround } from "@/lib/import/pairing";
 import type { StoredProfile } from "@/lib/import/profiles";
 import { readFile, tableFrom } from "@/lib/import/read";
@@ -69,7 +70,14 @@ const dateText = (date: Date | null) => (date ? date.toISOString().slice(0, 10) 
  * 3. mérföldkő): records, estimates, actuals, cancellations, agents, or any
  * entry in the flight's log (a cancellation that was restored, for instance).
  */
-export async function loadExistingFlights(window: { start: Date; end: Date }): Promise<ExistingFlight[]> {
+/**
+ * The flights with an STA or STD in the window, as the dry run compares them.
+ * For the Ikarus import, what it wrote itself is not operational data.
+ */
+export async function loadExistingFlights(
+  window: { start: Date; end: Date },
+  { ikarus = false }: { ikarus?: boolean } = {},
+): Promise<ExistingFlight[]> {
   const within = { gte: window.start, lt: window.end };
   const flights = await prisma.flight.findMany({
     where: { OR: [{ sta: within }, { std: within }] },
@@ -88,6 +96,10 @@ export async function loadExistingFlights(window: { start: Date; end: Date }): P
       etd: true,
       ata: true,
       atd: true,
+      etaSource: true,
+      etdSource: true,
+      arrivalAodbId: true,
+      departureAodbId: true,
       arrivalCancelled: true,
       departureCancelled: true,
       aircraftType: true,
@@ -117,12 +129,16 @@ export async function loadExistingFlights(window: { start: Date; end: Date }): P
     departureRegistration: flight.departureRegistration,
     importProfileId: flight.importProfileId,
     source: flight.source,
-    operational:
-      flight._count.events > 0 ||
-      !!(flight.eta || flight.etd || flight.ata || flight.atd) ||
-      flight.arrivalCancelled ||
-      flight.departureCancelled ||
-      flight.tasks.some((task) => !!task.arrivalAgentId || !!task.departureAgentId || task._count.records > 0),
+    arrivalAodbId: flight.arrivalAodbId,
+    departureAodbId: flight.departureAodbId,
+    operational: isOperational(
+      {
+        ...flight,
+        events: flight._count.events,
+        tasks: flight.tasks.map((task) => ({ ...task, records: task._count.records })),
+      },
+      { ikarus },
+    ),
   }));
 }
 
@@ -161,14 +177,62 @@ function scheduleData(turnaround: ImportedTurnaround) {
   };
 }
 
-const NO_ARRIVAL = { inboundFlightNumber: null, sta: null, origin: null, arrivalFlightDate: null, arrivalRegistration: null };
+// A flight giving up a part loses what belongs to it. Its estimate and actual
+// are only ever there on an Ikarus flight: the schedule import re-pairs only
+// flights without them.
+const NO_ARRIVAL = {
+  inboundFlightNumber: null,
+  sta: null,
+  origin: null,
+  arrivalFlightDate: null,
+  arrivalRegistration: null,
+  arrivalAodbId: null,
+  eta: null,
+  etaSource: null,
+  etaNote: null,
+  etaRecordedById: null,
+  etaRecordedAt: null,
+  ata: null,
+};
 const NO_DEPARTURE = {
   outboundFlightNumber: null,
   std: null,
   destination: null,
   departureFlightDate: null,
   departureRegistration: null,
+  departureAodbId: null,
+  etd: null,
+  etdSource: null,
+  etdNote: null,
+  etdRecordedById: null,
+  etdRecordedAt: null,
+  atd: null,
 };
+
+/**
+ * What the Ikarus import writes on a flight besides the schedule (CLAUDE.md,
+ * "Mit ír a járatra"): the stand, the estimates and actuals, the AODB ids.
+ */
+export type FlightExtra = Partial<
+  Pick<
+    Prisma.FlightCreateManyInput,
+    | "stand"
+    | "eta"
+    | "etaSource"
+    | "etaNote"
+    | "etaRecordedById"
+    | "etaRecordedAt"
+    | "etd"
+    | "etdSource"
+    | "etdNote"
+    | "etdRecordedById"
+    | "etdRecordedAt"
+    | "ata"
+    | "atd"
+    | "arrivalAodbId"
+    | "departureAodbId"
+  >
+>;
 
 export interface ImportSummary {
   new: number;
@@ -189,7 +253,10 @@ export interface ImportSummary {
  * flights first give up the legs they lose, then every matched flight gets its
  * schedule fields, the new flights are created with their tasks, and the
  * missing markers are set. Estimates, actuals, delays, cancellations,
- * assignments, stands and templates are never touched.
+ * assignments, stands and templates are never touched, except what `extra`
+ * gives: the Ikarus import's own fields, per turnaround (the flight's id, or
+ * null for a new flight). On an unchanged flight, null there means nothing
+ * to write.
  */
 export async function applyImport({
   userId,
@@ -199,6 +266,7 @@ export async function applyImport({
   fileSize,
   period,
   summary,
+  extra,
 }: {
   userId: string;
   diff: ImportDiff;
@@ -207,6 +275,7 @@ export async function applyImport({
   fileSize: number;
   period: { start: string; end: string };
   summary: ImportSummary;
+  extra?: (turnaround: ImportedTurnaround, flightId: string | null) => FlightExtra | null;
 }): Promise<string> {
   const imported = { source: "IMPORT" as const, ...(profileId ? { importProfileId: profileId } : {}) };
   const found = { arrivalMissing: false, departureMissing: false, missingImportRunId: null };
@@ -244,10 +313,16 @@ export async function applyImport({
         if (entry.kind !== "changed") continue;
         await tx.flight.update({
           where: { id: entry.flightId },
-          data: { ...scheduleData(entry.turnaround), ...imported, ...found },
+          data: { ...scheduleData(entry.turnaround), ...imported, ...found, ...extra?.(entry.turnaround, entry.flightId) },
         });
       }
-      const unchanged = diff.entries.flatMap((e) => (e.kind === "unchanged" ? [e.flightId] : []));
+      const unchanged: string[] = [];
+      for (const entry of diff.entries) {
+        if (entry.kind !== "unchanged") continue;
+        const own = extra?.(entry.turnaround, entry.flightId);
+        if (own) await tx.flight.update({ where: { id: entry.flightId }, data: { ...own, ...imported, ...found } });
+        else unchanged.push(entry.flightId);
+      }
       if (unchanged.length > 0) {
         await tx.flight.updateMany({ where: { id: { in: unchanged } }, data: { ...imported, ...found } });
       }
@@ -264,6 +339,7 @@ export async function applyImport({
             id,
             airlineId: entry.airlineId,
             ...scheduleData(entry.turnaround),
+            ...extra?.(entry.turnaround, null),
             ...imported,
           })),
         });

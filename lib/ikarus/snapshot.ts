@@ -36,8 +36,12 @@ export interface SnapshotRecord {
   airline: string;
   /** Normalised like the schedule import: "QQ0042" → "QQ42". */
   flightNumber: string;
-  /** The other airport (IATA). */
-  route: string | null;
+  /**
+   * The airport next to Budapest: the last stop of an arrival's route, the
+   * first of a departure's ("AAA BBB" arrives from BBB, "BBB AAA" leaves for
+   * BBB). General aviation has a number there, e.g. "016".
+   */
+  route: string;
   scheduled: Date;
   /** "hh:mm" with its day resolved; null when empty or unreadable. */
   estimated: Date | null;
@@ -49,7 +53,7 @@ export interface SnapshotRecord {
 }
 
 /** Why a record, or a time of it, could not be read. */
-export type RecordError = "id" | "flightNumber" | "scheduledTime" | "estimatedTime" | "actualTime";
+export type RecordError = "id" | "flightNumber" | "route" | "scheduledTime" | "estimatedTime" | "actualTime";
 
 const MINUTE = 60_000;
 const DAY = 24 * 60 * MINUTE;
@@ -84,16 +88,23 @@ export function nearestTime(text: string, scheduled: Date): Date | null {
 const text = (value: unknown): string | null => (typeof value === "string" && value.trim() !== "" ? value.trim() : null);
 
 /**
- * One record of a snapshot. Without a readable id, flight number or scheduled
- * time it is left out; an unreadable estimated or actual time is left empty,
- * with the error.
+ * One record of a snapshot. Without a readable id, flight number, route or
+ * scheduled time it is left out; an unreadable estimated or actual time is
+ * left empty, with the error.
  */
-export function readRecord(raw: unknown): { ok: true; record: SnapshotRecord; errors: RecordError[] } | { ok: false; error: RecordError; aodbId: number | null } {
+export function readRecord(
+  raw: unknown,
+  direction: Direction,
+): { ok: true; record: SnapshotRecord; errors: RecordError[] } | { ok: false; error: RecordError; aodbId: number | null } {
   const fields = (raw ?? {}) as Record<string, unknown>;
   const aodbId = typeof fields.id === "number" && Number.isSafeInteger(fields.id) && fields.id > 0 ? fields.id : null;
   if (aodbId === null) return { ok: false, error: "id", aodbId: null };
   const number = normaliseFlightNumber(null, text(fields.flightNumber));
   if (!number) return { ok: false, error: "flightNumber", aodbId };
+  // The stops in flying order.
+  const stops = text(fields.route)?.toUpperCase().split(/\s+/) ?? [];
+  if (stops.length === 0 || !stops.every((stop) => /^[A-Z0-9]{3}$/.test(stop))) return { ok: false, error: "route", aodbId };
+  const route = direction === "ARRIVAL" ? stops.at(-1)! : stops[0];
   const scheduled = parseScheduled(fields.scheduledTime);
   if (!scheduled) return { ok: false, error: "scheduledTime", aodbId };
 
@@ -112,7 +123,7 @@ export function readRecord(raw: unknown): { ok: true; record: SnapshotRecord; er
       aodbId,
       airline: number.airline,
       flightNumber: number.flightNumber,
-      route: text(fields.route)?.toUpperCase() ?? null,
+      route,
       scheduled,
       estimated: timeOf(fields.estimatedTime, "estimatedTime"),
       actual: timeOf(fields.actualTime, "actualTime"),
