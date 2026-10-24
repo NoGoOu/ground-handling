@@ -1,23 +1,21 @@
 # STATUS
 
-*Frissítve: 2026. október 5. · CLAUDE.md 45. verzió*
+*Frissítve: 2026. október 24. · CLAUDE.md 46. verzió*
 
 ## Mi készült el
 
-- 14. mérföldkő, 1. lépés: adatmodell és migráció. Új `Station` (repülőtér, időzóna, aktív); a migráció létrehozza a BUD állomást (Europe/Budapest). Az állomáshoz tartozó adatok (járat, csapat, műszak, publikáció, terv, importnapló, a légitársaság feladattípusai, sablon, címjegyzék, képzés, kérdés, eszköz) `stationId`-t kaptak; minden meglévő sor a BUD-é.
-- Beállítások szétválasztva: állomási (`StationSetting`: eltérés-küszöbök, a két „hamarosan lejár”, feladó, slot-tűrés; a tervezési beállítás állomásonként) és vállalati (`Setting`: naptárfrissítés). Az értékek a migrációban átmásolódnak.
-- A szerepkör-hozzárendelés és az egyéni jogosultság állomáshoz kötött (üres = minden állomás); az Admin szerepkörűek minden állomásra szólnak, a többiek a BUD-ra. Minden felhasználó alapértelmezett állomása a BUD.
-- 13. mérföldkő utómunka 6. pont (előző commit): az ügynök nézet csak a saját járatait tölti be.
+- Közbeiktatva, Ikarus-import, 1. lépés: beolvasás és összefésülés tiszta függvényként (`lib/ikarus/`): a napi mappák és a fájlnevek (UTC), BOM, a menetrendi idő UTC-ben, a nap nélküli idők a menetrendi időhöz legközelebbi napra (51. szabály), rekordonkénti összefésülés (irány + AODB-azonosító; a tényleges idő és a lajstrom megmarad). Tesztek kitalált mintákkal.
+- Próbaolvasás a valódi mentésen (a repón kívül): 26 napi mappa, 1080 pillanatkép, 6541 rekord (3253 érkezés, 3288 indulás), olvashatatlan fájl és rekord nincs.
 
 ## Állapot
 
-- Utolsó commit: lásd `git log -1` (feat: add stations and give every existing row to BUD)
-- Tesztek: 857 zöld; tsc és lint tiszta; a migráció után a séma-eltérés üres; seed lefut; a fő oldalak minden demo szerepkörrel hiba nélkül betöltenek.
+- Utolsó commit: lásd `git log -1` (feat: read and merge the Ikarus snapshots)
+- Tesztek: 874 zöld; tsc és lint tiszta.
 
 ## Eltérések a CLAUDE.md-től
 
-- Átmeneti: az állomáshoz tartozó táblák `stationId`-je alapértelmezésként a BUD (`lib/stations.ts`, `BUD_STATION_ID`), amíg minden oldal és művelet meg nem adja az állomást (4. lépés); akkor az alapérték és a konstans megszűnik.
-- Sorrend a mérföldkövön belül: a csapattagság-tábla a 4. lépésben, az üzenet–járatrész párosítás (`MessageLink`) a 6. lépésben kerül be, hogy egy adat ne legyen két helyen tárolva, amíg a régi kód még az eredetit használja.
+- A jóváhagyott terv szerint: a hárombetűs légitársaság-kódú járatok is bekerülnek (a légitársaság-űrlap formátum-ellenőrzése a 3. lépésben a 3 betűt is elfogadja); a forduló párja a gép következő érkezése előtti indulás lehet (2. lépés); az érkezési rész üzemnapja az STA budapesti napja (42. szabály szerint).
+- A 14. mérföldkő 1. lépésének átmeneti BUD-alapértékei (`lib/stations.ts`) a 4. lépésig maradnak.
 
 ## Kérdések a tervezéshez
 
@@ -25,4 +23,4 @@
 
 ## Következő lépés
 
-- 14. mérföldkő, 2. lépés: az időzóna kötelező paraméter a `lib/time.ts`-ben és minden napfüggő függvényben, Europe/Istanbul és óraátállítási tesztekkel.
+- Ikarus-import, 2. lépés: fordulók lajstrom alapján, tiszta függvényként, tesztekkel.
