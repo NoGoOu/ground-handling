@@ -1,6 +1,6 @@
 # Ground Handling App – projektleírás
 
-*Verzió: 46 · 2026. október 24.*
+*Verzió: 47 · 2026. november 10.*
 
 Nyílt forráskódú webalkalmazás repülőtéri földi kiszolgálás (ground handling) szervezésére. Minden járatfordulóhoz feladattípusonként egy task tartozik, benne mérföldkövekkel, amelyeknek van tervezett és tényleges időpontja. A mérföldkövek légitársaságonként testreszabható sablonokból jönnek. A hozzáférés szerepkör alapú.
 
@@ -887,7 +887,9 @@ Külön oldal, asztali gépre; telefonon ne törjön el, de nem arra optimalizá
 
 ## Közbeiktatva: valós járatok az Ikarus-mentésből, a tervező kipróbálása
 
-**Ezt építjük most,** a 14. mérföldkő 2. lépése előtt, a szokásos terv-jóváhagyással. A 14. mérföldkő 1. lépése után minden adat a BUD állomásé, így ez a mostani állapotra épül; a 14. mérföldkő utána a 2. lépéssel folytatódik.
+**Kész** (2026. október 24.). A leírás a megépült működés referenciája; a megvalósítás pontosításai a „További eldöntött szabályok” 97–100. pontjában. A 14. mérföldkő 1. lépésére épül; a 14. mérföldkő a 2. lépéssel folytatódik.
+
+**Eredmény** a valódi mentésen (27 nap, ebből 22 teljes), a demo sablonnal és a mostani tervezési beállításokkal: hétköznap átlagosan 167 járat, 29 pozíció, 241 munkaóra, a létszámigény csúcsa 17; hétvégén 149 járat, 27 pozíció, 219 munkaóra, csúcs 16. A pozíciószám a valós 20–40-es sávon belül van, hangolás most nem kell. Az összevetés a valós sablonokkal (GOU, HDS) megismétlendő, mert most minden légitársaság a demo sablont kapta.
 
 A projekt gazdája 2026. szeptember 28. óta félóránként menti a repülőtéri AODB járatlistáját a saját gépére. Ebből valós BUD-járatok kerülnek a helyi fejlesztői példányba, és ezeken próbáljuk ki a tervezőt (automatikus beosztás) és a létszámigényt. Az eredményt a valósághoz mérjük: egy átlagos hétköznapon kb. 20–40 ügynök dolgozik.
 
@@ -1149,6 +1151,10 @@ Ezeket a kérdéseket a megrendelő 2026. szeptember 22-én jóváhagyta; a kód
 94. **Képek kicsinyítése:** az átlátszó PNG fehér háttérrel lesz JPEG, a fájl neve `.jpg`-re vált; a nem olvasható képet a feltöltés elutasítja.
 95. **Növekményes mentés:** a feltöltött fájlok a mentési könyvtár közös tárába kerülnek, mindegyik egyszer; a csomag az adatbázist és az akkor meglévő fájlok listáját tartalmazza. Visszaállítás előtt a rendszer ellenőrzi, hogy a csomag minden fájlja megvan-e a tárban; ha nincs meg mind, semmi sem változik. A korábbi, minden fájlt tartalmazó csomagok is visszaállíthatók.
 96. **Terhelési próba:** 90% ügynök és 10% műszakvezető, 10–30 másodperc gondolkodási idővel, lépcsőnként növekvő létszámmal; csak próbaadatokkal, amelyeket a végén eltávolít, és valódi járatok mellett nem fut.
+97. **Ikarus-import, járat és forduló:** hárombetűs légitársaság-kód is elfogadott (a légitársaság űrlapján is). Az érkezés párja csak a gép következő érkezése előtti indulás lehet. Az érkezési rész üzemnapja az STA budapesti napja. Ha az útvonal több állomás, az érkezésnél az utolsó, az indulásnál az első számít; az általános repülésnél az útvonal szám is lehet, ez is bekerül.
+98. **Ikarus-import, források elsőbbsége:** a becsült idő csak akkor írja felül a kézi vagy üzenetből jött ETA/ETD-t, ha az régebbi a rekord utolsó pillanatképénél (a legutóbbi érték szabálya); az üzenetből jött ATA/ATD megmarad. Az állóhelyet felülírja, ha a mentés ad egyet (a 19. szabály az Ikarus-importra így nem áll).
+99. **Ikarus-import és a hiányzó járat:** „az utolsó importból hiányzik” jelölést nem állít, mert a mentés gördülő ablak, nem menetrend.
+100. **Ikarus-import eltávolítása:** a járatokhoz párosított üzenetek párosítatlanná válnak (nem törlődnek), az importnapló megmarad; ha egy Ikarus-járat taskján gyakorlati vizsga van, semmit nem távolít el.
 
 ## Később (most ne építsd)
 
