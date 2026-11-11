@@ -1,8 +1,6 @@
-# Üzenetformátumok – Ground Handling App
+# Üzenetformátumok
 
-*Verzió: 8 · 2026. szeptember 30.*
-
-Referencia a 7. és a 8. mérföldkőhöz (üzenetek fogadása, feldolgozása és előállítása), a CLAUDE.md ezekre a szakaszokra hivatkozik. A formátumok a projekt gazdájának gyakorlatából és valós mintákból származnak. Ha a gyakorlatban új változat bukkan fel, ide kerül, és a mintájából tesztadat lesz.
+Az üzenetek szövegére vonatkozó szabályok: formátumok, kódok, szétválasztás, párosítás, verziókulcsok, ellenőrzések és a valós minták. Hogy a rendszer mit kezd az üzenettel (fogadás, hatás a járatra, infografika, késéskód, küldés): `docs/spec/uzenetek.md`. A formátumok a projekt gazdájának gyakorlatából és valós mintákból származnak. Ha a gyakorlatban új változat bukkan fel, ide kerül, és a mintájából tesztadat lesz.
 
 ## Általános szabályok
 
@@ -10,10 +8,12 @@ Referencia a 7. és a 8. mérföldkőhöz (üzenetek fogadása, feldolgozása é
 - **Korrekció:** a típussor előtti külön `COR` sor jelzi (pl. `COR` / `MVT` / …). A `COR` az utána következő üzenethez tartozik.
 - Az Eurocontrol slotüzenetei (SAM, SRM) más családba tartoznak: ADEXP formátum, `-TITLE` sorral kezdődnek (lásd „Slotüzenetek”).
 - Minden idő UTC.
+- **Időpont napjának feloldása:** a nappal megadott időpont a menetrendi időhöz legközelebbi; a nap nélküli időpont az előtte álló időt követő első.
 - A fejléc dátuma többnyire csak a hónap napja (`/16`), de előfordul teljes dátum is (`/19SEP26`). **A fejléc dátuma a járat menetrendi napja (üzemnapja)**, akkor is, ha a járat napokat késik. A dátum feloldását lásd a „Párosítás és a járat része” szakaszban.
 - A „nincs” jelölése változó: `/N`, `/NIL`, `.NIL`.
 - A mezők sorrendje rendszerenként eltérhet (lásd CPM), ezért a mezőket mintázat alapján kell felismerni (állomáskód: 3 betű, súly: szám, ULD-azonosító: lásd lent), nem csak a pozíciójuk alapján.
 - A SI (supplementary information, szabad szöveg) opcionális, lehet üres is, és több sorra is kiterjedhet. **Üzemi utasítást is hordozhat**, csillagsorok közé keretezve (pl. „TAILTIPPING CRITICAL AIRCRAFT DO NOT START UNLOADING OF THE FORWARD HOLD BEFORE DEBOARDING HAS FINISHED.”): ezt kiemelve kell megjeleníteni, nem feldolgozási figyelmeztetésként. A CPM végén `CPM END` állhat. Sorvégi szóközök és üres sorok előfordulnak.
+- **Az SI-t nem dolgozzuk fel**, mert a tartalma légitársaságonként és üzenetenként nagyon eltér: az `SI` sortól az üzenet végéig (a CPM-nél a `CPM END`-ig) minden sor szabad szöveg, változatlanul megmarad és megjelenik, és nem ad „ismeretlen sor” figyelmeztetést. Az ellenőrzések csak az üzenet törzséből számolnak.
 - A feldolgozás hibatűrő: az ismeretlen sor figyelmeztetést ad, a többi feldolgozás folytatódik. A nyers szöveg mindig megmarad, kivéve a PSM-et és a PTM-et, mert azok neveket tartalmaznak (lásd ott).
 - Üzenetek hiányozhatnak vagy hiányosak lehetnek; ez nem akadályozhatja a többi adat megjelenítését.
 
@@ -50,32 +50,32 @@ Referencia a 7. és a 8. mérföldkőhöz (üzenetek fogadása, feldolgozása é
   - `.JMP/0`: jump seat; `.CRW/0` és `.PAD/0/3` (osztályonként): a jelentésük megerősítendő
 - Különleges tételek: `.ELD/pozíció/súly`, `.FKT/raktér/súly`.
 - SI: kategóriánkénti bontás (`C/0.E/1983.M/0`) vagy poggyász (`BP/57` darab, `B/825` kg, `TB/2` valószínűleg transzfer poggyász, megerősítendő).
-- SI, Lufthansa-változat. **A 8. mérföldkőben nem dolgozzuk fel**, szabad szövegként, változatlanul jelenik meg; a látott elemek későbbi feldolgozáshoz:
+- SI, Lufthansa-változat. Nem dolgozzuk fel; a látott elemek, későbbi feldolgozáshoz:
   - `DAA/…` (lásd Kódok);
   - csillagsorok közé keretezett üzemi utasítás;
   - célállomásonkénti nettó bontás: `BUD C 327 M 0 B 143/ 2384 O 110 T 0` = cargo 327 kg, posta 0, poggyász 143 darab / 2384 kg, egyéb (other) 110 kg, tranzit 0 (a szóközök száma változó);
   - `CHECKED BAGGAGE PIECES BUD 1/Y/57 3/Y/50 4/C/22 5/C/3/Y/11` = feladott poggyász darabszáma rakterenként és osztályonként (egy raktérnél több osztály is lehet);
   - `DHC/0/0`: a jelentése megerősítendő.
-- **Ellenőrzés:** főfedélzet + rakterek = T; férfi + nő + gyerek = a PAX osztályonkénti összege (az infant nélkül); a nettó bontás poggyásza egyezik a CHECKED BAGGAGE PIECES összegével.
+- **Ellenőrzés:** főfedélzet + rakterek = T; férfi + nő + gyerek = a PAX osztályonkénti összege (az infant nélkül).
 - A nettó bontás és a T különbsége a konténerek önsúlya (a Lufthansa-mintán 3336 − 2821 = 515 kg, pontosan a hét konténer önsúlya). Ezt nem ellenőrizzük, de az eltérés így magyarázható.
 
 ## CPM (rakodási üzenet)
 
 - Fejléc-változatok: `P75535/16.URNPA.1983.BUD` (összsúllyal és állomással), `CZ2557/19SEP26.B2041.4/1.CANBUD` (teljes dátum, útvonal; a `4/1` jelentése megerősítendő), `LH1338/27.DAIQT` (se összsúly, se állomás: a részt a járatszám dönti el).
 - Célállomásonkénti összesítés: `.BUD/92404`, `.TW/92404`.
+- **CPM `.TW` sor:** összsúlyként olvassuk, amíg a jelentése nem tisztázott.
 - Szakaszok (szélestörzsű, teherszállító): `M/D RIGHT SIDE`, `M/D LEFT SIDE`, `M/D CENTER`, `L/D …`.
 - Pozíciósor, két látott változat (a súly és a cél sorrendje eltér!):
-  - `-POZ/ULD/súly/cél/kontúr/kategória[.kód]`, pl. `-GR/PMC45245CZ/4765/BUD/Q5/C.ELI` (a `Q` és utána egy karakter kontúrkód; a magában álló `Q` kategória a sürgős cargo)
-  - `-POZ/ULD/cél/súly/kategória[.kód]`, pl. `-A9/PAG72809AGH/OSR/335/E.ELD`, `-11/AKH42390LH/BUD/565/BY0` (a kategória utáni számjegy a szabad negyedek száma)
+  - `-POZ/ULD/súly/cél/kontúr/kategória[.kód]`, pl. `-GR/PMC45245CZ/4765/BUD/Q5/C.ELI` (a `Q` és utána egy karakter kontúrkód; a magában álló `Q` kategória a sürgős cargo)  - `-POZ/ULD/cél/súly/kategória[.kód]`, pl. `-A9/PAG72809AGH/OSR/335/E.ELD`, `-11/AKH42390LH/BUD/565/BY0` (a kategória utáni számjegy a szabad negyedek száma)
 - A pozíció súlya bruttó (a konténer önsúlyával).
 - Bulk: `-BLK/108/BUD/C` vagy raktérszámmal `-1/OSR/50/E.FKT` (itt is eltér a sorrend). ULD nélküli pozíció szabad hellyel: `-51/BUD/30/D.VR1`.
 - **Egy pozíción több tétel:** `-52/BUD/47/BC/187/BY.VR3` = az 52-es pozíción 47 kg BC és 187 kg BY poggyász, 3 negyed szabad.
 - Üres pozíció: `-A1/N`, `-2/NIL`, `-11P.NIL`.
 - SI: súlyadatok (ZFW, TOW, index, súlypont, stab trim, üzemanyag).
-- SI, Lufthansa-változat (a 8. mérföldkőben nem dolgozzuk fel, csak megjelenítjük): az LDM SI-jének elemei (DAA, keretezett utasítás, nettó bontás), valamint:
+- SI, Lufthansa-változat (nem dolgozzuk fel, csak megjelenítjük): az LDM SI-jének elemei (DAA, keretezett utasítás, nettó bontás), valamint:
   - `LOAD IN CPTS 0/0 1/1511 3/1003 4/588 5/234` = rakomány rakterenként (a 0 a főfedélzet);
   - poggyász pozíciónként: `B11/BUD/BY/29/490` = a 11-es pozícióban BY poggyász, 29 darab, nettó 490 kg. A szóközzel kezdődő `   /BUD/BY/11/187` sor az előző pozíció (itt a 52-es) további tétele.
-- **Ellenőrzés:** a pozíciók összege = összsúly; TOW = ZFW + felszállási üzemanyag; a rakterek és a főfedélzet súlya egyezik az LDM-mel.
+- **Ellenőrzés:** a pozíciók összege a személyzet poggyásza (D) nélkül = összsúly; a rakterek és a főfedélzet súlya (D nélkül) egyezik az LDM-mel. Kézi rakodásnál (bulk) a CPM-ben nincs raktérszám, ezért ilyenkor csak az alsó fedélzet egésze vethető össze.
 - **Ellenőrzés az SI-ből (későbbi, amikor az SI feldolgozása sorra kerül):** a pozíciók raktérenkénti összege a személyzet poggyásza (D) nélkül = LOAD IN CPTS = az LDM rakterei; a B-sorok darabszáma és nettó súlya = az LDM nettó bontásának poggyásza; a B-sorok rakterenkénti darabszáma = CHECKED BAGGAGE PIECES.
 - A D (crew bag) a gép üzemi tömegének része, ezért nem számít bele a rakománysúlyba.
 - A Lufthansa-mintán a Q kategóriájú (sürgős) tétel nettó súlya (110 kg) az LDM nettó bontásában az O (other) alatt szerepel.
@@ -85,6 +85,7 @@ Referencia a 7. és a 8. mérföldkőhöz (üzenetek fogadása, feldolgozása é
 - Fejléc: `járat/nap.lajstrom.állomás`, utána `IN` (érkező ULD-k, az állomás a honnan) vagy `OUT` (induló ULD-k, az állomás a hova).
 - Tételek: `.ULD/állomás/kategória`, egy sorban több is.
 - **Ellenőrzés (OUT):** az UCM E-s ULD-jei megegyeznek a CPM ELD-s pozícióinak ULD-jeivel; az X-es ULD-k nem szerepelnek a CPM-ben.
+- **UCM:** ha egy UCM-ben `IN` és `OUT` is van, az első számít, figyelmeztetéssel.
 - Az IN és OUT üzenetekből a BUD-on lévő ULD-készlet követhető (későbbi lehetőség). Példa: a PAG72809AGH 12-én érkezett RMO-ból, 16-án ment tovább OSR-be.
 
 ## PSM (utasok különleges igényei)
@@ -93,7 +94,7 @@ Referencia a 7. és a 8. mérföldkőhöz (üzenetek fogadása, feldolgozása é
 - Célállomásonként egy blokk: `-BUD 1PAX / 1SSR`, utána kódonként és osztályonként a darabszám: `WCHR 001C 000M` = WCHR: business 1, economy 0.
 - Utána osztályonként (`C CLASS 1PAX / 1SSR`, `M CLASS NIL`) az utasok: név, ülés, esetleg csatlakozó járat (pl. `TK0399Y26LED`), majd a kódjaik.
 - Vége: `ENDPSM`; több részből álló üzenetnél a nem utolsó rész vége `ENDPARTn`.
-- **Amit megtartunk:** célállomásonként, kódonként (pl. WCHR, WCHS) és osztályonként a darabszám. **Nevet, ülést és a nyers szöveget nem tároljuk**, a feldolgozási figyelmeztetésekbe sem kerülhet sor a szövegből.
+- Csak a darabszámokat tartjuk meg, nevet és nyers szöveget nem: `docs/spec/uzenetek.md` (PSM és PTM, név nélkül).
 - **Ellenőrzés:** a kódonkénti darabszámok összege = a blokk `nSSR` értéke.
 
 ## PTM (átszálló utasok)
@@ -101,7 +102,7 @@ Referencia a 7. és a 8. mérföldkőhöz (üzenetek fogadása, feldolgozása é
 - Fejléc: `járat/napHÓNAP útvonal PARTn`, pl. `TK1034/26SEP BUDIST PART2` (BUD-ról IST-be).
 - Soronként: továbbjárat, célállomás, utasszám és osztály, poggyász darab és súly, név, pl. `TK0720 BOM 1Y 1B11K MINTA/A` = TK720 Bombay felé 1 economy utas, 1 poggyász 11 kg. A `0B0K` poggyász nélküli utas.
 - Vége: `ENDPTM` (nem utolsó résznél `ENDPARTn`).
-- **Amit megtartunk:** továbbjáratonként (járatszám és célállomás) és osztályonként az utasszám, a poggyász darabszáma és súlya. **Nevet és nyers szöveget nem tárolunk.**
+- Csak a darabszámokat tartjuk meg, nevet és nyers szöveget nem: `docs/spec/uzenetek.md` (PSM és PTM, név nélkül).
 
 ## Slotüzenetek (Eurocontrol, ADEXP)
 
@@ -122,7 +123,7 @@ Referencia a 7. és a 8. mérföldkőhöz (üzenetek fogadása, feldolgozása é
 
 ## Fogadás és szétválasztás
 
-A fogadó API, a kézi bemásolás és a jogosultságok leírása a CLAUDE.md 7. mérföldkő szakaszában van. Itt a szövegre vonatkozó szabályok:
+A fogadó API, a kézi bemásolás és a jogosultságok: `docs/spec/uzenetek.md`. Itt a szövegre vonatkozó szabályok:
 
 - Egy beküldött szövegben több üzenet is lehet. Új üzenet ott kezdődik, ahol:
   - egy sor pontosan egy ismert típuskód (MVT, LDM, CPM, UCM, PSM, PTM; a lista bővíthető); ha közvetlenül előtte (üres sorokat nem számítva) egy `COR` sor áll, az is az új üzenethez tartozik, és korrekciót jelez;
@@ -130,12 +131,12 @@ A fogadó API, a kézi bemásolás és a jogosultságok leírása a CLAUDE.md 7.
 - Egy üzenet a következő üzenet kezdetéig tart. Ezért a PTM után következő slotüzenetek nem olvadhatnak bele a PTM-be.
 - Az UCM `IN` és `OUT` sora az üzenet része, nem új üzenet. A `CPM END` a CPM végét jelzi.
 - A típussor előtti sorokat (pl. Type B fejléc és cím, email szöveg, aláírás) a feldolgozó átugorja; a nyers szöveg ezekkel együtt megmarad.
-- Nem támogatott típusnál a tartalmat nem tároljuk, csak a típust, a fejlécet (járat, dátum) és a beérkezés idejét naplózzuk, mert személyes adatot tartalmazhat. A PSM-ből és a PTM-ből csak a származtatott darabszámok maradnak meg.
+- Nem támogatott típusnál a tartalmat nem tároljuk, csak a típust, a fejlécet (járat, dátum) és a beérkezés idejét naplózzuk, mert személyes adatot tartalmazhat.
 
 ## Párosítás és a járat része
 
 - **Járatszám:** kétkarakteres légitársaság-kód, 1–4 számjegy, opcionálisan egy betű. A kódot a rendszerben lévő légitársaságok IATA-kódjai alapján választjuk le, pl. `P75535` = P7 5535.
-- **Üzemnap:** a fejléc dátuma az adott szakasz üzemnapja, vagyis az indulás napja az indulóállomáson (a CLAUDE.md 20. eldöntött szabálya). Csak nap esetén a beérkezés idejéhez legközelebbi, azonos napú dátum.
+- **Üzemnap:** a fejléc dátuma az adott szakasz üzemnapja, vagyis az indulás napja az indulóállomáson (`docs/spec/jaratok.md`). Csak nap esetén a beérkezés idejéhez legközelebbi, azonos napú dátum.
 - **A járat része:**
   - MVT: ha a fejléc állomása BUD és van `AD` sor, az indulási rész; ha a fejléc állomása BUD és van `AA` sor, az érkezési rész; ha a fejléc állomása más, és az `EA` sor célja BUD, az érkezési rész (ebből jön az ETA).
   - UCM: a fejléc állomása BUD; `IN` az érkezési, `OUT` az indulási rész.
@@ -162,14 +163,6 @@ A fogadó API, a kézi bemásolás és a jogosultságok leírása a CLAUDE.md 7.
 - A korrekciós MVT: a javított MVT teljes szövege, előtte egy `COR` sorral.
 - Az előállított szöveget a saját feldolgozónk visszaolvassa, és ugyanazokat az értékeket kell kapnia.
 
-## Hiányzó minták és kérdések
-
-- A várható indulást jelző (késési, `ED`) MVT, ha van ilyen.
-- Az LDM `PAD`, `CRW`, `DHC` és `TB`, a CPM-fejléc `4/1` és a `.TW` sor jelentése. Addig nyersen látszanak.
-- A Lufthansa XOM és XCS kódjának pontos jelentése.
-- Slottörlés és más `TITLE`-ű slotüzenet mintája.
-- A SITA-küldés átjárója: jelenleg milyen programmal vagy átjárón keresztül megy ki a Type B üzenet.
-
 ## Ellenőrzés a Lufthansa-mintán (tesztesetnek)
 
 A 2026. szeptember 27-i LH1338 FRA–BUD LDM-je és CPM-je mindenben egyezik. A feldolgozónak az üzenet törzséből ezeket az értékeket kell kapnia, figyelmeztetés nélkül (az SI-ből származó sorok a táblázat alatt, csak tájékoztatásul):
@@ -182,8 +175,6 @@ A 2026. szeptember 27-i LH1338 FRA–BUD LDM-je és CPM-je mindenben egyezik. A 
 | PSM kódok = nSSR | WCHR: 1 = 1SSR |
 
 Az SI-ből (most nem ellenőrzött): a B-sorok 143 darab és 2384 kg, egyezik a nettó bontás poggyászával; rakterenként 1: Y 57, 3: Y 50, 4: C 22, 5: C 3 és Y 11, egyezik a CHECKED BAGGAGE PIECES sorral; a LOAD IN CPTS egyezik az LDM raktereivel.
-
-A mostani (7. mérföldkő utáni) feldolgozó ezen a mintán téves eltérést jelez (146 helyett 147 utas; az 5-ös raktér 77 kg), ezek a 8. mérföldkőben javulnak.
 
 ## Ismert hibák a mintákban (tesztesetnek)
 
